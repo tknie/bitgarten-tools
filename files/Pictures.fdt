@@ -1,0 +1,36 @@
+;/************* ADABAS DATA DESIGNER EXPORT ******************* 2019/06/24
+;*
+;* Description: Pictures.fdt Pictures[100(tcpip://vanGogh:0) 10]
+;*
+;*************************************************************************/
+;
+   1    , PD   
+    2   , PN,   0,  A, NU,DE     ; PictureName
+    2   , PH,   0,  A, NU,DE     ; PictureHost
+   1    , DN,   0,  A, NU,DE     ; Directory
+   1    , M5,   0,  A, NU,DE,UQ  ; Md5
+   1    , CG                     ; Checksum
+    2   , CT,  40,  A, DE,NU     ; ChecksumThumbnail
+    2   , CP,  40,  A, DE,NU     ; ChecksumPicture
+   1    , DA                     ; Data
+    2   , DT,   0,  A, LB,NU     ; Thumbnail
+    2   , DP,   0,  A, LB,NU     ; Media
+   1    , MT                     ; Metadata
+    2   , TI,   0,  A, NU        ; Title
+    2   , FI,   1,  B, NU        ; Fill
+    2   , DE,   8,  B, DE        ; Date
+    2   , TY,   0,  A, NU        ; MIMEType
+    2   , OP,   0,  A, DE,NU     ; Option
+    2   , HE,   4,  B, NU        ; Height
+    2   , WI,   4,  B, NU        ; Width
+    2   , TG,   100,A, DE,MU     ; Tags
+   1    , EX                     ; Exif
+    2   , MO,   0,  A, NU        ; ExifModel
+    2   , MA,   0,  A, NU        ; ExifMake
+    2   , TA,   0,  A, NU        ; ExifTaken
+    2   , OT,   0,  A, NU        ; ExifOrigTime
+    2   , XD,   4,  B, NU        ; ExifXdimension
+    2   , YD,   4,  B, NU        ; ExifYdimension
+    2   , OR,   1,  B, NU        ; ExifOrientation
+   1    , GE,   8,  B, NU,SY=TIME,CR,DT=E(UNIXTIME) ; Generated
+   1    , UP,   8,  B, NU,SY=TIME,MU,DT=E(UNIXTIME) ; Updated

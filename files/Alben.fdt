@@ -1,0 +1,28 @@
+;/************* ADABAS DATA DESIGNER EXPORT ******************* 2019/06/24
+;*
+;* Description: Alben.fdt Alben[100(tcpip://vanGogh:0) 9]
+;*
+;*************************************************************************/
+;
+   1    , TY,  32,  A, NU        ; Type
+   1    , KY,  40,  A, NU,DE,UQ  ; Key
+   1    , DI,   0,  A, NU        ; Directory
+   1    , TI,   0,  W, NU,DE     ; Title
+   1    , DT,   8,  B, DE,DT=E(UNIXTIME) ; Date
+   1    , MT                     ; Metadata
+    2   , TD,   0,  W, NU        ; AlbumDescription
+    2   , OP,   0,  A, NU        ; Option
+    2   , TH,   0,  A, NU,DE     ; Thumbnail
+   1    , ET,  PE                ; Pictures
+    2   , PN,   0,  W, NU,DE     ; Name
+    2   , PD,   0,  W, NU        ; Description
+    2   , PM,  32,  A, NU        ; Md5
+    2   , MI,   0,  A, NU        ; MIMEType
+    2   , PT,  20,  A, NU        ; Fill
+    2   , PI,   8,  F, NU        ; Interval
+    2   , PS                     ; Size
+     3  , HE,   4,  B, NU        ; Height
+     3  , WI,   4,  B, NU        ; Width
+   1    , GE,   8,  B, NU,SY=TIME,CR,DT=E(UNIXTIME) ; Generated
+AS=TY(1,1),KY(1,40)
+AP=PN(1,60)
