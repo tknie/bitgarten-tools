@@ -225,6 +225,8 @@ func convertPictures(nr int) error {
 					fmt.Println("Map md5", picData.Md5, "use instead", pic.Md5)
 				}
 			}
+			pic.ExifReader()
+
 		}
 		sql.StorePictures(pic)
 		// fmt.Println("Found entry and insert ", pic.Title, pic.ChecksumPicture)

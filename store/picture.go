@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rwcarlsen/goexif/exif"
 
@@ -65,21 +66,30 @@ type PictureData struct {
 
 // Pictures definition
 type Pictures struct {
-	Index             uint64 `adabas:"#isn"`
-	Directory         string `adabas:"::DN"`
-	Md5               string `adabas:"::M5"`
-	ChecksumThumbnail string `adabas:"::CT"`
-	ChecksumPicture   string `adabas:"::CP"`
-	Title             string `adabas:"::TI"`
-	Fill              string `adabas:"::FI"`
-	MIMEType          string `adabas:"::TY"`
-	Option            string `adabas:"::OP"`
-	Width             uint32 `adabas:"::WI"`
-	Height            uint32 `adabas:"::HE"`
-	Media             []byte `adabas:"::DP"`
-	Thumbnail         []byte `adabas:"::DT"`
-	Generated         int64  `adabas:"::GE"`
-	PictureName       string `adabas:"::PN"`
+	Index              uint64 `adabas:"#isn"`
+	Directory          string `adabas:"::DN"`
+	Md5                string `adabas:"::M5"`
+	ChecksumThumbnail  string `adabas:"::CT"`
+	ChecksumPicture    string `adabas:"::CP"`
+	ChecksumPictureSHA string
+	Title              string `adabas:"::TI"`
+	Fill               string `adabas:"::FI"`
+	MIMEType           string `adabas:"::TY"`
+	Option             string `adabas:"::OP"`
+	Width              uint32 `adabas:"::WI"`
+	Height             uint32 `adabas:"::HE"`
+	Media              []byte `adabas:"::DP"`
+	Thumbnail          []byte `adabas:"::DT"`
+	Generated          int64  `adabas:"::GE"`
+	PictureName        string `adabas:"::PN"`
+	Exif               string
+	ExifModel          string
+	ExifMake           string
+	ExifTaken          time.Time
+	ExifOrigTime       time.Time
+	ExifXDimension     int32
+	ExifYDimension     int32
+	ExifOrientation    string
 	// PictureLocations  []PictureLocations `adabas:"::PL"`
 }
 
@@ -224,19 +234,36 @@ func (pic *PictureBinary) CreateThumbnail() error {
 		// pic.MetaData.Height = h
 		thmb, w, h, err := resizePicture(pic.Data.Media, 200)
 		if err != nil {
-			fmt.Println("Error generating thumbnail", err)
+			fmt.Println("Error generating thumbnail", pic.MetaData.MIMEType, err)
 			return err
 		}
 		pic.Data.Thumbnail = thmb
 		pic.MetaData.Width = w
 		pic.MetaData.Height = h
 		pic.Data.ChecksumThumbnail = createMd5(pic.Data.Thumbnail)
-		adatypes.Central.Log.Debugf("Thumbnail checksum", pic.Data.ChecksumThumbnail)
+		adatypes.Central.Log.Debugf("Thumbnail checksum %s", pic.Data.ChecksumThumbnail)
 	} else {
 		fmt.Println("No image, skip thumbnail generation ....")
 	}
 	return nil
 
+}
+
+// CreateThumbnail create thumbnail
+func (pic *Pictures) CreateThumbnail() error {
+	if strings.HasPrefix(pic.MIMEType, "image") {
+		thmb, w, h, err := resizePicture(pic.Media, 200)
+		if err != nil {
+			fmt.Println("Error generating thumbnail", pic.PictureName, ":", err)
+			return err
+		}
+		pic.Thumbnail = thmb
+		pic.Width = w
+		pic.Height = h
+		pic.ChecksumThumbnail = createMd5(pic.Thumbnail)
+		adatypes.Central.Log.Debugf("Thumbnail checksum %s", pic.ChecksumThumbnail)
+	}
+	return nil
 }
 
 // ReadDatabase read picture binary from database
@@ -460,6 +487,7 @@ func (pic *PictureBinary) sendBinary(mapName string, isPicture bool) *StoreRespo
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		fmt.Println("Client do error:", err)
 		fmt.Println(resp, err)
 		panic(err)
 	}

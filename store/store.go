@@ -46,6 +46,7 @@ func SendJSON(mapName string, jsonStr []byte) (*StoreResponse, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		fmt.Println("Client do errorx:", err)
 		fmt.Println(resp, err)
 		panic(err)
 	}

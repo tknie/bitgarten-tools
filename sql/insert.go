@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/tknie/adabas-go-api/adatypes"
 )
 
 type DataConfig struct {
@@ -33,6 +35,7 @@ type DatabaseInfo struct {
 }
 
 var Md5Map sync.Map
+var hostname = ""
 
 var picChannel = make(chan *store.Pictures)
 var stop = make(chan bool)
@@ -41,8 +44,25 @@ var sqlSendCounter = uint32(0)
 var sqlInsertCounter = uint32(0)
 var sqlSkipCounter = uint32(0)
 
+func init() {
+	hostname, _ = os.Hostname()
+	hostname = strings.Split(hostname, ".")[0]
+}
+
 func CreateConnection() (*DatabaseInfo, error) {
-	dc := &DataConfig{User: "admin", Password: "Testtkn1+", URL: "lion.fritz.box", Port: 5432}
+	host := os.Getenv("POSTGRES_HOST")
+	if host == "" {
+		host = "lion.fritz.box"
+	}
+	user := os.Getenv("POSTGRES_USER")
+	if user == "" {
+		user = "admin"
+	}
+	passwd := os.Getenv("POSTGRES_PASS")
+	if passwd == "" {
+		passwd = "lxXx"
+	}
+	dc := &DataConfig{User: user, Password: passwd, URL: host, Port: 5432}
 	driver, url := dc.PostgresXConnection()
 	connStr := url
 	// connConfig, _ := pgx.ParseConfig(url)
@@ -65,13 +85,16 @@ func (di *DatabaseInfo) used(s string, t time.Time) {
 	di.duraction += time.Since(t)
 }
 
-func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
-	defer di.used("insert sql", time.Now())
+func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
+	defer di.used("insert album", time.Now())
 
 	// Create a new context, and begin a transaction
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
-	conn, _ := di.db.Conn(ctx)
+	conn, err := di.db.Conn(ctx)
+	if err != nil {
+		return 0, err
+	}
 	conn.Raw(func(driverConn any) error {
 		c := driverConn.(*stdlib.Conn).Conn()
 		pgxdecimal.Register(c.TypeMap())
@@ -91,6 +114,57 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 	// 	return err
 	// }
 	newID := 0
+	err = tx.QueryRow("insert into Albums ( Title, AlbumKey, Directory, Thumbnail, published ) VALUES($1,$2,$3,$4,$5) RETURNING ID",
+		"New Album", "Key", directory, "", time.Now()).Scan(&newID)
+	if err != nil {
+		if !checkErrorContinue(err) {
+			fmt.Printf("Error inserting Albums(unknown): %v\n", err)
+			tx.Rollback()
+			return 0, err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		fmt.Println("Commit tx error:", err)
+		log.Fatal(err)
+	}
+	if newID%20 == 0 {
+		fmt.Print("*")
+	}
+	if newID%100 == 0 {
+		fmt.Print("\n")
+	}
+	return newID, nil
+}
+
+func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
+	defer di.used("insert sql", time.Now())
+
+	// Create a new context, and begin a transaction
+	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelfunc()
+	conn, _ := di.db.Conn(ctx)
+	conn.Raw(func(driverConn any) error {
+		c := driverConn.(*stdlib.Conn).Conn()
+		pgxdecimal.Register(c.TypeMap())
+		return nil
+	})
+	// pgxdecimal.Register(c.TypeMap())
+	// ctx := context.Background()
+	tx, err := di.db.BeginTx(ctx, nil)
+	if err != nil {
+		fmt.Printf("Error beginning Albums transaction: %v\n", err)
+		log.Fatal(err)
+	}
+
+	// fmt.Println("Insert album", time.Unix(int64(album.Date), 0))
+	// stmt, err := tx.Prepare("insert into Albums ( ID, Title, AlbumKey, Directory, Thumbnail ) VALUES($1,$2,$3,$4,$5)")
+	// if err != nil {
+	// 	fmt.Printf("Error preparing SQL Albums: %v\n", err)
+	// 	return err
+	// }
+	newID := 0
 	k := strings.Trim(album.Key, " ")
 	if k == "" {
 		d := strings.Trim(album.Directory, " ")
@@ -102,33 +176,40 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 	err = tx.QueryRow("insert into Albums ( Title, AlbumKey, Directory, Thumbnail, published ) VALUES($1,$2,$3,$4,$5) RETURNING ID",
 		album.Title, album.Key, album.Directory, album.Thumbnail, time.UnixMilli(int64(album.Date*1000))).Scan(&newID)
 	if err != nil {
+		err2 := tx.Rollback()
+		fmt.Println("Rollback ...", err2)
 		if !checkErrorContinue(err) {
 			fmt.Printf("Error inserting Albums(unknown): %v\n", err)
-			tx.Rollback()
 			return err
 		}
+		return nil
 	}
 	for i, p := range album.Pictures {
-		fmt.Println("Insert album picture Md5=", p.Md5)
+		adatypes.Central.Log.Debugf("Insert picture Md5=%s", p.Md5)
 		if p.Md5 == "" {
 			log.Fatalf("Pic MD5 empty, %s", p.Name)
 		}
 		if m, ok := Md5Map.Load(p.Md5); ok {
 			p.Md5 = m.(string)
 		}
-		_, err := tx.Exec("insert into AlbumPictures ( Index, AlbumId, Name, Description, Md5, Fill, Height, Width, SkipTime, MIMEType)"+
+		_, err := tx.Exec("insert into AlbumPictures ( Index, AlbumId, Name, Description, Md5,  Fill, Height, Width, SkipTime, MIMEType)"+
 			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-			strconv.Itoa(i+1), strconv.Itoa(int(newID)), p.Name, p.Description, p.Md5, p.Fill, strconv.Itoa(int(p.Height)), strconv.Itoa(int(p.Width)), strconv.Itoa(int(p.Interval)), p.MIMEType)
+			strconv.Itoa(i+1), strconv.Itoa(int(newID)), p.Name, p.Description,
+			p.Md5, p.Fill, strconv.Itoa(int(p.Height)), strconv.Itoa(int(p.Width)),
+			strconv.Itoa(int(p.Interval)), p.MIMEType)
 		if err != nil {
+			err2 := tx.Rollback()
+			fmt.Println("Rollback ...", err2)
 			if !checkErrorContinue(err) {
-				tx.Rollback()
 				fmt.Printf("Error inserting in AlbumPictures: %v\n", err)
 				return err
 			}
+			return nil
 		}
 	}
 	err = tx.Commit()
 	if err != nil {
+		fmt.Println("Commit tx error:", err)
 		log.Fatal(err)
 	}
 	if newID%20 == 0 {
@@ -151,6 +232,7 @@ func checkErrorContinue(err error) bool {
 	case *pgconn.PgError:
 		if e.Code == "23505" {
 			atomic.AddUint32(&sqlSkipCounter, 1)
+			return true
 		}
 		fmt.Printf("Error inserting record(no duplicate): %v\n", err)
 	default:
@@ -168,10 +250,7 @@ func createStringMd5(input string) string {
 func StorePictures(pic *store.Pictures) {
 	picChannel <- pic
 	wg.Add(1)
-	n := atomic.AddUint32(&sqlSendCounter, 1)
-	if n%100 == 0 {
-		fmt.Println("Store request", n)
-	}
+	atomic.AddUint32(&sqlSendCounter, 1)
 }
 
 func WaitStored() {
@@ -202,6 +281,28 @@ func InsertWorker() {
 	}
 }
 
+func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid int) error {
+	ctx := context.Background()
+	tx, err := di.db.BeginTx(ctx, nil)
+	if err != nil {
+		IncError(err)
+		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
+		return err
+	}
+	adatypes.Central.Log.Debugf("Insert album picture info Md5=%s", pic.Md5)
+	_, err = tx.ExecContext(ctx, "insert into AlbumPictures (index,albumid,name,description,md5,mimetype,fill,skiptime,height,width)"+
+		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+		strconv.Itoa(index), albumid, pic.Title, pic.Title+" description", pic.Md5, pic.MIMEType, pic.Fill, "5000", strconv.Itoa(int(pic.Height)), strconv.Itoa(int(pic.Width)))
+	if err != nil {
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	defer di.used("insert sql", time.Now())
 	// Create a new context, and begin a transaction
@@ -210,63 +311,84 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	ctx := context.Background()
 	tx, err := di.db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		IncError(err)
+		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
+		return err
 	}
-	fmt.Println("Insert picture Md5=", pic.Md5, "CP=", pic.ChecksumPicture)
-	_, err = tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, Md5, Title, Directory, Fill, Height, Width, Media, Thumbnail,mimetype)"+
-		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-		pic.ChecksumPicture, pic.Md5, pic.Title, pic.Directory, pic.Fill, pic.Height,
-		pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType)
+
+	rows, err := di.db.QueryContext(ctx, "select SHA256 FROM Pictures where ChecksumPicture=$1", pic.ChecksumPicture)
 	if err != nil {
-		fmt.Println("Error rolling back pic data md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
-		if !checkErrorContinue(err) {
-			tx.Rollback()
-			//fmt.Println("Error inserting Pictures", err, len(pic.Media))
-			return err
-		}
+		fmt.Println("Query error:", err)
+		return err
 	}
-	fmt.Println("Insert picture location CP=", pic.ChecksumPicture)
+	if rows.Next() {
+		sha := ""
+		rows.Scan(&sha)
+		rows.Close()
+		if sha != pic.ChecksumPictureSHA {
+			fmt.Println("SHA mismatch", pic.PictureName)
+			return fmt.Errorf("SHA mismatch")
+		}
+	} else {
+		rows.Close()
+
+		adatypes.Central.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
+		_, err = tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, ChecksumThumbnail, SHA256, Title, Directory, Fill, Height, Width, Media, Thumbnail,mimetype,exif,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation)"+
+			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)",
+			pic.ChecksumPicture, pic.ChecksumThumbnail, pic.ChecksumPictureSHA, pic.Title, pic.Directory, pic.Fill, pic.Height,
+			pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
+			pic.Exif, pic.ExifModel, pic.ExifMake, pic.ExifTaken, pic.ExifOrigTime, pic.ExifXDimension, pic.ExifYDimension, pic.ExifOrientation)
+		if err != nil {
+			tx.Rollback()
+			if !checkErrorContinue(err) {
+				IncError(err)
+				fmt.Println("Error rolling back pic data md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
+				//fmt.Println("Error inserting Pictures", err, len(pic.Media))
+				return err
+			}
+			IncDuplicate()
+			return nil
+		}
+		IncInsert()
+	}
+	adatypes.Central.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
 	ins := "insert into PictureLocations (PictureName, ChecksumPicture, PictureHost, PictureDirectory)" +
 		" VALUES($1,$2,$3,$4)"
 	_, err = tx.ExecContext(ctx, ins,
-		pic.PictureName, pic.ChecksumPicture, "", "")
+		pic.PictureName, pic.ChecksumPicture, hostname, pic.Directory)
 	if err != nil {
+		tx.Rollback()
+		fmt.Println("Error inserting PictureLocations",
+			pic.ChecksumPicture, pic.PictureName, err)
 		if !checkErrorContinue(err) {
 			fmt.Println("Error rolling back Md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
-			tx.Rollback()
-			fmt.Println("Error inserting PictureLocations",
-				pic.ChecksumPicture, pic.PictureName, err)
 			return err
 		}
+		return nil
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		return err
 	}
-	fmt.Println("Commited pic: md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
-	n := atomic.AddUint32(&sqlInsertCounter, 1)
-	if n%20 == 0 {
-		fmt.Print(".")
-	}
-	if n%100 == 0 {
-		fmt.Print("\n")
-	}
+	IncCommit()
+	adatypes.Central.Log.Debugf("Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
+	atomic.AddUint32(&sqlInsertCounter, 1)
 
 	return nil
 }
 
 func (dc *DataConfig) MySQLConnection() (string, string) {
-	return "mysql", fmt.Sprintf("%s:%s@tcp(%s)/Bitgarten", dc.User, dc.Password, dc.URL)
+	return "mysql", fmt.Sprintf("%s:%s@tcp(%s)/bitgarten", dc.User, dc.Password, dc.URL)
 }
 
 func (dc *DataConfig) PostgresConnection() (string, string) {
-	return "postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dc.URL, dc.Port, dc.User, dc.Password, "Bitgarten")
+	return "postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dc.URL, dc.Port, dc.User, dc.Password, "bitgarten")
 }
 
 func (dc *DataConfig) PostgresXConnection() (string, string) {
 	// urlExample := "postgres://username:password@localhost:5432/database_name"
-	return "pgx", fmt.Sprintf("postgres://%s:%s@%s:%d/%s", dc.User, dc.Password, dc.URL, dc.Port, "Bitgarten")
+	return "pgx", fmt.Sprintf("postgres://%s:%s@%s:%d/%s", dc.User, dc.Password, dc.URL, dc.Port, "bitgarten")
 }
 
 func Display() error {
