@@ -19,6 +19,7 @@ type Printer struct {
 }
 
 func (pic *Pictures) ExifReader() error {
+	adatypes.Central.Log.Debugf("Exif reader pic %s", pic.MIMEType)
 	if !strings.HasPrefix(pic.MIMEType, "image/") {
 		return nil
 	}
@@ -35,6 +36,7 @@ func (pic *Pictures) ExifReader() error {
 		return err
 	}
 	pic.Exif = p.buffer.String()
+	adatypes.Central.Log.Debugf("Exif result: %s", pic.Exif)
 	return nil
 }
 
@@ -69,7 +71,7 @@ func (p *Printer) Walk(name exif.FieldName, tag *tiff.Tag) error {
 func getTime(dateTime string) (time.Time, error) {
 	tx := dateTime
 	tx = strings.ReplaceAll(tx, "\"", "")
-	tx = strings.ReplaceAll(tx, "\\", ":")
+	tx = strings.ReplaceAll(tx, "/", ":")
 	if tx == "0000:00:00 00:00:00" {
 		return time.Time{}, nil
 	}

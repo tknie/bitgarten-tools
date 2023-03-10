@@ -100,6 +100,7 @@ func LoadFile(fileName string) (*store.Pictures, error) {
 		return nil, fmt.Errorf("no format to upload of type " + fileType[1:])
 	}
 
+	adatypes.Central.Log.Debugf("Check image %s", pic.MIMEType)
 	if strings.HasPrefix(pic.MIMEType, "image/") {
 		err = pic.CreateThumbnail()
 		if err != nil {
