@@ -4,24 +4,27 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/tknie/adabas-go-api/adatypes"
 )
 
 type PictureConnection struct {
-	ShortenName bool
-	ChecksumRun bool
-	Found       uint64
-	Empty       uint64
-	Loaded      uint64
-	Duplicate   uint64
-	Commited    uint64
-	Checked     uint64
-	ToBig       uint64
-	Errors      map[string]uint64
-	Filter      []string
-	NrErrors    uint64
-	NrDeleted   uint64
-	Ignored     uint64
-	MaxBlobSize int64
+	ShortenName     bool
+	ChecksumRun     bool
+	Found           uint64
+	Empty           uint64
+	Loaded          uint64
+	Duplicate       uint64
+	Commited        uint64
+	Checked         uint64
+	ToBig           uint64
+	RequestBlobSize int64
+	MaxBlobSize     int64
+	Errors          map[string]uint64
+	Filter          []string
+	NrErrors        uint64
+	NrDeleted       uint64
+	Ignored         uint64
 }
 
 var ps = &PictureConnection{Errors: make(map[string]uint64)}
@@ -32,14 +35,14 @@ var stopSchedule chan bool
 var statLock sync.Mutex
 var wgStat sync.WaitGroup
 
-func StartStats() {
+var output = func() {
+	fmt.Printf("%s Picture directory checked=%02d loaded=%02d found=%02d too big=%02d errors=%02d deleted=%02d\n",
+		time.Now().Format(timeFormat), ps.Checked, ps.Loaded, ps.Found, ps.ToBig, ps.NrErrors, ps.NrDeleted)
+	fmt.Printf("%s Picture directory empty=%02d ignored=%02d  max Blocksize=%02d deferred Blocksize=%02d\n",
+		time.Now().Format(timeFormat), ps.Empty, ps.Ignored, ps.MaxBlobSize, ps.RequestBlobSize)
+}
 
-	output := func() {
-		fmt.Printf("%s Picture directory checked=%02d loaded=%02d found=%02d too big=%02d errors=%02d deleted=%02d\n",
-			time.Now().Format(timeFormat), ps.Checked, ps.Loaded, ps.Found, ps.ToBig, ps.NrErrors, ps.NrDeleted)
-		fmt.Printf("%s Picture directory empty=%02d ignored=%02d  max Blocksize=%02d\n",
-			time.Now().Format(timeFormat), ps.Empty, ps.Ignored, ps.MaxBlobSize)
-	}
+func StartStats() {
 
 	schedule(output, 5*time.Second)
 
@@ -51,10 +54,12 @@ func EndStats() {
 	stopSchedule <- true
 	fmt.Println("Waiting ending...")
 	wgStat.Wait()
-	fmt.Printf("%s Done Picture directory checked=%d loaded=%d found=%d too big=%d empty=%d ignored=%d errors=%d\n",
-		time.Now().Format(timeFormat), ps.Checked, ps.Loaded, ps.Found, ps.ToBig, ps.Empty, ps.Ignored, ps.NrErrors)
+
+	fmt.Printf("%s Done\n", time.Now().Format(timeFormat))
+	output()
 	for e, n := range ps.Errors {
 		fmt.Println(e, ":", n)
+		adatypes.Central.Log.Errorf("%03d -> %s", n, e)
 	}
 
 }
@@ -74,6 +79,12 @@ func schedule(what func(), delay time.Duration) {
 		}
 	}()
 
+}
+
+func DeferredBlobSize(blobSize int64) {
+	if blobSize > ps.RequestBlobSize {
+		ps.RequestBlobSize = blobSize
+	}
 }
 
 func RegisterBlobSize(blobSize int64) {
@@ -126,6 +137,7 @@ func IncErrorFile(err error, fileName string) {
 	if err == nil {
 		return
 	}
+	adatypes.Central.Log.Errorf("Increase error for %s: %v", fileName, err)
 	if e, ok := ps.Errors[fileName+"->"+err.Error()]; ok {
 		ps.Errors[fileName+"->"+err.Error()] = e + 1
 		return

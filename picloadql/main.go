@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -113,7 +114,6 @@ func main() {
 	var insertAlbum bool
 	var checksumRun bool
 	var shortenPath bool
-	var query string
 	var threadNr int
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
@@ -121,8 +121,7 @@ func main() {
 	flag.StringVar(&pictureDirectory, "D", "", "Directory of picture to be imported")
 	flag.StringVar(&dbTable, "t", "", "SQL Table name of pictures")
 	flag.IntVar(&threadNr, "T", 5, "Threads storing of pictures")
-	flag.StringVar(&filter, "F", "@eadir", "Comma-separated list of parts which may excluded")
-	flag.StringVar(&query, "q", "", "Ignore paths using this regexp")
+	flag.StringVar(&filter, "F", ".*@eadir.*,.*/._[^/]*", "Comma-separated list of regular expression which may excluded")
 	flag.BoolVar(&insertAlbum, "A", false, "Insert Albums")
 	flag.BoolVar(&shortenPath, "s", false, "Shortend directory to last name only")
 	flag.BoolVar(&verify, "v", false, "Verify data")
@@ -154,6 +153,15 @@ func main() {
 		}
 		defer pprof.StopCPUProfile()
 	}
+	regs := make([]*regexp.Regexp, 0)
+	for _, r := range strings.Split(filter, ",") {
+		reg, err := regexp.Compile(r)
+		if err != nil {
+			log.Fatalf("Regular expression error (%s): %v", r, err)
+		}
+		regs = append(regs, reg)
+	}
+
 	defer writeMemProfile(*memprofile)
 	if pictureDirectory != "" {
 		sql.StartStats()
@@ -165,11 +173,6 @@ func main() {
 		}
 		fmt.Println("Connecting ....", con)
 
-		reg, err := regexp.Compile(query)
-		if err != nil {
-			fmt.Println("Query error regexp:", err)
-			return
-		}
 		directory := path.Base(pictureDirectory)
 		id := 1
 		if insertAlbum {
@@ -187,14 +190,17 @@ func main() {
 				adatypes.Central.Log.Infof("Info empty or dir: %s", path)
 				return nil
 			}
+			for _, reg := range regs {
+				if !checkQueryPath(reg, path) {
+					return nil
+				}
+			}
+
 			sql.IncChecked()
 			suffix := path[strings.LastIndex(path, ".")+1:]
 			suffix = strings.ToLower(suffix)
 			switch suffix {
 			case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
-				if query != "" {
-					checkQueryPath(reg, path)
-				}
 				err = storeFile(con, path, id)
 				if err != nil {
 					// return fmt.Errorf("error storing file: %v", err)

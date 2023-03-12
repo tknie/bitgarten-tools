@@ -26,7 +26,7 @@ func (pic *Pictures) ExifReader() error {
 	buffer := bytes.NewReader(pic.Media)
 	x, err := exif.Decode(buffer)
 	if err != nil {
-		adatypes.Central.Log.Errorf("Exif decode error:", err)
+		adatypes.Central.Log.Errorf("Exif decode error: %v", err)
 		return err
 	}
 	p := &Printer{pic: pic}

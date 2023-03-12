@@ -69,6 +69,7 @@ func LoadFile(fileName string) (*store.Pictures, error) {
 	}
 	if fi.Size() > MaxBlobSize {
 		sql.IncToBig()
+		sql.DeferredBlobSize(fi.Size())
 		err := fmt.Errorf("file %s tooo big %d > %d", fileName, fi.Size(), MaxBlobSize)
 		sql.IncError(err)
 		return nil, err

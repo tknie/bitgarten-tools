@@ -358,9 +358,9 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		pic.PictureName, pic.ChecksumPicture, hostname, pic.Directory)
 	if err != nil {
 		tx.Rollback()
-		fmt.Println("Error inserting PictureLocations",
-			pic.ChecksumPicture, pic.PictureName, err)
 		if !checkErrorContinue(err) {
+			fmt.Println("Error inserting PictureLocations",
+				pic.ChecksumPicture, pic.PictureName, err)
 			fmt.Println("Error rolling back Md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
 			return err
 		}
