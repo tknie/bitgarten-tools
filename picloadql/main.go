@@ -105,33 +105,23 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 
 func main() {
 	var pictureDirectory string
-	var dbTable string
 	var filter string
-	var deleteIsn int
 	var binarySize int64
-	var verify bool
-	var update bool
 	var insertAlbum bool
-	var checksumRun bool
 	var shortenPath bool
 	var threadNr int
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 	flag.StringVar(&pictureDirectory, "D", "", "Directory of picture to be imported")
-	flag.StringVar(&dbTable, "t", "", "SQL Table name of pictures")
 	flag.IntVar(&threadNr, "T", 5, "Threads storing of pictures")
 	flag.StringVar(&filter, "F", ".*@eadir.*,.*/._[^/]*", "Comma-separated list of regular expression which may excluded")
 	flag.BoolVar(&insertAlbum, "A", false, "Insert Albums")
 	flag.BoolVar(&shortenPath, "s", false, "Shortend directory to last name only")
-	flag.BoolVar(&verify, "v", false, "Verify data")
-	flag.BoolVar(&update, "u", false, "Update data")
-	flag.BoolVar(&checksumRun, "c", false, "Checksum run, no data load")
-	flag.IntVar(&deleteIsn, "r", -1, "Delete ISN image")
 	flag.Int64Var(&binarySize, "b", 50000000, "Maximum binary blob size")
 	flag.Parse()
 
-	if !verify && (pictureDirectory == "" && deleteIsn == -1) {
+	if pictureDirectory == "" {
 		fmt.Println("Picture directory option is required")
 		flag.Usage()
 		return
@@ -171,7 +161,7 @@ func main() {
 			fmt.Println("Error storing file", err)
 			return
 		}
-		fmt.Println("Connecting ....", con)
+		fmt.Println("Connecting ....")
 
 		directory := path.Base(pictureDirectory)
 		id := 1
