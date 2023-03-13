@@ -155,6 +155,7 @@ func main() {
 	defer writeMemProfile(*memprofile)
 	if pictureDirectory != "" {
 		sql.StartStats()
+		start := time.Now()
 
 		con, err := sql.CreateConnection()
 		if err != nil {
@@ -186,7 +187,7 @@ func main() {
 				}
 			}
 
-			sql.IncChecked()
+			ti := sql.IncChecked()
 			suffix := path[strings.LastIndex(path, ".")+1:]
 			suffix = strings.ToLower(suffix)
 			switch suffix {
@@ -199,6 +200,7 @@ func main() {
 			default:
 				adatypes.Central.Log.Debugf("Suffix unknown: %s", suffix)
 			}
+			ti.IncDone()
 			return nil
 		})
 		if err != nil {
@@ -207,6 +209,7 @@ func main() {
 		}
 
 		sql.EndStats()
+		fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
 	}
 }
 

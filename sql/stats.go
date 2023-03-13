@@ -12,12 +12,19 @@ type indexType int
 
 const (
 	loadIndex indexType = iota
+	loadedIndex
+	insertedIndex
+	endStoreIndex
 	duplicateIndex
 	duplicateLocationIndex
 	commitedIndex
+	doneIndex
 )
 
-var indexInfo = []string{"loaded", "duplicate", "duplicateLocation", "commited"}
+const lastIndex = doneIndex
+
+var indexInfo = []string{"load", "loaded", "inserted", "end store",
+	"duplicate", "duplicateLocation", "commited", "done"}
 
 type statInfo struct {
 	counter  uint64
@@ -28,7 +35,7 @@ type PictureConnection struct {
 	ShortenName bool
 	ChecksumRun bool
 	Started     uint64
-	StatInfo    [commitedIndex]statInfo
+	StatInfo    [lastIndex + 1]statInfo
 	/*	Loaded                    uint64
 		LoadedDuration            time.Duration
 		Duplicate                 uint64
@@ -62,7 +69,7 @@ var output = func() {
 	tn := time.Now().Format(timeFormat)
 	fmt.Printf("%s statistics started=%02d checked=%02d  too big=%02d errors=%02d\n",
 		tn, ps.Started, ps.Checked, ps.ToBig, ps.NrErrors)
-	for i := 0; i < int(commitedIndex); i++ {
+	for i := 0; i < int(doneIndex)+1; i++ {
 		avg := time.Duration(0)
 		if ps.StatInfo[i].counter > 0 {
 			avg = ps.StatInfo[i].duration / time.Duration(ps.StatInfo[i].counter)
@@ -128,6 +135,18 @@ func RegisterBlobSize(blobSize int64) {
 	}
 }
 
+func IncStored() *timeInfo {
+	return &timeInfo{startTime: time.Now()}
+}
+
+func (di *timeInfo) IncLoaded() {
+	di.used(int(loadedIndex))
+}
+
+func (di *timeInfo) IncEndStored() {
+	di.used(int(endStoreIndex))
+}
+
 func (di *timeInfo) IncDuplicate() {
 	di.used(int(duplicateIndex))
 }
@@ -141,8 +160,17 @@ func IncStarted() *timeInfo {
 	return &timeInfo{startTime: time.Now()}
 }
 
-func IncChecked() {
+func IncChecked() *timeInfo {
 	ps.Checked++
+	return &timeInfo{startTime: time.Now()}
+}
+
+func (di *timeInfo) IncDone() {
+	di.used(int(doneIndex))
+}
+
+func (di *timeInfo) IncInserted() {
+	di.used(int(insertedIndex))
 }
 
 func (di *timeInfo) IncInsert() {

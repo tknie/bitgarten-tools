@@ -29,6 +29,7 @@ type Data struct {
 }
 
 func storeFile(con *sql.DatabaseInfo, fileName string, albumid int) error {
+	ti := sql.IncStored()
 	baseName := path.Base(fileName)
 	//dirName := path.Dir(fileName)
 	pic, err := LoadFile(fileName)
@@ -36,7 +37,7 @@ func storeFile(con *sql.DatabaseInfo, fileName string, albumid int) error {
 		return err
 	}
 	sql.RegisterBlobSize(int64(len(pic.Media)))
-
+	ti.IncLoaded()
 	globalindex++
 	pic.Index = globalindex
 	//pic.Directory = path.Base(dirName)
@@ -47,7 +48,9 @@ func storeFile(con *sql.DatabaseInfo, fileName string, albumid int) error {
 	if err != nil {
 		return err
 	}
+	ti.IncInserted()
 	sql.StorePictures(pic)
+	ti.IncEndStored()
 	return nil
 }
 

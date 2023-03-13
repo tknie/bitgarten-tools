@@ -396,7 +396,7 @@ func (dc *DataConfig) PostgresConnection() (string, string) {
 
 func (dc *DataConfig) PostgresXConnection() (string, string) {
 	// urlExample := "postgres://username:password@localhost:5432/database_name"
-	return "pgx", fmt.Sprintf("postgres://%s:%s@%s:%d/%s", dc.User, dc.Password, dc.URL, dc.Port, "bitgarten")
+	return "pgx", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?application_name=picloadql", dc.User, dc.Password, dc.URL, dc.Port, "bitgarten")
 }
 
 func Display() error {
