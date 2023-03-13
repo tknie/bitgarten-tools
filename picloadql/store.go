@@ -28,6 +28,52 @@ type Data struct {
 	ChecksumThumbnail     string
 }
 
+type StoreFile struct {
+	fileName string
+	albumid  int
+}
+
+var storeChannel = make(chan *StoreFile, 4)
+var stop = make(chan bool)
+
+func queueStoreFileInAlbumID(fileName string, albumid int) {
+	storeChannel <- &StoreFile{fileName: fileName, albumid: albumid}
+}
+
+func StoreWorker() {
+	for {
+		select {
+		case file := <-storeChannel:
+			err := storeFileInAlbumID(file.fileName, file.albumid)
+			if err != nil {
+				fmt.Println("Error inserting SQL picture:", err)
+			}
+		case <-stop:
+			return
+		}
+	}
+}
+
+func storeFileInAlbumID(fileName string, albumid int) error {
+	ti := sql.IncStored()
+	baseName := path.Base(fileName)
+	//dirName := path.Dir(fileName)
+	pic, err := LoadFile(fileName)
+	if err != nil {
+		return err
+	}
+	sql.RegisterBlobSize(int64(len(pic.Media)))
+	ti.IncLoaded()
+	globalindex++
+	pic.Index = globalindex
+	sql.StorePictures(pic)
+	pic.Title = baseName
+	ti.IncInserted()
+	sql.StorePictures(pic)
+	ti.IncEndStored()
+	return nil
+}
+
 func storeFile(con *sql.DatabaseInfo, fileName string, albumid int) error {
 	ti := sql.IncStored()
 	baseName := path.Base(fileName)

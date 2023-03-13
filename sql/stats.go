@@ -74,12 +74,25 @@ var output = func() {
 		if ps.StatInfo[i].counter > 0 {
 			avg = ps.StatInfo[i].duration / time.Duration(ps.StatInfo[i].counter)
 		}
-		fmt.Printf("%s statistics %18s -> counter=%02d duration=%v average=%v\n", tn, indexInfo[i],
+		fmt.Printf("%s statistics %18s -> counter=%04d duration=%v average=%v\n", tn, indexInfo[i],
 			ps.StatInfo[i].counter, ps.StatInfo[i].duration, avg)
 	}
-	fmt.Printf("%s statistics max Blocksize=%02d deferred Blocksize=%02d\n",
-		tn, ps.MaxBlobSize, ps.RequestBlobSize)
+	fmt.Printf("%s statistics max Blocksize=%s deferred Blocksize=%v\n",
+		tn, ByteCountBinary(ps.MaxBlobSize), ByteCountBinary(ps.RequestBlobSize))
 	fmt.Printf("--------------------------------------------------------------\n")
+}
+
+func ByteCountBinary(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
 func StartStats() {

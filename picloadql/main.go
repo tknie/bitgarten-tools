@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -109,12 +108,14 @@ func main() {
 	var binarySize int64
 	var insertAlbum bool
 	var shortenPath bool
-	var threadNr int
+	var nrThreadReader int
+	var nrThreadStorer int
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 	flag.StringVar(&pictureDirectory, "D", "", "Directory of picture to be imported")
-	flag.IntVar(&threadNr, "T", 5, "Threads storing of pictures")
+	flag.IntVar(&nrThreadReader, "t", 5, "Threads preparing pictures")
+	flag.IntVar(&nrThreadStorer, "T", 5, "Threads storing pictures")
 	flag.StringVar(&filter, "F", ".*@eadir.*,.*/._[^/]*", "Comma-separated list of regular expression which may excluded")
 	flag.BoolVar(&insertAlbum, "A", false, "Insert Albums")
 	flag.BoolVar(&shortenPath, "s", false, "Shortend directory to last name only")
@@ -127,7 +128,10 @@ func main() {
 		return
 	}
 
-	for i := 0; i < threadNr; i++ {
+	for i := 0; i < nrThreadReader; i++ {
+		go StoreWorker()
+	}
+	for i := 0; i < nrThreadStorer; i++ {
 		go sql.InsertWorker()
 	}
 	MaxBlobSize = binarySize
@@ -157,26 +161,11 @@ func main() {
 		sql.StartStats()
 		start := time.Now()
 
-		con, err := sql.CreateConnection()
-		if err != nil {
-			fmt.Println("Error storing file", err)
-			return
-		}
-		fmt.Println("Connecting ....")
-
-		directory := path.Base(pictureDirectory)
 		id := 1
-		if insertAlbum {
-			id, err = con.InsertNewAlbum(directory)
-			if err != nil {
-				fmt.Println("Error inserting album:", err)
-				return
-			}
-		}
 		fmt.Println("Load pictures for Album ID", id)
 
 		fmt.Printf("%s Loading path %s\n", time.Now().Format(timeFormat), pictureDirectory)
-		err = filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
 				adatypes.Central.Log.Infof("Info empty or dir: %s", path)
 				return nil
@@ -192,7 +181,7 @@ func main() {
 			suffix = strings.ToLower(suffix)
 			switch suffix {
 			case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
-				err = storeFile(con, path, id)
+				queueStoreFileInAlbumID(path, id)
 				if err != nil {
 					// return fmt.Errorf("error storing file: %v", err)
 					sql.IncErrorFile(err, path)
