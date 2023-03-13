@@ -44,7 +44,7 @@ func StoreWorker() {
 	for {
 		select {
 		case file := <-storeChannel:
-			err := storeFileInAlbumID(file.fileName, file.albumid)
+			err := storeFileInAlbumID(file)
 			if err != nil {
 				fmt.Println("Error inserting SQL picture:", err)
 			}
@@ -54,11 +54,11 @@ func StoreWorker() {
 	}
 }
 
-func storeFileInAlbumID(fileName string, albumid int) error {
+func storeFileInAlbumID(file *StoreFile) error {
 	ti := sql.IncStored()
-	baseName := path.Base(fileName)
+	baseName := path.Base(file.fileName)
 	//dirName := path.Dir(fileName)
-	pic, err := LoadFile(fileName)
+	pic, err := LoadFile(file.fileName)
 	if err != nil {
 		return err
 	}
@@ -68,34 +68,6 @@ func storeFileInAlbumID(fileName string, albumid int) error {
 	pic.Index = globalindex
 	sql.StorePictures(pic)
 	pic.Title = baseName
-	ti.IncInserted()
-	sql.StorePictures(pic)
-	ti.IncEndStored()
-	return nil
-}
-
-func storeFile(con *sql.DatabaseInfo, fileName string, albumid int) error {
-	ti := sql.IncStored()
-	baseName := path.Base(fileName)
-	//dirName := path.Dir(fileName)
-	pic, err := LoadFile(fileName)
-	if err != nil {
-		return err
-	}
-	sql.RegisterBlobSize(int64(len(pic.Media)))
-	ti.IncLoaded()
-	globalindex++
-	pic.Index = globalindex
-	//pic.Directory = path.Base(dirName)
-	//pic.PictureName = baseName
-	pic.Title = baseName
-	globalindex++
-	err = con.InsertAlbumPictures(pic, int(globalindex), albumid)
-	if err != nil {
-		return err
-	}
-	ti.IncInserted()
-	sql.StorePictures(pic)
 	ti.IncEndStored()
 	return nil
 }
