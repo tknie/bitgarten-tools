@@ -9,22 +9,23 @@ import (
 )
 
 type PictureConnection struct {
-	ShortenName     bool
-	ChecksumRun     bool
-	Found           uint64
-	Empty           uint64
-	Loaded          uint64
-	Duplicate       uint64
-	Commited        uint64
-	Checked         uint64
-	ToBig           uint64
-	RequestBlobSize int64
-	MaxBlobSize     int64
-	Errors          map[string]uint64
-	Filter          []string
-	NrErrors        uint64
-	NrDeleted       uint64
-	Ignored         uint64
+	ShortenName       bool
+	ChecksumRun       bool
+	Started           uint64
+	Empty             uint64
+	Loaded            uint64
+	Duplicate         uint64
+	DuplicateLocation uint64
+	Commited          uint64
+	Checked           uint64
+	ToBig             uint64
+	RequestBlobSize   int64
+	MaxBlobSize       int64
+	Errors            map[string]uint64
+	Filter            []string
+	NrErrors          uint64
+	NrDeleted         uint64
+	Ignored           uint64
 }
 
 var ps = &PictureConnection{Errors: make(map[string]uint64)}
@@ -36,10 +37,12 @@ var statLock sync.Mutex
 var wgStat sync.WaitGroup
 
 var output = func() {
-	fmt.Printf("%s Picture directory checked=%02d loaded=%02d found=%02d too big=%02d errors=%02d deleted=%02d\n",
-		time.Now().Format(timeFormat), ps.Checked, ps.Loaded, ps.Found, ps.ToBig, ps.NrErrors, ps.NrDeleted)
-	fmt.Printf("%s Picture directory empty=%02d ignored=%02d  max Blocksize=%02d deferred Blocksize=%02d\n",
-		time.Now().Format(timeFormat), ps.Empty, ps.Ignored, ps.MaxBlobSize, ps.RequestBlobSize)
+	fmt.Printf("%s Picture directory checked=%02d loaded=%02d duplicate=%02d too big=%02d errors=%02d deleted=%02d\n",
+		time.Now().Format(timeFormat), ps.Checked, ps.Loaded, ps.Duplicate, ps.ToBig, ps.NrErrors, ps.NrDeleted)
+	fmt.Printf("%s Picture directory started=%02d empty=%02d ignored=%02d  duplicate Location=%02d commited=%02d\n",
+		time.Now().Format(timeFormat), ps.Started, ps.Empty, ps.Ignored, ps.DuplicateLocation, ps.Commited)
+	fmt.Printf("%s Picture directory max Blocksize=%02d deferred Blocksize=%02d\n",
+		time.Now().Format(timeFormat), ps.MaxBlobSize, ps.RequestBlobSize)
 }
 
 func StartStats() {
@@ -97,7 +100,14 @@ func RegisterBlobSize(blobSize int64) {
 
 func IncDuplicate() {
 	ps.Duplicate++
-	ps.Found++
+}
+
+func IncDuplicateLocation() {
+	ps.DuplicateLocation++
+}
+
+func IncStarted() {
+	ps.Started++
 }
 
 func IncChecked() {

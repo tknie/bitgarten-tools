@@ -197,6 +197,7 @@ func main() {
 					sql.IncErrorFile(err, path)
 				}
 			default:
+				adatypes.Central.Log.Debugf("Suffix unknown: %s", suffix)
 			}
 			return nil
 		})

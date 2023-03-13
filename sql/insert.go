@@ -308,6 +308,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	// Create a new context, and begin a transaction
 	//ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	// defer cancelfunc()
+	IncStarted()
 	ctx := context.Background()
 	tx, err := di.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -327,8 +328,11 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		rows.Close()
 		if sha != pic.ChecksumPictureSHA {
 			fmt.Println("SHA mismatch", pic.PictureName)
-			return fmt.Errorf("SHA mismatch")
+			err := fmt.Errorf("SHA mismatch %s/%s", pic.Directory, pic.PictureName)
+			IncError(err)
+			return err
 		}
+		IncDuplicate()
 	} else {
 		rows.Close()
 
@@ -351,30 +355,45 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		}
 		IncInsert()
 	}
-	adatypes.Central.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
-	ins := "insert into PictureLocations (PictureName, ChecksumPicture, PictureHost, PictureDirectory)" +
-		" VALUES($1,$2,$3,$4)"
-	_, err = tx.ExecContext(ctx, ins,
-		pic.PictureName, pic.ChecksumPicture, hostname, pic.Directory)
+	rows, err = di.db.QueryContext(ctx, "select 1 FROM PictureLocations where picturehost=$1 AND picturedirectory=$2 AND picturename=$3",
+		hostname, pic.Directory, pic.PictureName)
 	if err != nil {
+		fmt.Println("Query error:", err)
 		tx.Rollback()
-		if !checkErrorContinue(err) {
-			fmt.Println("Error inserting PictureLocations",
-				pic.ChecksumPicture, pic.PictureName, err)
-			fmt.Println("Error rolling back Md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
-			return err
-		}
-		return nil
-	}
-
-	err = tx.Commit()
-	if err != nil {
 		return err
 	}
-	IncCommit()
-	adatypes.Central.Log.Debugf("Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
-	atomic.AddUint32(&sqlInsertCounter, 1)
+	if rows.Next() {
+		IncDuplicateLocation()
+		rows.Close()
+		tx.Rollback()
+	} else {
+		rows.Close()
+		adatypes.Central.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
+		ins := "insert into PictureLocations (PictureName, ChecksumPicture, PictureHost, PictureDirectory)" +
+			" VALUES($1,$2,$3,$4)"
+		_, err = tx.ExecContext(ctx, ins,
+			pic.PictureName, pic.ChecksumPicture, hostname, pic.Directory)
+		if err != nil {
+			tx.Rollback()
+			if !checkErrorContinue(err) {
+				fmt.Println("Error inserting PictureLocations",
+					pic.ChecksumPicture, pic.PictureName, err)
+				fmt.Println("Error rolling back Md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
+				return err
+			}
+			IncDuplicateLocation()
+			return nil
+		}
 
+		err = tx.Commit()
+		if err != nil {
+			IncError(fmt.Errorf("error commiting: %v", err))
+			return err
+		}
+		IncCommit()
+		adatypes.Central.Log.Debugf("Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
+		atomic.AddUint32(&sqlInsertCounter, 1)
+	}
 	return nil
 }
 
