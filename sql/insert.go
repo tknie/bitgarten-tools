@@ -80,13 +80,7 @@ func CreateConnection() (*DatabaseInfo, error) {
 	return &DatabaseInfo{db, 0}, nil
 }
 
-func (di *DatabaseInfo) used(s string, t time.Time) {
-	// fmt.Println("Used for "+s+":", time.Since(t))
-	di.duraction += time.Since(t)
-}
-
 func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
-	defer di.used("insert album", time.Now())
 
 	// Create a new context, and begin a transaction
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
@@ -139,7 +133,6 @@ func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
 }
 
 func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
-	defer di.used("insert sql", time.Now())
 
 	// Create a new context, and begin a transaction
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
@@ -304,11 +297,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 }
 
 func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
-	defer di.used("insert sql", time.Now())
-	// Create a new context, and begin a transaction
-	//ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	// defer cancelfunc()
-	IncStarted()
+	ti := IncStarted()
 	ctx := context.Background()
 	tx, err := di.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -332,7 +321,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			IncError(err)
 			return err
 		}
-		IncDuplicate()
+		ti.IncDuplicate()
 	} else {
 		rows.Close()
 
@@ -350,10 +339,10 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 				//fmt.Println("Error inserting Pictures", err, len(pic.Media))
 				return err
 			}
-			IncDuplicate()
+			ti.IncDuplicate()
 			return nil
 		}
-		IncInsert()
+		ti.IncInsert()
 	}
 	rows, err = di.db.QueryContext(ctx, "select 1 FROM PictureLocations where picturehost=$1 AND picturedirectory=$2 AND picturename=$3",
 		hostname, pic.Directory, pic.PictureName)
@@ -363,7 +352,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		return err
 	}
 	if rows.Next() {
-		IncDuplicateLocation()
+		ti.IncDuplicateLocation()
 		rows.Close()
 		tx.Rollback()
 	} else {
@@ -381,7 +370,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 				fmt.Println("Error rolling back Md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
 				return err
 			}
-			IncDuplicateLocation()
+			ti.IncDuplicateLocation()
 			return nil
 		}
 
@@ -390,7 +379,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			IncError(fmt.Errorf("error commiting: %v", err))
 			return err
 		}
-		IncCommit()
+		ti.IncCommit()
 		adatypes.Central.Log.Debugf("Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
 		atomic.AddUint32(&sqlInsertCounter, 1)
 	}

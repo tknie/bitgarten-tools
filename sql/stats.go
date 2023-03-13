@@ -8,24 +8,46 @@ import (
 	"github.com/tknie/adabas-go-api/adatypes"
 )
 
+type indexType int
+
+const (
+	loadIndex indexType = iota
+	duplicateIndex
+	duplicateLocationIndex
+	commitedIndex
+)
+
+var indexInfo = []string{"loaded", "duplicate", "duplicateLocation", "commited"}
+
+type statInfo struct {
+	counter  uint64
+	duration time.Duration
+}
+
 type PictureConnection struct {
-	ShortenName       bool
-	ChecksumRun       bool
-	Started           uint64
-	Empty             uint64
-	Loaded            uint64
-	Duplicate         uint64
-	DuplicateLocation uint64
-	Commited          uint64
-	Checked           uint64
-	ToBig             uint64
-	RequestBlobSize   int64
-	MaxBlobSize       int64
-	Errors            map[string]uint64
-	Filter            []string
-	NrErrors          uint64
-	NrDeleted         uint64
-	Ignored           uint64
+	ShortenName bool
+	ChecksumRun bool
+	Started     uint64
+	StatInfo    [commitedIndex]statInfo
+	/*	Loaded                    uint64
+		LoadedDuration            time.Duration
+		Duplicate                 uint64
+		DuplicateDuration         time.Duration
+		DuplicateLocation         uint64
+		DuplicateLocationDuration time.Duration
+		Commited                  uint64
+		CommitedDuration          time.Duration*/
+	Checked         uint64
+	ToBig           uint64
+	RequestBlobSize int64
+	MaxBlobSize     int64
+	Errors          map[string]uint64
+	Filter          []string
+	NrErrors        uint64
+}
+
+type timeInfo struct {
+	startTime time.Time
 }
 
 var ps = &PictureConnection{Errors: make(map[string]uint64)}
@@ -37,12 +59,20 @@ var statLock sync.Mutex
 var wgStat sync.WaitGroup
 
 var output = func() {
-	fmt.Printf("%s Picture directory checked=%02d loaded=%02d duplicate=%02d too big=%02d errors=%02d deleted=%02d\n",
-		time.Now().Format(timeFormat), ps.Checked, ps.Loaded, ps.Duplicate, ps.ToBig, ps.NrErrors, ps.NrDeleted)
-	fmt.Printf("%s Picture directory started=%02d empty=%02d ignored=%02d  duplicate Location=%02d commited=%02d\n",
-		time.Now().Format(timeFormat), ps.Started, ps.Empty, ps.Ignored, ps.DuplicateLocation, ps.Commited)
-	fmt.Printf("%s Picture directory max Blocksize=%02d deferred Blocksize=%02d\n",
-		time.Now().Format(timeFormat), ps.MaxBlobSize, ps.RequestBlobSize)
+	tn := time.Now().Format(timeFormat)
+	fmt.Printf("%s statistics started=%02d checked=%02d  too big=%02d errors=%02d\n",
+		tn, ps.Started, ps.Checked, ps.ToBig, ps.NrErrors)
+	for i := 0; i < int(commitedIndex); i++ {
+		avg := time.Duration(0)
+		if ps.StatInfo[i].counter > 0 {
+			avg = ps.StatInfo[i].duration / time.Duration(ps.StatInfo[i].counter)
+		}
+		fmt.Printf("%s statistics %18s -> counter=%02d duration=%v average=%v\n", tn, indexInfo[i],
+			ps.StatInfo[i].counter, ps.StatInfo[i].duration, avg)
+	}
+	fmt.Printf("%s statistics max Blocksize=%02d deferred Blocksize=%02d\n",
+		tn, ps.MaxBlobSize, ps.RequestBlobSize)
+	fmt.Printf("--------------------------------------------------------------\n")
 }
 
 func StartStats() {
@@ -98,36 +128,34 @@ func RegisterBlobSize(blobSize int64) {
 	}
 }
 
-func IncDuplicate() {
-	ps.Duplicate++
+func (di *timeInfo) IncDuplicate() {
+	di.used(int(duplicateIndex))
 }
 
-func IncDuplicateLocation() {
-	ps.DuplicateLocation++
+func (di *timeInfo) IncDuplicateLocation() {
+	di.used(int(duplicateLocationIndex))
 }
 
-func IncStarted() {
+func IncStarted() *timeInfo {
 	ps.Started++
+	return &timeInfo{startTime: time.Now()}
 }
 
 func IncChecked() {
 	ps.Checked++
 }
 
-func IncInsert() {
-	ps.Loaded++
+func (di *timeInfo) IncInsert() {
+	di.used(int(loadIndex))
 }
 
-func IncCommit() {
-	ps.Commited++
-}
-
-func IncIgnore() {
-	ps.Ignored++
+func (di *timeInfo) IncCommit() {
+	di.used(int(commitedIndex))
 }
 
 func IncToBig() {
 	ps.ToBig++
+
 }
 
 func IncError(err error) {
@@ -153,4 +181,9 @@ func IncErrorFile(err error, fileName string) {
 		return
 	}
 	ps.Errors[fileName+"->"+err.Error()] = 1
+}
+
+func (di *timeInfo) used(index int) {
+	ps.StatInfo[index].counter++
+	ps.StatInfo[index].duration += time.Since(di.startTime)
 }
