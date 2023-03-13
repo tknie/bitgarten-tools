@@ -248,8 +248,8 @@ func createStringMd5(input string) string {
 }
 
 func StorePictures(pic *store.Pictures) {
-	picChannel <- pic
 	wg.Add(1)
+	picChannel <- pic
 	atomic.AddUint32(&sqlSendCounter, 1)
 }
 
