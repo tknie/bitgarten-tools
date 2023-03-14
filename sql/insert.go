@@ -306,25 +306,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		return err
 	}
 
-	rows, err := di.db.QueryContext(ctx, "select SHA256 FROM Pictures where ChecksumPicture=$1", pic.ChecksumPicture)
-	if err != nil {
-		fmt.Println("Query error:", err)
-		return err
-	}
-	if rows.Next() {
-		sha := ""
-		rows.Scan(&sha)
-		rows.Close()
-		if sha != pic.ChecksumPictureSHA {
-			fmt.Println("SHA mismatch", pic.PictureName)
-			err := fmt.Errorf("SHA mismatch %s/%s", pic.Directory, pic.PictureName)
-			IncError(err)
-			return err
-		}
-		ti.IncDuplicate()
-	} else {
-		rows.Close()
-
+	if pic.Available == store.NoAvailable {
 		adatypes.Central.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
 		_, err = tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, ChecksumThumbnail, SHA256, Title, Directory, Fill, Height, Width, Media, Thumbnail,mimetype,exif,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation)"+
 			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)",
@@ -344,19 +326,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		}
 		ti.IncInsert()
 	}
-	rows, err = di.db.QueryContext(ctx, "select 1 FROM PictureLocations where picturehost=$1 AND picturedirectory=$2 AND picturename=$3",
-		hostname, pic.Directory, pic.PictureName)
-	if err != nil {
-		fmt.Println("Query error:", err)
-		tx.Rollback()
-		return err
-	}
-	if rows.Next() {
-		ti.IncDuplicateLocation()
-		rows.Close()
-		tx.Rollback()
-	} else {
-		rows.Close()
+	if pic.Available == store.NoAvailable || pic.Available == store.PicAvailable {
 		adatypes.Central.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
 		ins := "insert into PictureLocations (PictureName, ChecksumPicture, PictureHost, PictureDirectory)" +
 			" VALUES($1,$2,$3,$4)"

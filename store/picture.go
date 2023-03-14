@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -64,6 +66,15 @@ type PictureData struct {
 	Thumbnail         []byte `xml:"-" json:"-"`
 }
 
+type Available byte
+
+const (
+	NoAvailable Available = iota
+	PicAvailable
+	PicLocationAvailable
+	BothAvailable
+)
+
 // Pictures definition
 type Pictures struct {
 	Index              uint64 `adabas:"#isn"`
@@ -90,6 +101,7 @@ type Pictures struct {
 	ExifXDimension     int32
 	ExifYDimension     int32
 	ExifOrientation    string
+	Available          Available
 	// PictureLocations  []PictureLocations `adabas:"::PL"`
 }
 
@@ -249,6 +261,10 @@ func (pic *PictureBinary) CreateThumbnail() error {
 
 }
 
+func NewPictures(fileName string) *Pictures {
+	return &Pictures{Directory: filepath.Dir(fileName), PictureName: filepath.Base(fileName)}
+}
+
 // CreateThumbnail create thumbnail
 func (pic *Pictures) CreateThumbnail() error {
 	if strings.HasPrefix(pic.MIMEType, "image") {
@@ -261,7 +277,14 @@ func (pic *Pictures) CreateThumbnail() error {
 		pic.Width = w
 		pic.Height = h
 		pic.ChecksumThumbnail = createMd5(pic.Thumbnail)
+		pic.Md5 = pic.ChecksumThumbnail
 		adatypes.Central.Log.Debugf("Thumbnail checksum %s", pic.ChecksumThumbnail)
+
+		err = pic.ExifReader()
+		if err != nil && err != io.EOF {
+			return err
+		}
+
 	}
 	return nil
 }

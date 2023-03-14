@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"fmt"
-	"io"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -41,10 +41,14 @@ func queueStoreFileInAlbumID(fileName string, albumid int) {
 }
 
 func StoreWorker() {
+	checker, err := sql.CreateConnection()
+	if err != nil {
+		log.Fatalf("Database connection not established: %v", err)
+	}
 	for {
 		select {
 		case file := <-storeChannel:
-			err := storeFileInAlbumID(file)
+			err := storeFileInAlbumID(checker, file)
 			if err != nil {
 				fmt.Println("Error inserting SQL picture:", err)
 			}
@@ -54,15 +58,20 @@ func StoreWorker() {
 	}
 }
 
-func storeFileInAlbumID(file *StoreFile) error {
+func storeFileInAlbumID(db *sql.DatabaseInfo, file *StoreFile) error {
 	ti := sql.IncStored()
 	baseName := path.Base(file.fileName)
 	//dirName := path.Dir(fileName)
-	pic, err := LoadFile(file.fileName)
+	pic, err := LoadFile(db, file.fileName)
 	if err != nil {
 		return err
 	}
 	sql.RegisterBlobSize(int64(len(pic.Media)))
+	if pic.Available == store.BothAvailable {
+		ti.IncDuplicate()
+		ti.IncDuplicateLocation()
+		return nil
+	}
 	ti.IncLoaded()
 	globalindex++
 	pic.Index = globalindex
@@ -73,7 +82,7 @@ func storeFileInAlbumID(file *StoreFile) error {
 }
 
 // LoadFile load file
-func LoadFile(fileName string) (*store.Pictures, error) {
+func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println("Open file error:", err)
@@ -95,21 +104,10 @@ func LoadFile(fileName string) (*store.Pictures, error) {
 		sql.IncError(err)
 		return nil, err
 	}
-	pic := &store.Pictures{Directory: filepath.Dir(fileName), PictureName: filepath.Base(fileName)}
+	pic := store.NewPictures(fileName)
 	if ShortPath {
 		pic.Directory = path.Base(pic.Directory)
 	}
-	pic.Media = make([]byte, fi.Size())
-	var n int
-	n, err = f.Read(pic.Media)
-	adatypes.Central.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Media), err)
-	if err != nil {
-		sql.IncError(err)
-		return nil, err
-	}
-	pic.ChecksumPicture = createMd5(pic.Media)
-	pic.ChecksumPictureSHA = createSHA(pic.Media)
-
 	fileType := filepath.Ext(fileName)
 	pic.Fill = "1"
 	switch strings.ToLower(fileType[1:]) {
@@ -122,23 +120,28 @@ func LoadFile(fileName string) (*store.Pictures, error) {
 		return nil, fmt.Errorf("no format to upload of type " + fileType[1:])
 	}
 
-	adatypes.Central.Log.Debugf("Check image %s", pic.MIMEType)
-	if strings.HasPrefix(pic.MIMEType, "image/") {
-		err = pic.CreateThumbnail()
-		if err != nil {
-			adatypes.Central.Log.Errorf("Error creating thumbnail: %s", fileName)
-			sql.IncErrorFile(err, pic.Directory+"/"+pic.PictureName)
-			// return nil, err
-		} else {
-			pic.Md5 = pic.ChecksumThumbnail
-		}
-		err = pic.ExifReader()
-		if err != nil && err != io.EOF {
-			adatypes.Central.Log.Errorf("Error Exif reader: %s -> %v", fileName, err)
-			sql.IncErrorFile(err, pic.Directory+"/"+pic.PictureName)
-		}
+	pic.Media = make([]byte, fi.Size())
+	var n int
+	n, err = f.Read(pic.Media)
+	adatypes.Central.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Media), err)
+	if err != nil {
+		sql.IncError(err)
+		return nil, err
 	}
-	// pic.MetaData.ChecksumPicture = pic.Data.ChecksumPicture
+	pic.ChecksumPicture = createMd5(pic.Media)
+	pic.ChecksumPictureSHA = createSHA(pic.Media)
+
+	db.CheckExists(pic)
+	if pic.Available == store.BothAvailable {
+		return pic, nil
+	}
+
+	err = pic.CreateThumbnail()
+	if err != nil {
+		adatypes.Central.Log.Errorf("Error creating thumbnail %s: %v", fileName, err)
+		sql.IncErrorFile(err, pic.Directory+"/"+pic.PictureName)
+	}
+
 	adatypes.Central.Log.Debugf("PictureBinary md5=%s sha512=%s size=%d len=%d", pic.ChecksumPicture, pic.ChecksumPictureSHA, fi.Size(), len(pic.Media))
 
 	return pic, nil
