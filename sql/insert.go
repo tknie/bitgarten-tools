@@ -308,9 +308,9 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 
 	if pic.Available == store.NoAvailable {
 		adatypes.Central.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
-		_, err = tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, ChecksumThumbnail, SHA256, Title, Directory, Fill, Height, Width, Media, Thumbnail,mimetype,exif,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation)"+
-			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)",
-			pic.ChecksumPicture, pic.ChecksumThumbnail, pic.ChecksumPictureSHA, pic.Title, pic.Directory, pic.Fill, pic.Height,
+		_, err = tx.ExecContext(ctx, "insert into Pictures (Md5,ChecksumPicture, ChecksumThumbnail, SHA256, Title, Directory, Fill, Height, Width, Media, Thumbnail,mimetype,exif,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation)"+
+			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)",
+			pic.Md5, pic.ChecksumPicture, pic.ChecksumThumbnail, pic.ChecksumPictureSHA, pic.Title, pic.Directory, pic.Fill, pic.Height,
 			pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
 			pic.Exif, pic.ExifModel, pic.ExifMake, pic.ExifTaken, pic.ExifOrigTime, pic.ExifXDimension, pic.ExifYDimension, pic.ExifOrientation)
 		if err != nil {

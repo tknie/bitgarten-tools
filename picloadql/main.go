@@ -186,10 +186,11 @@ func main() {
 					// return fmt.Errorf("error storing file: %v", err)
 					sql.IncErrorFile(err, path)
 				}
+				ti.IncDone()
 			default:
 				adatypes.Central.Log.Debugf("Suffix unknown: %s", suffix)
+				sql.IncSkipped()
 			}
-			ti.IncDone()
 			return nil
 		})
 		if err != nil {

@@ -32,19 +32,12 @@ type statInfo struct {
 }
 
 type PictureConnection struct {
-	ShortenName bool
-	ChecksumRun bool
-	Started     uint64
-	StatInfo    [lastIndex + 1]statInfo
-	/*	Loaded                    uint64
-		LoadedDuration            time.Duration
-		Duplicate                 uint64
-		DuplicateDuration         time.Duration
-		DuplicateLocation         uint64
-		DuplicateLocationDuration time.Duration
-		Commited                  uint64
-		CommitedDuration          time.Duration*/
-	Checked         uint64
+	ShortenName     bool
+	ChecksumRun     bool
+	Started         uint64
+	StatInfo        [lastIndex + 1]statInfo
+	checked         uint64
+	skipped         uint64
 	ToBig           uint64
 	RequestBlobSize int64
 	MaxBlobSize     int64
@@ -67,8 +60,8 @@ var wgStat sync.WaitGroup
 
 var output = func() {
 	tn := time.Now().Format(timeFormat)
-	fmt.Printf("%s statistics started=%02d checked=%02d  too big=%02d errors=%02d\n",
-		tn, ps.Started, ps.Checked, ps.ToBig, ps.NrErrors)
+	fmt.Printf("%s statistics started=%02d checked=%02d skipped=%02d too big=%02d errors=%02d\n",
+		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
 	for i := 0; i < int(doneIndex)+1; i++ {
 		avg := time.Duration(0)
 		if ps.StatInfo[i].counter > 0 {
@@ -174,7 +167,7 @@ func IncStarted() *timeInfo {
 }
 
 func IncChecked() *timeInfo {
-	ps.Checked++
+	ps.checked++
 	return &timeInfo{startTime: time.Now()}
 }
 
@@ -197,6 +190,10 @@ func (di *timeInfo) IncCommit() {
 func IncToBig() {
 	ps.ToBig++
 
+}
+
+func IncSkipped() {
+	ps.skipped++
 }
 
 func IncError(err error) {

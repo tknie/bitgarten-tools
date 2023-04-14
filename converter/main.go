@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 	"tux-lobload/sql"
@@ -228,6 +229,10 @@ func convertPictures(nr int) error {
 			pic.ExifReader()
 
 		}
+		fmt.Printf("Before <%s> -> <%s>\n", pic.Md5, pic.ChecksumPicture)
+		pic.Md5 = strings.Trim(pic.Md5, " ")
+		pic.ChecksumPicture = strings.Trim(pic.ChecksumPicture, " ")
+		fmt.Printf("After  <%s> -> <%s>\n", pic.Md5, pic.ChecksumPicture)
 		sql.StorePictures(pic)
 		// fmt.Println("Found entry and insert ", pic.Title, pic.ChecksumPicture)
 		// err = sql.InsertPictures(db, pic)

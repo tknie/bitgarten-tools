@@ -46,9 +46,9 @@ type PictureMetadata struct {
 	Option          string
 	Width           uint32
 	Height          uint32
-	ExifModel       string
+	ExifModel       string `adabas:"ignore"`
 	ExifMake        string
-	ExifTaken       string
+	ExifTaken       string `adabas:"ignore"`
 	ExifOrigTime    string
 	ExifOrientation byte
 	ExifXdimension  uint32
@@ -77,31 +77,31 @@ const (
 
 // Pictures definition
 type Pictures struct {
-	Index              uint64 `adabas:"#isn"`
-	Directory          string `adabas:"::DN"`
-	Md5                string `adabas:"::M5"`
-	ChecksumThumbnail  string `adabas:"::CT"`
-	ChecksumPicture    string `adabas:"::CP"`
-	ChecksumPictureSHA string
-	Title              string `adabas:"::TI"`
-	Fill               string `adabas:"::FI"`
-	MIMEType           string `adabas:"::TY"`
-	Option             string `adabas:"::OP"`
-	Width              uint32 `adabas:"::WI"`
-	Height             uint32 `adabas:"::HE"`
-	Media              []byte `adabas:"::DP"`
-	Thumbnail          []byte `adabas:"::DT"`
-	Generated          int64  `adabas:"::GE"`
-	PictureName        string `adabas:"::PN"`
-	Exif               string
-	ExifModel          string
-	ExifMake           string
-	ExifTaken          time.Time
-	ExifOrigTime       time.Time
-	ExifXDimension     int32
-	ExifYDimension     int32
-	ExifOrientation    string
-	Available          Available
+	Index              uint64    `adabas:"#isn"`
+	Directory          string    `adabas:"::DN"`
+	Md5                string    `adabas:"::M5"`
+	ChecksumThumbnail  string    `adabas:"::CT"`
+	ChecksumPicture    string    `adabas:"::CP"`
+	ChecksumPictureSHA string    `adabas:":ignore"`
+	Title              string    `adabas:"::TI"`
+	Fill               string    `adabas:"::FI"`
+	MIMEType           string    `adabas:"::TY"`
+	Option             string    `adabas:"::OP"`
+	Width              uint32    `adabas:"::WI"`
+	Height             uint32    `adabas:"::HE"`
+	Media              []byte    `adabas:"::DP"`
+	Thumbnail          []byte    `adabas:"::DT"`
+	Generated          int64     `adabas:"::GE"`
+	PictureName        string    `adabas:"::PN"`
+	Exif               string    `adabas:":ignore"`
+	ExifModel          string    `adabas:":ignore"`
+	ExifMake           string    `adabas:":ignore"`
+	ExifTaken          time.Time `adabas:":ignore"`
+	ExifOrigTime       time.Time `adabas:":ignore"`
+	ExifXDimension     int32     `adabas:":ignore"`
+	ExifYDimension     int32     `adabas:":ignore"`
+	ExifOrientation    string    `adabas:":ignore"`
+	Available          Available `adabas:":ignore"`
 	// PictureLocations  []PictureLocations `adabas:"::PL"`
 }
 
