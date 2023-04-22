@@ -8,7 +8,7 @@ import (
 
 func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 	pic.Available = store.NoAvailable
-	rows, err := di.db.Query("select p.SHA256, pl.picturehost, pl.picturedirectory, pl.picturename FROM Pictures p, PictureLocations pl where p.ChecksumPicture=$1 AND p.ChecksumPicture = pl.ChecksumPicture",
+	rows, err := di.db.Query("select p.Sha256Checksum, pl.picturehost, pl.picturedirectory, pl.picturename FROM Pictures p, PictureLocations pl where p.ChecksumPicture=$1 AND p.ChecksumPicture = pl.ChecksumPicture",
 		pic.ChecksumPicture)
 	if err != nil {
 		fmt.Println("Query error:", err)

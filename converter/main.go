@@ -19,6 +19,9 @@ import (
 )
 
 var cpMap sync.Map
+var adabasTarget = ""
+var adabasAlbumFile = 5
+var adabasPictureFile = 6
 
 func init() {
 	level := zapcore.ErrorLevel
@@ -80,7 +83,7 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 }
 
 func convertAlbum() error {
-	connection, cerr := adabas.NewConnection("acj;inmap=adatcp://lion.fritz.box:64150,5")
+	connection, cerr := adabas.NewConnection(fmt.Sprintf("acj;inmap=%s,%d", adabasTarget, adabasAlbumFile))
 	if cerr != nil {
 		return cerr
 	}
@@ -115,13 +118,15 @@ func convertAlbum() error {
 			return err
 		}
 		sumAdabasUsed += time.Since(n)
-		//		fmt.Println("Used adabas", time.Since(n))
-		// _ = response.DumpData()
 		a := record.(*store.Album)
 		for _, p := range a.Pictures {
 			if m, ok := sql.Md5Map.Load(p.Md5); ok {
 				fmt.Printf("Map md5=<%s> use instead <%s>\n", p.Md5, m.(string))
 				p.Md5 = m.(string)
+				fmt.Printf("Replace  <%s> -> <%s>\n", p.Md5, m.(string))
+
+			} else {
+				log.Fatalf("Md5 hash missing for %s -> %s", p.Name, p.Md5)
 			}
 		}
 
@@ -144,7 +149,7 @@ func convertAlbum() error {
 }
 
 func convertPictures(nr int) error {
-	connection, cerr := adabas.NewConnection("acj;inmap=adatcp://lion.fritz.box:64150,6")
+	connection, cerr := adabas.NewConnection(fmt.Sprintf("acj;inmap=%s,%d", adabasTarget, adabasPictureFile))
 	if cerr != nil {
 		return cerr
 	}
@@ -160,6 +165,7 @@ func convertPictures(nr int) error {
 		return err
 	}
 	request.Multifetch = 2
+	request.Limit = 10
 	response, rerr := request.ReadPhysicalWithCursoring()
 	if rerr != nil {
 		fmt.Println("Read fields error:", rerr)
@@ -173,12 +179,6 @@ func convertPictures(nr int) error {
 	if err != nil {
 		return err
 	}
-	// db, err := sql.CreateConnection()
-	// if err != nil {
-	// 	fmt.Println("Connection error:", rerr)
-	// 	return err
-	// }
-	// defer db.Close()
 	for i := 0; i < nr; i++ {
 		go sql.InsertWorker()
 	}
@@ -192,55 +192,11 @@ func convertPictures(nr int) error {
 			return err
 		}
 		sumAdabasUsed += time.Since(n)
-		// _ = response.DumpData()
 		pic := record.(*store.Pictures)
-		descRes, err := descrRequest.ReadLogicalWith("CP=" + pic.ChecksumPicture)
-		if err != nil {
-			log.Fatal("Err log read")
-			return err
-		}
-		if len(descRes.Data) > 1 {
-			// log.Fatalf("Error length != 0 (%d/%d) count=%d", len(descRes.Values), len(descRes.Data), count)
-			fmt.Printf("Descriptors > 1 for CP=%s Md5=%s\n", pic.ChecksumPicture, pic.Md5)
-			if pic.Md5 == "" {
-				fmt.Printf("Map md5 (%s) empty for %s\n", pic.Md5, pic.Title)
-				for _, d := range descRes.Data {
-					picData := d.(*store.Pictures)
-					if picData.Md5 != "" {
-						pic.Md5 = picData.Md5
-						pic.Title = picData.Title
-					}
-				}
-				if pic.Md5 == "" {
-					fmt.Println("Skip picture md5 empty CP=", pic.ChecksumPicture)
-					continue
-				}
-			}
-			if m, ok := cpMap.LoadOrStore(pic.ChecksumPicture, pic.Md5); ok {
-				fmt.Println("Skip picture md5=", pic.Md5, "for", m.(string), "CP=", pic.ChecksumPicture)
-				continue
-			} else {
-				for _, d := range descRes.Data {
-					picData := d.(*store.Pictures)
-					sql.Md5Map.Store(picData.Md5, pic.Md5)
-					fmt.Println("Map md5", picData.Md5, "use instead", pic.Md5)
-				}
-			}
-			pic.ExifReader()
-
-		}
-		fmt.Printf("Before <%s> -> <%s>\n", pic.Md5, pic.ChecksumPicture)
+		pic.ExifReader()
 		pic.Md5 = strings.Trim(pic.Md5, " ")
 		pic.ChecksumPicture = strings.Trim(pic.ChecksumPicture, " ")
-		fmt.Printf("After  <%s> -> <%s>\n", pic.Md5, pic.ChecksumPicture)
 		sql.StorePictures(pic)
-		// fmt.Println("Found entry and insert ", pic.Title, pic.ChecksumPicture)
-		// err = sql.InsertPictures(db, pic)
-		// if err != nil {
-		// 	fmt.Println("SQL insert error:", err)
-		// 	return err
-		// }
-		// n = time.Now()
 		count++
 		if count%100 == 0 {
 			fmt.Println("Read adabas records", count)
@@ -256,6 +212,42 @@ func convertPictures(nr int) error {
 	return nil
 }
 
+func createHashMap() error {
+	connection, cerr := adabas.NewConnection(fmt.Sprintf("acj;inmap=%s,%d", adabasTarget, adabasPictureFile))
+	if cerr != nil {
+		return cerr
+	}
+	defer connection.Close()
+	fmt.Printf("Created Adabas connection...\n")
+	request, err := connection.CreateMapReadRequest(&store.Pictures{})
+	if err != nil {
+		return err
+	}
+	err = request.QueryFields("CP,M5")
+	if err != nil {
+		fmt.Println("Query fields error:", err)
+		return err
+	}
+	request.Multifetch = 2
+	request.Limit = 10
+	response, rerr := request.ReadPhysicalWithCursoring()
+	if rerr != nil {
+		fmt.Println("Read fields error:", rerr)
+		return rerr
+	}
+	for response.HasNextRecord() {
+		record, err := response.NextData()
+		if err != nil {
+			fmt.Println("Read error:", err)
+			return err
+		}
+		pic := record.(*store.Pictures)
+		cp := strings.Trim(pic.ChecksumPicture, " ")
+		sql.Md5Map.Store(pic.Md5, cp)
+	}
+	return nil
+}
+
 func main() {
 	verify := false
 	skip := false
@@ -266,6 +258,9 @@ func main() {
 	flag.BoolVar(&verify, "v", false, "Verify data")
 	flag.BoolVar(&picOnly, "p", false, "Load picture data only")
 	flag.BoolVar(&skip, "s", false, "Skip picture load")
+	flag.StringVar(&adabasTarget, "T", "adatcp://lion.fritz.box:64150", "Adabas target")
+	flag.IntVar(&adabasAlbumFile, "A", 5, "Adabas Album file number")
+	flag.IntVar(&adabasPictureFile, "P", 6, "Adabas Picture file number")
 	flag.Parse()
 
 	fmt.Printf("Number of worker   : %d\n", workerNr)
@@ -285,6 +280,8 @@ func main() {
 			fmt.Println("SQL convert pictures error", err)
 			return
 		}
+	} else {
+		createHashMap()
 	}
 	fmt.Println("Convert albums ...")
 	if !picOnly {

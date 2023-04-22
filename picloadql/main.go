@@ -41,6 +41,8 @@ import (
 const timeFormat = "2006-01-02 15:04:05"
 
 var hostname string
+var insertAlbum = false
+var albumid = 1
 
 func init() {
 	hostname, _ = os.Hostname()
@@ -106,7 +108,6 @@ func main() {
 	var pictureDirectory string
 	var filter string
 	var binarySize int64
-	var insertAlbum bool
 	var shortenPath bool
 	var nrThreadReader int
 	var nrThreadStorer int
@@ -161,9 +162,19 @@ func main() {
 		sql.StartStats()
 		start := time.Now()
 
-		id := 1
-		fmt.Println("Load pictures for Album ID", id)
-
+		if insertAlbum {
+			di, err := sql.CreateConnection()
+			if err != nil {
+				fmt.Println("Error connecting:", err)
+				return
+			}
+			dir := filepath.Base(pictureDirectory)
+			albumid, err = di.InsertNewAlbum(dir)
+			if err != nil {
+				fmt.Println("Error inserting album:", err)
+				return
+			}
+		}
 		fmt.Printf("%s Loading path %s\n", time.Now().Format(timeFormat), pictureDirectory)
 		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
@@ -181,7 +192,7 @@ func main() {
 			suffix = strings.ToLower(suffix)
 			switch suffix {
 			case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
-				queueStoreFileInAlbumID(path, id)
+				queueStoreFileInAlbumID(path, albumid)
 				if err != nil {
 					// return fmt.Errorf("error storing file: %v", err)
 					sql.IncErrorFile(err, path)
@@ -197,9 +208,13 @@ func main() {
 			fmt.Println("Abort/Error during file walk:", err)
 			return
 		}
+		wgStore.Wait()
 
 		sql.EndStats()
 		fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
+	}
+	for i := 0; i < nrThreadReader; i++ {
+		sql.StopWorker()
 	}
 }
 

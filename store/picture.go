@@ -91,7 +91,7 @@ type Pictures struct {
 	Height             uint32    `adabas:"::HE"`
 	Media              []byte    `adabas:"::DP"`
 	Thumbnail          []byte    `adabas:"::DT"`
-	Generated          int64     `adabas:"::GE"`
+	Generated          time.Time `adabas:"::GE"`
 	PictureName        string    `adabas:"::PN"`
 	Exif               string    `adabas:":ignore"`
 	ExifModel          string    `adabas:":ignore"`
@@ -102,6 +102,7 @@ type Pictures struct {
 	ExifYDimension     int32     `adabas:":ignore"`
 	ExifOrientation    string    `adabas:":ignore"`
 	Available          Available `adabas:":ignore"`
+	StoreAlbum         int       `adabas:":ignore"`
 	// PictureLocations  []PictureLocations `adabas:"::PL"`
 }
 

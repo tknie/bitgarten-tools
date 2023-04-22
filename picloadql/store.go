@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"tux-lobload/sql"
 	"tux-lobload/store"
 
@@ -19,6 +20,7 @@ var MaxBlobSize = int64(30000000)
 
 var globalindex = uint64(0)
 var ShortPath = false
+var wgStore sync.WaitGroup
 
 type Data struct {
 	Media                 []byte
@@ -37,6 +39,7 @@ var storeChannel = make(chan *StoreFile, 4)
 var stop = make(chan bool)
 
 func queueStoreFileInAlbumID(fileName string, albumid int) {
+	wgStore.Add(1)
 	storeChannel <- &StoreFile{fileName: fileName, albumid: albumid}
 }
 
@@ -48,7 +51,8 @@ func StoreWorker() {
 	for {
 		select {
 		case file := <-storeChannel:
-			err := storeFileInAlbumID(checker, file)
+			err := storeFileInAlbumID(checker, file, albumid)
+			wgStore.Done()
 			if err != nil {
 				fmt.Println("Error inserting SQL picture:", err)
 			}
@@ -58,7 +62,7 @@ func StoreWorker() {
 	}
 }
 
-func storeFileInAlbumID(db *sql.DatabaseInfo, file *StoreFile) error {
+func storeFileInAlbumID(db *sql.DatabaseInfo, file *StoreFile, storeAlbum int) error {
 	ti := sql.IncStored()
 	baseName := path.Base(file.fileName)
 	//dirName := path.Dir(fileName)
@@ -75,8 +79,9 @@ func storeFileInAlbumID(db *sql.DatabaseInfo, file *StoreFile) error {
 	ti.IncLoaded()
 	globalindex++
 	pic.Index = globalindex
-	sql.StorePictures(pic)
 	pic.Title = baseName
+	pic.StoreAlbum = storeAlbum
+	sql.StorePictures(pic)
 	ti.IncEndStored()
 	return nil
 }
