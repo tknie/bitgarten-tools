@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"time"
 	"tux-lobload/sql"
 	"tux-lobload/store"
@@ -18,7 +17,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var cpMap sync.Map
+// var cpMap sync.Map
 var adabasTarget = ""
 var adabasAlbumFile = 5
 var adabasPictureFile = 6
@@ -196,6 +195,8 @@ func convertPictures(nr int) error {
 		pic.ExifReader()
 		pic.Md5 = strings.Trim(pic.Md5, " ")
 		pic.ChecksumPicture = strings.Trim(pic.ChecksumPicture, " ")
+		cp := strings.Trim(pic.ChecksumPicture, " ")
+		sql.Md5Map.Store(pic.Md5, cp)
 		sql.StorePictures(pic)
 		count++
 		if count%100 == 0 {
@@ -253,12 +254,17 @@ func main() {
 	skip := false
 	picOnly := false
 
+	adaTarget := os.Getenv("ADA_TARGET")
+	if adaTarget == "" {
+		adaTarget = "adatcp://lion.fritz.box:64150"
+	}
+
 	workerNr := 1
 	flag.IntVar(&workerNr, "w", 4, "Nr of workers for sql insert")
 	flag.BoolVar(&verify, "v", false, "Verify data")
 	flag.BoolVar(&picOnly, "p", false, "Load picture data only")
 	flag.BoolVar(&skip, "s", false, "Skip picture load")
-	flag.StringVar(&adabasTarget, "T", "adatcp://lion.fritz.box:64150", "Adabas target")
+	flag.StringVar(&adabasTarget, "T", adaTarget, "Adabas target")
 	flag.IntVar(&adabasAlbumFile, "A", 5, "Adabas Album file number")
 	flag.IntVar(&adabasPictureFile, "P", 6, "Adabas Picture file number")
 	flag.Parse()

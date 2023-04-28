@@ -72,7 +72,7 @@ func CreateConnection() (*DatabaseInfo, error) {
 	// connStr := stdlib.RegisterConnConfig(connConfig)
 	// dc := &DataConfig{User: "admin", Password: "Testtkn1+", URL: "lion.fritz.box:3306"}
 	// driver, url := dc.MySQLConnection()
-	fmt.Println("Connecting to ....", url, connStr)
+	fmt.Println("Connecting to ....", host)
 	db, err := sql.Open(driver,
 		connStr)
 	if err != nil {
@@ -404,9 +404,6 @@ func (dc *DataConfig) PostgresXConnection() (string, string) {
 func Display() error {
 	dc := &DataConfig{User: "admin", Password: os.Getenv("POSTGRES_PASS"), URL: os.Getenv("POSTGRES_HOST"), Port: 5432}
 	driver, url := dc.PostgresXConnection()
-	// dc := &DataConfig{User: "admin", Password: "Testtkn1+", URL: "lion.fritz.box:3306"}
-	// driver, url := dc.MySQLConnection()
-	fmt.Println("Connecting to ....", url)
 	db, err := sql.Open(driver,
 		url)
 	if err != nil {
@@ -419,23 +416,13 @@ func Display() error {
 		return err
 	}
 	defer rows.Close()
-	rowColumns, err := rows.Columns()
-	if err != nil {
-		fmt.Println("Error row read:", err)
-		return err
-	}
 	colsType, err := rows.ColumnTypes()
 	if err != nil {
 		fmt.Println("Error cols read:", err)
 		return err
 	}
-	for _, r := range rowColumns {
-		fmt.Println(r)
-	}
 	colsValue := make([]interface{}, 0)
-	for nr, col := range colsType {
-		len, ok := col.Length()
-		fmt.Println(nr, "name=", col.Name(), "len=", len, "ok=", ok)
+	for _, col := range colsType {
 		switch col.DatabaseTypeName() {
 		case "VARCHAR2":
 			s := ""
@@ -454,7 +441,7 @@ func Display() error {
 			colsValue = append(colsValue, &s)
 		}
 	}
-	fmt.Println("Entries: ", len(colsValue))
+	fmt.Println("Field entries converted: ", len(colsValue))
 	for rows.Next() {
 		err := rows.Scan(colsValue...)
 		if err != nil {
