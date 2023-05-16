@@ -64,14 +64,20 @@ func CreateConnection() (*DatabaseInfo, error) {
 	if passwd == "" {
 		passwd = "lxXx"
 	}
-	dc := &DataConfig{User: user, Password: passwd, URL: host, Port: 5432}
+	portS := os.Getenv("POSTGRES_PORT")
+	port := 5432
+	var err error
+	if portS != "" {
+		port, err = strconv.Atoi(portS)
+		if err != nil {
+			fmt.Println("Error converting port", portS)
+			return nil, err
+		}
+	}
+	dc := &DataConfig{User: user, Password: passwd, URL: host, Port: port}
 	driver, url := dc.PostgresXConnection()
 	connStr := url
-	// connConfig, _ := pgx.ParseConfig(url)
-	// connConfig.Tracer = &x{}
-	// connStr := stdlib.RegisterConnConfig(connConfig)
-	// dc := &DataConfig{User: "admin", Password: "Testtkn1+", URL: "lion.fritz.box:3306"}
-	// driver, url := dc.MySQLConnection()
+
 	fmt.Println("Connecting to ....", host)
 	db, err := sql.Open(driver,
 		connStr)
@@ -401,8 +407,17 @@ func (dc *DataConfig) PostgresXConnection() (string, string) {
 	return "pgx", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?application_name=picloadql", dc.User, dc.Password, dc.URL, dc.Port, "bitgarten")
 }
 
-func Display() error {
-	dc := &DataConfig{User: "admin", Password: os.Getenv("POSTGRES_PASS"), URL: os.Getenv("POSTGRES_HOST"), Port: 5432}
+func Display() (err error) {
+	portS := os.Getenv("POSTGRES_PORT")
+	port := 5432
+	if portS != "" {
+		port, err = strconv.Atoi(portS)
+		if err != nil {
+			fmt.Println("Error converting port", portS)
+			return err
+		}
+	}
+	dc := &DataConfig{User: "admin", Password: os.Getenv("POSTGRES_PASS"), URL: os.Getenv("POSTGRES_HOST"), Port: port}
 	driver, url := dc.PostgresXConnection()
 	db, err := sql.Open(driver,
 		url)
