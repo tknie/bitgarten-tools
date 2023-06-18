@@ -1,0 +1,257 @@
+package sql
+
+import (
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/tknie/flynn"
+	"github.com/tknie/flynn/common"
+)
+
+// Picture picture data
+type Picture struct {
+	Id              uint64
+	ChecksumPicture string
+	Sha256checksum  string
+	Thumbnail       []byte
+	Media           []byte
+	Title           string
+	Fill            string
+	Mimetype        string
+	Height          uint64
+	Width           uint64
+	Exifmodel       string
+	Exifmake        string
+	Exiftaken       string
+	Exiforigtime    string
+	Exifxdimension  uint64
+	Exifydimension  uint64
+	Exiforientation string
+	Created         time.Time
+	Updated_at      time.Time
+}
+
+// AlbumPictures pciture information
+type AlbumPictures struct {
+	Index           uint64
+	AlbumId         uint64
+	Name            string
+	Description     string
+	ChecksumPicture string
+	MimeType        string
+	SkipTime        uint64
+	Height          uint64
+	Width           uint64
+}
+
+// Album album information
+type Albums struct {
+	Id            uint64
+	Type          string
+	Key           string
+	Directory     string
+	Title         string
+	Description   string
+	Option        string
+	ThumbnailHash string
+	Published     time.Time
+	// Created       time.Time
+	//	Updated_At    time.Time
+	Pictures []*AlbumPictures `db:":ignore"`
+}
+
+func Connect(url, pwd string) (*DatabaseInfo, error) {
+	ref, passwd, err := common.NewReference(url)
+	if err != nil {
+		return nil, err
+	}
+	if passwd == "" {
+		passwd = pwd
+	}
+	fmt.Println("Connecting to ....", ref.Host)
+	return &DatabaseInfo{nil, ref, passwd, 0}, nil
+}
+
+func (di *DatabaseInfo) Open() (common.RegDbID, error) {
+	id, err := flynn.RegisterDatabase(di.Reference, di.passwd)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func (di *DatabaseInfo) ListAlbums() error {
+	id, err := di.Open()
+	if err != nil {
+		return err
+	}
+	fmt.Println("List Album titles:")
+	q := &common.Query{TableName: "Albums",
+		DataStruct: Albums{},
+		Fields:     []string{"Title", "Id", "Published"},
+	}
+	count := 0
+	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
+		album := result.Data.(*Albums)
+		count++
+		fmt.Printf("%03d - %3d: %-35s %v\n", count, album.Id, album.Title, album.Published)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (di *DatabaseInfo) ReadAlbum(albumTitle string) (*Albums, error) {
+	var album *Albums
+	id, err := di.Open()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("Search Album title:", strings.Replace(albumTitle, "'", "\\'", -1), albumTitle)
+	q := &common.Query{TableName: "Albums",
+		DataStruct: Albums{},
+		Fields:     []string{"*"},
+		Search:     fmt.Sprintf("Title = '%s'", strings.Replace(albumTitle, "'", "''", -1)),
+	}
+	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
+		album = result.Data.(*Albums)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	album.Pictures, err = di.ReadAlbumPictures(id, int(album.Id))
+	if err != nil {
+		return nil, err
+	}
+	return album, nil
+}
+
+func (di *DatabaseInfo) ReadAlbumPictures(id common.RegDbID, albumid int) ([]*AlbumPictures, error) {
+	q := &common.Query{TableName: "AlbumPictures",
+		DataStruct: AlbumPictures{},
+		Fields:     []string{"*"},
+		Search:     fmt.Sprintf("albumid = %d", albumid),
+	}
+	pictures := make([]*AlbumPictures, 0)
+	_, err := id.Query(q, func(search *common.Query, result *common.Result) error {
+		ap := result.Data.(*AlbumPictures)
+		apic := &AlbumPictures{}
+		*apic = *ap
+		pictures = append(pictures, apic)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(pictures, func(i, j int) bool {
+		return pictures[i].Index < pictures[j].Index
+	})
+	return pictures, nil
+}
+
+func (di *DatabaseInfo) CheckPicture(checksum string) (bool, error) {
+	id, err := di.Open()
+	if err != nil {
+		return false, err
+	}
+	defer flynn.Unregister(id)
+	q := &common.Query{TableName: "Pictures",
+		DataStruct: Picture{},
+		Fields:     []string{"checksumpicture"},
+		Search:     fmt.Sprintf("checksumpicture = '%s'", checksum),
+	}
+	found := false
+	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
+		found = true
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return found, nil
+}
+
+func (di *DatabaseInfo) ReadPicture(checksum string) (*Picture, error) {
+	id, err := di.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer flynn.Unregister(id)
+	q := &common.Query{TableName: "Pictures",
+		DataStruct: Picture{},
+		Fields:     []string{"*"},
+		Search:     fmt.Sprintf("checksumpicture = '%s'", checksum),
+	}
+	found := false
+	res, err := id.Query(q, func(search *common.Query, result *common.Result) error {
+		found = true
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("picture not found")
+	}
+
+	return res.Data.(*Picture), nil
+}
+
+func (a *Albums) Display() {
+	fmt.Printf("Found album %d: %s\n", a.Id, a.Title)
+	for _, p := range a.Pictures {
+		fmt.Printf("   Found picture %d: %s\n", p.Index, p.Description)
+	}
+}
+
+func (di *DatabaseInfo) CheckAlbum(album *Albums) (uint64, error) {
+	id, err := di.Open()
+	if err != nil {
+		return 0, err
+	}
+	defer flynn.Unregister(id)
+	q := &common.Query{TableName: "Albums",
+		DataStruct: Albums{},
+		Fields:     []string{"id", "Title"},
+		Search:     fmt.Sprintf("title = '%s'", strings.Replace(album.Title, "'", "''", -1)),
+	}
+	found := uint64(0)
+	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
+		a := result.Data.(*Albums)
+		found = a.Id
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return found, nil
+}
+
+func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error) {
+	id, err := di.Open()
+	if err != nil {
+		return false, err
+	}
+	defer flynn.Unregister(id)
+	q := &common.Query{TableName: "AlbumPictures",
+		DataStruct: AlbumPictures{},
+		Fields:     []string{"index", "albumid"},
+		Search: fmt.Sprintf("index = %d AND albumid = %d",
+			albumPic.Index, albumPic.AlbumId),
+	}
+	found := false
+	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
+		found = true
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return found, nil
+}

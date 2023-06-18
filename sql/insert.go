@@ -21,6 +21,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/flynn"
+	"github.com/tknie/flynn/common"
 )
 
 type DataConfig struct {
@@ -32,6 +34,8 @@ type DataConfig struct {
 
 type DatabaseInfo struct {
 	db        *sql.DB
+	Reference *common.Reference
+	passwd    string
 	duraction time.Duration
 }
 
@@ -85,11 +89,185 @@ func CreateConnection() (*DatabaseInfo, error) {
 		fmt.Println("Error db open:", err)
 		return nil, err
 	}
-	return &DatabaseInfo{db, 0}, nil
+	return &DatabaseInfo{db, nil, "", 0}, nil
+}
+
+func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
+	found, err := di.CheckAlbum(album)
+	if err != nil {
+		return err
+	}
+	adatypes.Central.Log.Debugf("Check Album found: %v", found)
+	fmt.Printf("Search found on source %03d -> %s\n", album.Id, album.Title)
+
+	id, err := di.Open()
+	if err != nil {
+		return err
+	}
+	defer flynn.Unregister(id)
+	list := [][]any{{
+		album.Type,
+		album.Key,
+		album.Directory,
+		album.Title,
+		album.Description,
+		album.Option,
+		album.ThumbnailHash,
+		album.Published,
+	}}
+	input := &common.Entries{
+		Fields: []string{
+			"Type",
+			"Key",
+			"Directory",
+			"Title",
+			"Description",
+			"Option",
+			"ThumbnailHash",
+			"Published",
+		},
+		Values: list}
+	if found > 0 {
+		input.Update = []string{"title='" + strings.Replace(album.Title, "'", "''", -1) + "'"}
+		n, err := id.Update("Albums", input)
+		if err != nil {
+			return err
+		}
+		adatypes.Central.Log.Debugf("Update %d entries", n)
+		album.Id = found
+	} else {
+		err = id.Insert("Albums", input)
+		if err != nil {
+			return err
+		}
+		found, err = di.CheckAlbum(album)
+		if err != nil {
+			return err
+		}
+		album.Id = found
+	}
+	fmt.Printf("Adapt new album id on destination %03d -> %s\n", album.Id, album.Title)
+	for _, p := range album.Pictures {
+		p.AlbumId = album.Id
+	}
+
+	return nil
+}
+
+func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
+	found, err := di.CheckAlbumPictures(albumPic)
+	if err != nil {
+		return err
+	}
+	adatypes.Central.Log.Debugf("Check AlbumPicture found: %v", found)
+	id, err := di.Open()
+	if err != nil {
+		return err
+	}
+	defer flynn.Unregister(id)
+	list := [][]any{{
+		albumPic.Index,
+		albumPic.AlbumId,
+		albumPic.Name,
+		albumPic.Description,
+		albumPic.ChecksumPicture,
+		albumPic.MimeType,
+		albumPic.SkipTime,
+		albumPic.Height,
+		albumPic.Width,
+	}}
+	input := &common.Entries{
+		Fields: []string{
+			"Index",
+			"AlbumId",
+			"Name",
+			"Description",
+			"ChecksumPicture",
+			"MimeType",
+			"SkipTime",
+			"Height",
+			"Width",
+		},
+		Values: list}
+	if found {
+		input.Update = []string{fmt.Sprintf("index = %d AND albumid = %d",
+			albumPic.Index, albumPic.AlbumId)}
+		n, err := id.Update("AlbumPictures", input)
+		if err != nil {
+			return err
+		}
+		adatypes.Central.Log.Debugf("Update %d entries", n)
+	} else {
+		err = id.Insert("AlbumPictures", input)
+		adatypes.Central.Log.Debugf("Update AlbumPictures entry")
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (di *DatabaseInfo) WritePicture(pic *Picture) error {
+	id, err := di.Open()
+	if err != nil {
+		return err
+	}
+	defer flynn.Unregister(id)
+	list := [][]any{{
+		pic.Id,
+		pic.ChecksumPicture,
+		pic.Sha256checksum,
+		pic.Thumbnail,
+		pic.Media,
+		pic.Title,
+		pic.Fill,
+		pic.Mimetype,
+		pic.Height,
+		pic.Width,
+		pic.Exifmodel,
+		pic.Exifmake,
+		pic.Exiftaken,
+		pic.Exiforigtime,
+		pic.Exifxdimension,
+		pic.Exifydimension,
+		pic.Exiforientation,
+		pic.Created,
+		pic.Updated_at,
+	}}
+	input := &common.Entries{
+		Fields: []string{"Id",
+			"ChecksumPicture",
+			"Sha256checksum",
+			"Thumbnail",
+			"Media",
+			"Title",
+			"Fill",
+			"Mimetype",
+			"Height",
+			"Width",
+			"Exifmodel",
+			"Exifmake",
+			"Exiftaken",
+			"Exiforigtime",
+			"Exifxdimension",
+			"Exifydimension",
+			"Exiforientation",
+			"Created",
+			"Updated_at"},
+		Values: list}
+	err = id.Insert("Pictures", input)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (di *DatabaseInfo) Close() {
-	di.db.Close()
+	if di != nil && di.db != nil {
+		di.db.Close()
+	}
 }
 
 func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
