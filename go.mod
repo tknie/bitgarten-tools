@@ -6,12 +6,12 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/jackc/pgx v3.6.2+incompatible
 	github.com/jackc/pgx-shopspring-decimal v0.0.0-20220624020537-1d36b5a1853e
-	github.com/jackc/pgx/v5 v5.4.0
+	github.com/jackc/pgx/v5 v5.4.1
 	github.com/lib/pq v1.10.7
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/tknie/adabas-go-api v1.7.9
-	github.com/tknie/flynn v0.0.0-20230617175635-9f0b4bcdfa87
+	github.com/tknie/flynn v0.0.0-20230619185811-c370a91162af
 	github.com/tknie/log v0.0.0-20230429175804-66867a7f7c54
 	go.uber.org/zap v1.24.0
 	golang.org/x/net v0.11.0

@@ -45,6 +45,8 @@ github.com/jackc/pgx/v5 v5.3.1 h1:Fcr8QJ1ZeLi5zsPZqQeUZhNhxfkkKBOgJuYkJHoBOtU=
 github.com/jackc/pgx/v5 v5.3.1/go.mod h1:t3JDKnCBlYIc0ewLF0Q7B8MXmoIaBOZj/ic7iHozM/8=
 github.com/jackc/pgx/v5 v5.4.0 h1:BSr+GCm4N6QcgIwv0DyTFHK9ugfEFF9DzSbbzxOiXU0=
 github.com/jackc/pgx/v5 v5.4.0/go.mod h1:q6iHT8uDNXWiFNOlRqJzBTaSH3+2xCXkokxHZC5qWFY=
+github.com/jackc/pgx/v5 v5.4.1 h1:oKfB/FhuVtit1bBM3zNRRsZ925ZkMN3HXL+LgLUM9lE=
+github.com/jackc/pgx/v5 v5.4.1/go.mod h1:q6iHT8uDNXWiFNOlRqJzBTaSH3+2xCXkokxHZC5qWFY=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
@@ -91,6 +93,8 @@ github.com/tknie/flynn v0.0.0-20230617091410-bd0bc446ca35 h1:BH8O7vlTsoqoZ73INOq
 github.com/tknie/flynn v0.0.0-20230617091410-bd0bc446ca35/go.mod h1:DVkcqi7dhBHl+KrMfNkavNX5J3BNjpBOL3P0llxGHp0=
 github.com/tknie/flynn v0.0.0-20230617175635-9f0b4bcdfa87 h1:/uiMGq8h630G0zyJDoNS1As22DbDg1P2l8ziIj0YO/0=
 github.com/tknie/flynn v0.0.0-20230617175635-9f0b4bcdfa87/go.mod h1:DVkcqi7dhBHl+KrMfNkavNX5J3BNjpBOL3P0llxGHp0=
+github.com/tknie/flynn v0.0.0-20230619185811-c370a91162af h1:0qksCh+kK9JqF6VLVuvpGIkKEnQFG02NrrHQOHsoV+A=
+github.com/tknie/flynn v0.0.0-20230619185811-c370a91162af/go.mod h1:DVkcqi7dhBHl+KrMfNkavNX5J3BNjpBOL3P0llxGHp0=
 github.com/tknie/log v0.0.0-20230429175804-66867a7f7c54 h1:kpo9mbYUsygdb+wOojm5jmtmxdZAKwYgACs045oEC00=
 github.com/tknie/log v0.0.0-20230429175804-66867a7f7c54/go.mod h1:W67unT0xxqTLc9tyxpdV1lED/JuD0veFgxT/astdxt4=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
