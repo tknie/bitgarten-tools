@@ -30,6 +30,7 @@ type DataConfig struct {
 	Password string
 	URL      string
 	Port     int
+	Database string
 }
 
 type DatabaseInfo struct {
@@ -78,7 +79,12 @@ func CreateConnection() (*DatabaseInfo, error) {
 			return nil, err
 		}
 	}
-	dc := &DataConfig{User: user, Password: passwd, URL: host, Port: port}
+	dbName := os.Getenv("POSTGRES_DB")
+	if dbName == "" {
+		dbName = "bitgarten"
+	}
+	dc := &DataConfig{User: user, Password: passwd, URL: host,
+		Port: port, Database: dbName}
 	driver, url := dc.PostgresXConnection()
 	connStr := url
 
@@ -573,16 +579,18 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 }
 
 func (dc *DataConfig) MySQLConnection() (string, string) {
-	return "mysql", fmt.Sprintf("%s:%s@tcp(%s)/bitgarten", dc.User, dc.Password, dc.URL)
+	return "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", dc.User, dc.Password, dc.URL, dc.Database)
 }
 
 func (dc *DataConfig) PostgresConnection() (string, string) {
-	return "postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", dc.URL, dc.Port, dc.User, dc.Password, "bitgarten")
+	return "postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		dc.URL, dc.Port, dc.User, dc.Password, dc.Database)
 }
 
 func (dc *DataConfig) PostgresXConnection() (string, string) {
 	// urlExample := "postgres://username:password@localhost:5432/database_name"
-	return "pgx", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?application_name=picloadql", dc.User, dc.Password, dc.URL, dc.Port, "bitgarten")
+	return "pgx", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?application_name=picloadql",
+		dc.User, dc.Password, dc.URL, dc.Port, dc.Database)
 }
 
 func Display() (err error) {
