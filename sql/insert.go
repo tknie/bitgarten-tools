@@ -529,12 +529,22 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		}
 	}
 	if pic.Available == store.NoAvailable {
+		fill := pic.Fill
+		if len(fill) > 1 {
+			fmt.Println("Fill >1: " + fill)
+			fill = fill[0:1]
+		}
+		orientation := pic.ExifOrientation
+		if len(orientation) > 1 {
+			fmt.Println("Orienation >1: " + orientation)
+			orientation = orientation[0:1]
+		}
 		adatypes.Central.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
 		_, err = tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, Sha256Checksum, Title, Fill, Height, Width, Media, Thumbnail,mimetype,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation,created)"+
 			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)",
-			pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, pic.Fill, pic.Height,
+			pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, fill, pic.Height,
 			pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
-			pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat), pic.ExifOrigTime.Format(timeFormat), pic.ExifXDimension, pic.ExifYDimension, pic.ExifOrientation, pic.Generated)
+			pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat), pic.ExifOrigTime.Format(timeFormat), pic.ExifXDimension, pic.ExifYDimension, orientation, pic.Generated)
 		if err != nil {
 			tx.Rollback()
 			if !checkErrorContinue(err) {
