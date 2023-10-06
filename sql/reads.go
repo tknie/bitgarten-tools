@@ -8,6 +8,7 @@ import (
 
 	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
+	"github.com/tknie/log"
 )
 
 // Picture picture data
@@ -70,7 +71,7 @@ func Connect(url, pwd string) (*DatabaseInfo, error) {
 	if passwd == "" {
 		passwd = pwd
 	}
-	fmt.Println("Connecting to ....", ref.Host)
+	log.Log.Infof("Connecting to .... %s", ref.Host)
 	return &DatabaseInfo{nil, ref, passwd, 0}, nil
 }
 

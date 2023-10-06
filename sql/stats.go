@@ -63,17 +63,21 @@ var output = func() {
 	tn := time.Now().Format(timeFormat)
 	fmt.Printf("%s statistics started=%02d checked=%02d skipped=%02d too big=%02d errors=%02d\n",
 		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
+	log.Log.Infof("%s statistics started=%02d checked=%02d skipped=%02d too big=%02d errors=%02d\n",
+		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
 	for i := 0; i < int(doneIndex)+1; i++ {
 		avg := time.Duration(0)
 		if ps.StatInfo[i].counter > 0 {
 			avg = ps.StatInfo[i].duration / time.Duration(ps.StatInfo[i].counter)
 		}
-		log.Log.Debugf("%s statistics %18s -> counter=%04d duration=%v average=%v", tn, indexInfo[i],
+		log.Log.Infof("%s statistics %18s -> counter=%04d duration=%v average=%v", tn, indexInfo[i],
 			ps.StatInfo[i].counter, ps.StatInfo[i].duration, avg)
 	}
 	fmt.Printf("%s statistics max Blocksize=%s deferred Blocksize=%v\n",
 		tn, ByteCountBinary(ps.MaxBlobSize), ByteCountBinary(ps.RequestBlobSize))
-	fmt.Printf("--------------------------------------------------------------\n")
+	log.Log.Infof("%s statistics max Blocksize=%s deferred Blocksize=%v\n",
+		tn, ByteCountBinary(ps.MaxBlobSize), ByteCountBinary(ps.RequestBlobSize))
+	log.Log.Infof("--------------------------------------------------------------\n")
 }
 
 func ByteCountBinary(b int64) string {
@@ -197,16 +201,16 @@ func IncSkipped() {
 	ps.skipped++
 }
 
-func IncError(err error) {
+func IncError(prefix string, err error) {
 	ps.NrErrors++
 	if err == nil {
 		return
 	}
-	if e, ok := ps.Errors[err.Error()]; ok {
+	if e, ok := ps.Errors[prefix+":"+err.Error()]; ok {
 		ps.Errors[err.Error()] = e + 1
 		return
 	}
-	ps.Errors[err.Error()] = 1
+	ps.Errors[prefix+":"+err.Error()] = 1
 }
 
 func IncErrorFile(err error, fileName string) {

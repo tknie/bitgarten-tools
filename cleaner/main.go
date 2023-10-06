@@ -33,6 +33,7 @@ import (
 
 	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -123,8 +124,10 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 
 	sugar := logger.Sugar()
 
-	sugar.Infof("Start logging with level", level)
+	sugar.Infof("Start logging with level %s", level)
 	adatypes.Central.Log = sugar
+	log.Log = sugar
+	log.SetDebugLevel(level == zapcore.DebugLevel)
 
 	return
 }

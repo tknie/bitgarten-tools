@@ -87,7 +87,7 @@ func CreateConnection() (*DatabaseInfo, error) {
 	driver, url := dc.PostgresXConnection()
 	connStr := url
 
-	fmt.Println("Connecting to ....", host)
+	log.Log.Infof("Connecting to ....%s", host)
 	db, err := sql.Open(driver,
 		connStr)
 	if err != nil {
@@ -487,7 +487,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 	ctx := context.Background()
 	tx, err := di.db.BeginTx(ctx, nil)
 	if err != nil {
-		IncError(err)
+		IncError("Begin Tx "+pic.PictureName, err)
 		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
 		return err
 	}
@@ -514,7 +514,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	ctx := context.Background()
 	tx, err := di.db.BeginTx(ctx, nil)
 	if err != nil {
-		IncError(err)
+		IncError("BeginTx "+pic.PictureName, err)
 		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
 		return err
 	}
@@ -547,7 +547,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		if err != nil {
 			tx.Rollback()
 			if !checkErrorContinue(err) {
-				IncError(err)
+				IncError("ExecContext "+pic.PictureName, err)
 				fmt.Println("Error rolling back pic data md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
 				//fmt.Println("Error inserting Pictures", err, len(pic.Media))
 				return err
@@ -577,11 +577,11 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 
 		err = tx.Commit()
 		if err != nil {
-			IncError(fmt.Errorf("error commiting: %v", err))
+			IncError("Commit error "+pic.PictureName, fmt.Errorf("error commiting: %v", err))
 			return err
 		}
 		ti.IncCommit()
-		log.Log.Debugf("Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
+		log.Log.Debugf("Commited pic", "Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
 		atomic.AddUint32(&sqlInsertCounter, 1)
 	}
 	return nil

@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 	"tux-lobload/sql"
 	"tux-lobload/store"
+
+	"github.com/tknie/log"
 
 	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/adabas-go-api/adatypes"
@@ -75,8 +76,10 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 
 	sugar := logger.Sugar()
 
-	sugar.Infof("Start logging with level", level)
+	sugar.Infof("Start logging with level %s", level)
 	adatypes.Central.Log = sugar
+	log.Log = sugar
+	log.SetDebugLevel(level == zapcore.DebugLevel)
 
 	return
 }
@@ -125,7 +128,7 @@ func convertAlbum() error {
 				fmt.Printf("Replace  <%s> -> <%s>\n", p.Md5, m.(string))
 
 			} else {
-				log.Fatalf("Md5 hash missing for %s -> %s", p.Name, p.Md5)
+				log.Log.Fatalf("Md5 hash missing for %s -> %s", p.Name, p.Md5)
 			}
 		}
 

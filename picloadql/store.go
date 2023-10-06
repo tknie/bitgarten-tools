@@ -95,7 +95,7 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	defer f.Close()
 	fi, err := f.Stat()
 	if err != nil {
-		sql.IncError(err)
+		sql.IncError("Stat Error "+fileName, err)
 		return nil, err
 	}
 	if fi.Size() == 0 {
@@ -105,7 +105,7 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 		sql.IncToBig()
 		sql.DeferredBlobSize(fi.Size())
 		err := fmt.Errorf("file %s tooo big %d > %d", fileName, fi.Size(), MaxBlobSize)
-		sql.IncError(err)
+		sql.IncError("File too big "+fileName, err)
 		return nil, err
 	}
 	pic := store.NewPictures(fileName)
@@ -129,7 +129,7 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	n, err = f.Read(pic.Media)
 	log.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Media), err)
 	if err != nil {
-		sql.IncError(err)
+		sql.IncError("Read error "+fileName, err)
 		return nil, err
 	}
 	pic.ChecksumPicture = createMd5(pic.Media)

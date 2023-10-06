@@ -27,7 +27,7 @@ func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 		if sha != pic.ChecksumPictureSHA {
 			fmt.Println("SHA mismatch", pic.PictureName)
 			err := fmt.Errorf("SHA mismatch %s/%s", pic.Directory, pic.PictureName)
-			IncError(err)
+			IncError("SHA differs "+pic.PictureName, err)
 			pic.Available = store.NoAvailable
 		}
 		if host == hostname && directory == pic.Directory && name == pic.PictureName {

@@ -98,8 +98,9 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 
 	sugar := logger.Sugar()
 
-	sugar.Infof("Start logging with level", level)
 	adatypes.Central.Log = sugar
+	log.Log = sugar
+	log.Log.Infof("Start logging with level %s", level)
 
 	return
 }

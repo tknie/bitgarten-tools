@@ -104,9 +104,8 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 	sugar.Infof("Start logging with level %v", level)
 	adatypes.Central.Log = sugar
 	log.Log = sugar
-	if level == zap.DebugLevel {
-		log.SetDebugLevel(true)
-	}
+	log.SetDebugLevel(level == zapcore.DebugLevel)
+
 	return nil
 }
 

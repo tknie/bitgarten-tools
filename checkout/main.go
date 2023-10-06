@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"runtime"
@@ -31,6 +30,8 @@ import (
 	"strings"
 	"time"
 	"tux-lobload/store"
+
+	"github.com/tknie/log"
 
 	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/adabas-go-api/adatypes"
@@ -140,8 +141,10 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 
 	sugar := logger.Sugar()
 
-	sugar.Infof("Start logging with level", level)
+	sugar.Infof("Start logging with level %s", level)
 	adatypes.Central.Log = sugar
+	log.Log = sugar
+	log.SetDebugLevel(level == zapcore.DebugLevel)
 
 	return
 }
@@ -349,7 +352,7 @@ func (checker *checker) writeFile(record *adabas.Record) (err error) {
 	}
 	file, err := os.OpenFile(f, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
-		log.Fatal(err)
+		log.Log.Fatal(err)
 	}
 	defer file.Close()
 	file.Write(data.Media)
