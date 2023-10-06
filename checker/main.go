@@ -29,6 +29,7 @@ import (
 
 	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -211,20 +212,20 @@ func (checker *checker) validateData(checksum string) error {
 		return rerr
 	}
 	readCheck.Multifetch = 1
-	adatypes.Central.Log.Debugf("Read checksums records")
+	log.Log.Debugf("Read checksums records")
 	cursor, err := readCheck.ReadLogicalWithCursoring("ChecksumPicture=" + checksum)
 	if err != nil {
 		fmt.Printf("Error checking descriptor quantity for ChecksumPicture: %v\n", err)
 		panic("Read error " + err.Error())
 	}
-	adatypes.Central.Log.Debugf("Called and get next record")
+	log.Log.Debugf("Called and get next record")
 	for cursor.HasNextRecord() {
 		record, recErr := cursor.NextRecord()
 		if recErr != nil {
 			panic("Read error " + recErr.Error())
 		}
 		mv := record.HashFields["Media"]
-		adatypes.Central.Log.Debugf("Length %d %#v", mv.Type().Length(), mv)
+		log.Log.Debugf("Length %d %#v", mv.Type().Length(), mv)
 		fmt.Println("Length", record.HashFields["Media"].Type().Length())
 		data := record.HashFields["Media"].Bytes()
 		if len(data) == 0 {

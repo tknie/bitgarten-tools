@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -20,9 +19,9 @@ import (
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/tknie/adabas-go-api/adatypes"
 	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
+	"github.com/tknie/log"
 )
 
 type DataConfig struct {
@@ -103,7 +102,7 @@ func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
 	if err != nil {
 		return err
 	}
-	adatypes.Central.Log.Debugf("Check Album found: %v", found)
+	log.Log.Debugf("Check Album found: %v", found)
 	fmt.Printf("Search found on source %03d -> %s\n", album.Id, album.Title)
 
 	id, err := di.Open()
@@ -139,7 +138,7 @@ func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
 		if err != nil {
 			return err
 		}
-		adatypes.Central.Log.Debugf("Update %d entries", n)
+		log.Log.Debugf("Update %d entries", n)
 		album.Id = found
 	} else {
 		err = id.Insert("Albums", input)
@@ -165,7 +164,7 @@ func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
 	if err != nil {
 		return err
 	}
-	adatypes.Central.Log.Debugf("Check AlbumPicture found: %v", found)
+	log.Log.Debugf("Check AlbumPicture found: %v", found)
 	id, err := di.Open()
 	if err != nil {
 		return err
@@ -202,10 +201,10 @@ func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
 		if err != nil {
 			return err
 		}
-		adatypes.Central.Log.Debugf("Update %d entries", n)
+		log.Log.Debugf("Update %d entries", n)
 	} else {
 		err = id.Insert("AlbumPictures", input)
-		adatypes.Central.Log.Debugf("Update AlbumPictures entry")
+		log.Log.Debugf("Update AlbumPictures entry")
 	}
 	if err != nil {
 		return err
@@ -327,7 +326,7 @@ func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
 	err = tx.Commit()
 	if err != nil {
 		fmt.Println("Commit tx error:", err)
-		log.Fatal(err)
+		log.Log.Fatal(err)
 	}
 	if newID%20 == 0 {
 		fmt.Print("*")
@@ -354,7 +353,7 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 	tx, err := di.db.BeginTx(ctx, nil)
 	if err != nil {
 		fmt.Printf("Error beginning Albums transaction: %v\n", err)
-		log.Fatal(err)
+		log.Log.Fatal(err)
 	}
 
 	// fmt.Println("Insert album", time.Unix(int64(album.Date), 0))
@@ -387,9 +386,9 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 		return nil
 	}
 	for i, p := range album.Pictures {
-		adatypes.Central.Log.Debugf("Insert picture Md5=%s", p.Md5)
+		log.Log.Debugf("Insert picture Md5=%s", p.Md5)
 		if p.Md5 == "" {
-			log.Fatalf("Pic MD5 empty, %s", p.Name)
+			log.Log.Fatalf("Pic MD5 empty, %s", p.Name)
 		}
 		if m, ok := Md5Map.Load(p.Md5); ok {
 			p.Md5 = strings.Trim(m.(string), " ")
@@ -413,7 +412,7 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 	err = tx.Commit()
 	if err != nil {
 		fmt.Println("Commit tx error:", err)
-		log.Fatal(err)
+		log.Log.Fatal(err)
 	}
 	if newID%20 == 0 {
 		fmt.Print("*")
@@ -492,7 +491,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
 		return err
 	}
-	adatypes.Central.Log.Debugf("Insert album picture info Md5=%s", pic.Md5)
+	log.Log.Debugf("Insert album picture info Md5=%s", pic.Md5)
 	_, err = tx.ExecContext(ctx, "insert into AlbumPictures (index,albumid,name,description,checksumpicture,mimetype,fill,skiptime,height,width)"+
 		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
 		strconv.Itoa(index), albumid, pic.Title, pic.Title+" description", pic.ChecksumPicture, pic.MIMEType, pic.Fill, "5000", strconv.Itoa(int(pic.Height)), strconv.Itoa(int(pic.Width)))
@@ -539,7 +538,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			fmt.Println("Orienation >1: " + orientation)
 			orientation = orientation[0:1]
 		}
-		adatypes.Central.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
+		log.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
 		_, err = tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, Sha256Checksum, Title, Fill, Height, Width, Media, Thumbnail,mimetype,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation,created)"+
 			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)",
 			pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, fill, pic.Height,
@@ -559,7 +558,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		ti.IncInsert()
 	}
 	if pic.Available == store.NoAvailable || pic.Available == store.PicAvailable {
-		adatypes.Central.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
+		log.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
 		ins := "insert into PictureLocations (PictureName, ChecksumPicture, PictureHost, PictureDirectory)" +
 			" VALUES($1,$2,$3,$4)"
 		_, err = tx.ExecContext(ctx, ins,
@@ -582,7 +581,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return err
 		}
 		ti.IncCommit()
-		adatypes.Central.Log.Debugf("Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
+		log.Log.Debugf("Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
 		atomic.AddUint32(&sqlInsertCounter, 1)
 	}
 	return nil

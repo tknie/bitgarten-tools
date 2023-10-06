@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -34,6 +33,7 @@ import (
 	"tux-lobload/sql"
 
 	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -152,7 +152,7 @@ func main() {
 	for _, r := range strings.Split(filter, ",") {
 		reg, err := regexp.Compile(r)
 		if err != nil {
-			log.Fatalf("Regular expression error (%s): %v", r, err)
+			log.Log.Fatalf("Regular expression error (%s): %v", r, err)
 		}
 		regs = append(regs, reg)
 	}
@@ -178,7 +178,7 @@ func main() {
 		fmt.Printf("%s Loading path %s\n", time.Now().Format(timeFormat), pictureDirectory)
 		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
-				adatypes.Central.Log.Infof("Info empty or dir: %s", path)
+				log.Log.Infof("Info empty or dir: %s", path)
 				return nil
 			}
 			for _, reg := range regs {
@@ -199,7 +199,7 @@ func main() {
 				}
 				ti.IncDone()
 			default:
-				adatypes.Central.Log.Debugf("Suffix unknown: %s", suffix)
+				log.Log.Debugf("Suffix unknown: %s", suffix)
 				sql.IncSkipped()
 			}
 			return nil

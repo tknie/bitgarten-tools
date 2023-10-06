@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -13,7 +12,7 @@ import (
 	"tux-lobload/sql"
 	"tux-lobload/store"
 
-	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 )
 
 var MaxBlobSize = int64(30000000)
@@ -46,7 +45,7 @@ func queueStoreFileInAlbumID(fileName string, albumid int) {
 func StoreWorker() {
 	checker, err := sql.CreateConnection()
 	if err != nil {
-		log.Fatalf("Database connection not established: %v", err)
+		log.Log.Fatalf("Database connection not established: %v", err)
 	}
 	for {
 		select {
@@ -128,7 +127,7 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	pic.Media = make([]byte, fi.Size())
 	var n int
 	n, err = f.Read(pic.Media)
-	adatypes.Central.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Media), err)
+	log.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Media), err)
 	if err != nil {
 		sql.IncError(err)
 		return nil, err
@@ -143,11 +142,11 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 
 	err = pic.CreateThumbnail()
 	if err != nil {
-		adatypes.Central.Log.Errorf("Error creating thumbnail %s: %v", fileName, err)
+		log.Log.Errorf("Error creating thumbnail %s: %v", fileName, err)
 		sql.IncErrorFile(err, pic.Directory+"/"+pic.PictureName)
 	}
 
-	adatypes.Central.Log.Debugf("PictureBinary md5=%s sha512=%s size=%d len=%d", pic.ChecksumPicture, pic.ChecksumPictureSHA, fi.Size(), len(pic.Media))
+	log.Log.Debugf("PictureBinary md5=%s sha512=%s size=%d len=%d", pic.ChecksumPicture, pic.ChecksumPictureSHA, fi.Size(), len(pic.Media))
 
 	return pic, nil
 }

@@ -31,7 +31,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 	"golang.org/x/net/html"
 )
 
@@ -187,7 +187,7 @@ func (album *Album) e(div *html.Node, interval string) error {
 }
 
 func (album *Album) readFile() error {
-	adatypes.Central.Log.Debugf("Extract album information: %s", album.fileName)
+	log.Log.Debugf("Extract album information: %s", album.fileName)
 	file, err := os.Open(album.fileName)
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ func (album *Album) readFile() error {
 		fmt.Println("Error read body", err)
 		return err
 	}
-	adatypes.Central.Log.Debugf("Result title : ", renderNode(bn[0]))
+	log.Log.Debugf("Result title : ", renderNode(bn[0]))
 	var re = regexp.MustCompile(`(?ms)<title>(.*)</title>`)
 	album.Title = re.FindStringSubmatch(renderNode(bn[0]))[1]
 	if album.Title == "" {
@@ -217,7 +217,7 @@ func (album *Album) readFile() error {
 		fmt.Println("Error read body", err)
 		return err
 	}
-	adatypes.Central.Log.Debugf("Result items : ", len(bn))
+	log.Log.Debugf("Result items : ", len(bn))
 	for _, x := range bn {
 		d := searchAttributeClass(x.Attr, "data-interval")
 		album.e(x, d)
@@ -232,7 +232,7 @@ func EvaluateIndex(fileName string) error {
 	path := key
 	ke = strings.LastIndex(key, "/")
 	key = key[ke+1:]
-	adatypes.Central.Log.Debugf("Key: %s", key)
+	log.Log.Debugf("Key: %s", key)
 	fmt.Println("Path:", path)
 	a := &Album{path: path, fileName: fileName, Directory: key}
 	a.readFile()

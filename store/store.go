@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 )
 
 var URL string
@@ -31,7 +31,7 @@ type StoreResponse struct {
 // SendJSON send json data to server
 func SendJSON(mapName string, jsonStr []byte) (*StoreResponse, error) {
 	mapURL := URL + "/" + mapName
-	adatypes.Central.Log.Debugf("URL:>", mapURL)
+	log.Log.Debugf("URL:>", mapURL)
 
 	req, err := http.NewRequest("POST", mapURL, bytes.NewBuffer(jsonStr))
 	if err != nil {

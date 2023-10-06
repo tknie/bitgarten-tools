@@ -34,6 +34,7 @@ import (
 
 	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -213,7 +214,7 @@ func main() {
 		stop := schedule(output, 5*time.Second)
 		err = filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
-				adatypes.Central.Log.Infof("Info empty or dir: %s", path)
+				log.Log.Infof("Info empty or dir: %s", path)
 				return nil
 			}
 			suffix := path[strings.LastIndex(path, ".")+1:]
@@ -228,7 +229,7 @@ func main() {
 			}
 			switch suffix {
 			case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
-				adatypes.Central.Log.Debugf("Checking picture file: %s", path)
+				log.Log.Debugf("Checking picture file: %s", path)
 				add := true
 				if query != "" {
 					add = checkQueryPath(reg, path)
@@ -236,7 +237,7 @@ func main() {
 				if add {
 					err = ps.LoadPicture(!update, path, a)
 					if err != nil {
-						adatypes.Central.Log.Debugf("Loaded %s with error=%v", ps, err)
+						log.Log.Debugf("Loaded %s with error=%v", ps, err)
 						fmt.Fprintln(os.Stderr, "Error loading picture", path, ":", err)
 						if strings.HasPrefix(err.Error(), "File tooo big") {
 							ps.ToBig++

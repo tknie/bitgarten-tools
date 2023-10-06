@@ -8,6 +8,7 @@ import (
 
 	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 )
 
 // PictureConnection picture connection handle
@@ -113,12 +114,12 @@ func (ps *PictureConnection) LoadPicture(insert bool, fileName string, ada *adab
 	var ok bool
 	ok, err = ps.available(pictureKey)
 	if err != nil {
-		adatypes.Central.Log.Debugf("Availability check error %v", err)
+		log.Log.Debugf("Availability check error %v", err)
 		return err
 	}
 	empty := checkEmpty(fileName)
 	if empty {
-		adatypes.Central.Log.Debugf(pictureName, "-> picture file empty")
+		log.Log.Debugf(pictureName, "-> picture file empty")
 		ps.Empty++
 		if ok {
 			fmt.Printf("Remove empty file from database: %s(%s)\n", fileName, pictureKey)
@@ -128,7 +129,7 @@ func (ps *PictureConnection) LoadPicture(insert bool, fileName string, ada *adab
 	}
 	ps.Checked++
 	if ok && insert {
-		adatypes.Central.Log.Debugf(pictureName, "-> picture name already loaded")
+		log.Log.Debugf(pictureName, "-> picture name already loaded")
 		ps.Found++
 		return nil
 	}
@@ -146,7 +147,7 @@ func (ps *PictureConnection) LoadPicture(insert bool, fileName string, ada *adab
 			PictureHost: Hostname, Md5: pictureKey}, MaxBlobSize: ps.MaxBlobSize}
 	err = p.LoadFile()
 	if err != nil {
-		adatypes.Central.Log.Debugf("Load file error %v", err)
+		log.Log.Debugf("Load file error %v", err)
 		return err
 	}
 
@@ -158,7 +159,7 @@ func (ps *PictureConnection) LoadPicture(insert bool, fileName string, ada *adab
 		p.ExtractExif()
 		terr := p.CreateThumbnail()
 		if terr != nil {
-			adatypes.Central.Log.Debugf("Create thumbnail error %v", terr)
+			log.Log.Debugf("Create thumbnail error %v", terr)
 			return terr
 		}
 		if p.MetaData.Height > p.MetaData.Width {
@@ -175,7 +176,7 @@ func (ps *PictureConnection) LoadPicture(insert bool, fileName string, ada *adab
 	default:
 		panic("Unknown suffix " + suffix)
 	}
-	adatypes.Central.Log.Debugf("Done set value to Picture, searching ...")
+	log.Log.Debugf("Done set value to Picture, searching ...")
 
 	if insert {
 		//fmt.Println("Store record metadata ....", p.MetaData.Md5)
@@ -213,7 +214,7 @@ func (ps *PictureConnection) LoadPicture(insert bool, fileName string, ada *adab
 		fmt.Printf("Store request error %v\n", err)
 		return err
 	}
-	adatypes.Central.Log.Debugf("Updated record into ISN=%d MD5=%s", p.MetaData.Index, p.Data.Md5)
+	log.Log.Debugf("Updated record into ISN=%d MD5=%s", p.MetaData.Index, p.Data.Md5)
 	err = ps.store.EndTransaction()
 	if err != nil {
 		panic("End of transaction error: " + err.Error())
@@ -244,10 +245,10 @@ func (ps *PictureConnection) available(key string) (bool, error) {
 	}
 	// result.DumpValues()
 	if len(result.Values) > 0 || len(result.Data) > 0 {
-		adatypes.Central.Log.Debugf("Md5=%s is available\n", key)
+		log.Log.Debugf("Md5=%s is available\n", key)
 		return true, nil
 	}
-	adatypes.Central.Log.Debugf("Md5=%s is not loaded\n", key)
+	log.Log.Debugf("Md5=%s is not loaded\n", key)
 	return false, nil
 }
 
@@ -261,10 +262,10 @@ func (ps *PictureConnection) checkPicture(key string) (bool, error) {
 	}
 	// result.DumpValues()
 	if len(result.Values) > 0 || len(result.Data) > 0 {
-		adatypes.Central.Log.Debugf("ChecksumPicture=%s is available\n", key)
+		log.Log.Debugf("ChecksumPicture=%s is available\n", key)
 		return true, nil
 	}
-	adatypes.Central.Log.Debugf("ChecksumPicture=%s is not loaded\n", key)
+	log.Log.Debugf("ChecksumPicture=%s is not loaded\n", key)
 	return false, nil
 }
 

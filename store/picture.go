@@ -22,6 +22,7 @@ import (
 	"github.com/nfnt/resize"
 	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 	"golang.org/x/net/html"
 )
 
@@ -129,13 +130,13 @@ func (pic *PictureBinary) LoadFile() error {
 	pic.Data.Media = make([]byte, fi.Size())
 	var n int
 	n, err = f.Read(pic.Data.Media)
-	adatypes.Central.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Data.Media), err)
+	log.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Data.Media), err)
 	if err != nil {
 		return err
 	}
 	pic.Data.ChecksumPicture = createMd5(pic.Data.Media)
 	// pic.MetaData.ChecksumPicture = pic.Data.ChecksumPicture
-	adatypes.Central.Log.Debugf("PictureBinary checksum %s size=%d len=%d", pic.Data.ChecksumPicture, fi.Size(), len(pic.Data.Media))
+	log.Log.Debugf("PictureBinary checksum %s size=%d len=%d", pic.Data.ChecksumPicture, fi.Size(), len(pic.Data.Media))
 
 	return nil
 }
@@ -149,7 +150,7 @@ func resizePicture(media []byte, max int) ([]byte, uint32, uint32, error) {
 	buffer.Write(media)
 	srcImage, _, err := image.Decode(&buffer)
 	if err != nil {
-		adatypes.Central.Log.Debugf("Decode image for thumbnail error %v", err)
+		log.Log.Debugf("Decode image for thumbnail error %v", err)
 		return nil, 0, 0, err
 	}
 	maxX := uint(0)
@@ -173,7 +174,7 @@ func resizePicture(media []byte, max int) ([]byte, uint32, uint32, error) {
 	err = jpeg.Encode(buf, newImage, nil)
 	if err != nil {
 		// fmt.Println("Error generating thumbnail", err)
-		adatypes.Central.Log.Debugf("Encode image for thumbnail error %v", err)
+		log.Log.Debugf("Encode image for thumbnail error %v", err)
 		return nil, 0, 0, err
 	}
 	return buf.Bytes(), width, height, nil
@@ -254,7 +255,7 @@ func (pic *PictureBinary) CreateThumbnail() error {
 		pic.MetaData.Width = w
 		pic.MetaData.Height = h
 		pic.Data.ChecksumThumbnail = createMd5(pic.Data.Thumbnail)
-		adatypes.Central.Log.Debugf("Thumbnail checksum %s", pic.Data.ChecksumThumbnail)
+		log.Log.Debugf("Thumbnail checksum %s", pic.Data.ChecksumThumbnail)
 	} else {
 		fmt.Println("No image, skip thumbnail generation ....")
 	}
@@ -279,7 +280,7 @@ func (pic *Pictures) CreateThumbnail() error {
 		pic.Height = h
 		pic.ChecksumThumbnail = createMd5(pic.Thumbnail)
 		pic.Md5 = pic.ChecksumThumbnail
-		adatypes.Central.Log.Debugf("Thumbnail checksum %s", pic.ChecksumThumbnail)
+		log.Log.Debugf("Thumbnail checksum %s", pic.ChecksumThumbnail)
 
 		err = pic.ExifReader()
 		if err != nil && err != io.EOF {
@@ -359,7 +360,7 @@ func (psx *PictureConnection) LoadIndex(insert bool, fileName string, ada *adaba
 						for c := n.FirstChild; c != nil; c = c.NextSibling {
 							buffer.WriteString(c.Data)
 						}
-						adatypes.Central.Log.Debugf("Title -> %s", buffer.String())
+						log.Log.Debugf("Title -> %s", buffer.String())
 						break
 					}
 				}
@@ -367,22 +368,22 @@ func (psx *PictureConnection) LoadIndex(insert bool, fileName string, ada *adaba
 				for _, a := range n.Attr {
 					if a.Key == "class" && strings.Contains(a.Val, "item") {
 						e := entry{}
-						adatypes.Central.Log.Debugf("Found item: %s", a.Val)
+						log.Log.Debugf("Found item: %s", a.Val)
 						for c := n.FirstChild; c != nil; c = c.NextSibling {
 							switch c.Data {
 							case "video":
 								for _, sa := range c.Attr {
-									adatypes.Central.Log.Debugf("VideoX -> %s", sa.Val)
+									log.Log.Debugf("VideoX -> %s", sa.Val)
 									if sa.Key == "class" {
 										e.fillType = sa.Val
 									}
 								}
 								for s := c.FirstChild; s != nil; s = s.NextSibling {
 									if s.Data == "source" {
-										adatypes.Central.Log.Debugf("VideoY -> %s", s.Data)
+										log.Log.Debugf("VideoY -> %s", s.Data)
 										for _, sb := range s.Attr {
 											if sb.Key == "src" {
-												adatypes.Central.Log.Debugf("VideoZ -> %s", sb.Key, sb.Val)
+												log.Log.Debugf("VideoZ -> %s", sb.Key, sb.Val)
 												li := strings.LastIndex(sb.Val, "/")
 												e.imgName = sb.Val[li+1:]
 											}
@@ -393,19 +394,19 @@ func (psx *PictureConnection) LoadIndex(insert bool, fileName string, ada *adaba
 								for _, sa := range c.Attr {
 									switch sa.Key {
 									case "style":
-										adatypes.Central.Log.Debugf("Style -> %s", sa.Val)
+										log.Log.Debugf("Style -> %s", sa.Val)
 										e.imgName = sa.Val[strings.Index(sa.Val, "/")+1 : strings.LastIndex(sa.Val, "'")]
 									case "class":
 										if sa.Val == "carousel-caption" {
-											adatypes.Central.Log.Debugf("classX -> %s", sa.Val)
+											log.Log.Debugf("classX -> %s", sa.Val)
 											for s := c.FirstChild; s != nil; s = s.NextSibling {
 												for sb := s.FirstChild; sb != nil; sb = sb.NextSibling {
-													adatypes.Central.Log.Debugf(" -> %s", sb.Data)
+													log.Log.Debugf(" -> %s", sb.Data)
 													e.text = sb.Data
 												}
 											}
 										} else {
-											adatypes.Central.Log.Debugf("Fill -> %s", sa.Val)
+											log.Log.Debugf("Fill -> %s", sa.Val)
 											e.fillType = sa.Val
 										}
 									}
@@ -414,7 +415,7 @@ func (psx *PictureConnection) LoadIndex(insert bool, fileName string, ada *adaba
 						}
 						err = psx.LoadPicture(insert, directory+ps+"img"+ps+e.imgName, ada)
 						if err != nil {
-							adatypes.Central.Log.Debugf("Loaded %s with error=%v", directory+ps+"img"+ps+e.imgName, err)
+							log.Log.Debugf("Loaded %s with error=%v", directory+ps+"img"+ps+e.imgName, err)
 							fmt.Println("Error loading picture:", err)
 							os.Exit(1)
 						}
@@ -485,7 +486,7 @@ func (pic *PictureBinary) sendBinary(mapName string, isPicture bool) *StoreRespo
 	}
 	mapURL := strings.Replace(URL, "rest/", "binary/", -1) +
 		"/" + mapName + "/" + strconv.Itoa(int(pic.MetaData.Index)) + "/" + field
-	adatypes.Central.Log.Debugf("Binary URL:>", mapURL, "on ISN=", pic.MetaData.Index)
+	log.Log.Debugf("Binary URL:>", mapURL, "on ISN=", pic.MetaData.Index)
 
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 )
 
 type indexType int
@@ -32,6 +32,7 @@ type statInfo struct {
 }
 
 type PictureConnection struct {
+	start           time.Time
 	ShortenName     bool
 	ChecksumRun     bool
 	Started         uint64
@@ -67,7 +68,7 @@ var output = func() {
 		if ps.StatInfo[i].counter > 0 {
 			avg = ps.StatInfo[i].duration / time.Duration(ps.StatInfo[i].counter)
 		}
-		fmt.Printf("%s statistics %18s -> counter=%04d duration=%v average=%v\n", tn, indexInfo[i],
+		log.Log.Debugf("%s statistics %18s -> counter=%04d duration=%v average=%v", tn, indexInfo[i],
 			ps.StatInfo[i].counter, ps.StatInfo[i].duration, avg)
 	}
 	fmt.Printf("%s statistics max Blocksize=%s deferred Blocksize=%v\n",
@@ -104,15 +105,15 @@ func EndStats() {
 	fmt.Printf("%s Done\n", time.Now().Format(timeFormat))
 	output()
 	for e, n := range ps.Errors {
-		fmt.Println(e, ":", n)
-		adatypes.Central.Log.Errorf("%03d -> %s", n, e)
+		fmt.Println("Error:", e, ":", n)
+		log.Log.Errorf("End stats %03d -> %s", n, e)
 	}
 
 }
 
 func schedule(what func(), delay time.Duration) {
 	stopSchedule = make(chan bool)
-
+	ps.start = time.Now()
 	go func() {
 		for {
 			what()
@@ -213,7 +214,7 @@ func IncErrorFile(err error, fileName string) {
 	if err == nil {
 		return
 	}
-	adatypes.Central.Log.Errorf("Increase error for %s: %v", fileName, err)
+	log.Log.Errorf("Increase error for %s: %v", fileName, err)
 	if e, ok := ps.Errors[fileName+"->"+err.Error()]; ok {
 		ps.Errors[fileName+"->"+err.Error()] = e + 1
 		return

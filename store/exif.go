@@ -8,7 +8,7 @@ import (
 
 	"github.com/rwcarlsen/goexif/exif"
 	"github.com/rwcarlsen/goexif/tiff"
-	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/log"
 )
 
 const timeParseFormat = "2006:01:02 15:04:05"
@@ -19,24 +19,24 @@ type Printer struct {
 }
 
 func (pic *Pictures) ExifReader() error {
-	adatypes.Central.Log.Debugf("Exif reader pic %s", pic.MIMEType)
+	log.Log.Debugf("Exif reader pic %s", pic.MIMEType)
 	if !strings.HasPrefix(pic.MIMEType, "image/") {
 		return nil
 	}
 	buffer := bytes.NewReader(pic.Media)
 	x, err := exif.Decode(buffer)
 	if err != nil {
-		adatypes.Central.Log.Errorf("Exif decode error: %v", err)
+		log.Log.Errorf("Exif decode error: %v", err)
 		return err
 	}
 	p := &Printer{pic: pic}
 	err = x.Walk(p)
 	if err != nil {
-		adatypes.Central.Log.Errorf("Exif reader error (%s): %v\n", pic.Title, err)
+		log.Log.Errorf("Exif reader error (%s): %v\n", pic.Title, err)
 		return err
 	}
 	pic.Exif = p.buffer.String()
-	adatypes.Central.Log.Debugf("Exif result: %s", pic.Exif)
+	log.Log.Debugf("Exif result: %s", pic.Exif)
 	return nil
 }
 
