@@ -256,3 +256,19 @@ func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error
 	}
 	return found, nil
 }
+
+func (di *DatabaseInfo) CheckMedia(f common.ResultFunction) error {
+
+	id, err := di.Open()
+	if err != nil {
+		return err
+	}
+	defer flynn.Unregister(id)
+	q := &common.Query{TableName: "Pictures",
+		DataStruct: &Picture{},
+		Fields:     []string{"ChecksumPicture", "Sha256checksum", "Media"},
+	}
+
+	_, err = id.Query(q, f)
+	return err
+}

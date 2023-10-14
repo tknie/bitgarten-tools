@@ -109,7 +109,7 @@ func (ps *PictureConnection) LoadPicture(insert bool, fileName string, ada *adab
 		}
 		fmt.Printf("Shorten name from %s to %s\n", fileName, pictureName)
 	}
-	pictureKey := createMd5([]byte(pictureName))
+	pictureKey := CreateMd5([]byte(pictureName))
 	var err error
 	var ok bool
 	ok, err = ps.available(pictureKey)
@@ -297,7 +297,7 @@ func verifyPictureRecord(record *adabas.Record, x interface{}) error {
 		return xerr
 	}
 	vLen := len(v.Bytes())
-	md := createMd5(v.Bytes())
+	md := CreateMd5(v.Bytes())
 	v, xerr = record.SearchValue("ChecksumPicture")
 	if xerr != nil {
 		return xerr

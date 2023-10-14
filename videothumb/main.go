@@ -22,13 +22,17 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"image"
 	"image/draw"
 	"image/jpeg"
 	"image/png"
+	"io"
 	"os"
 	"os/exec"
+	"runtime"
+	"runtime/pprof"
 	"tux-lobload/store"
 
 	"github.com/tknie/adabas-go-api/adatypes"
@@ -110,6 +114,23 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 }
 
 func main() {
+	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+	var chksum string
+	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic("could not create CPU profile: " + err.Error())
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			panic("could not start CPU profile: " + err.Error())
+		}
+		defer pprof.StopCPUProfile()
+	}
+	defer writeMemProfile(*memprofile)
+
 	url := os.Getenv("POSTGRES_URL")
 	ref, passwd, err := common.NewReference(url)
 	if err != nil {
@@ -125,12 +146,16 @@ func main() {
 		fmt.Println("Error connect ...:", err)
 		return
 	}
+	prefix := ""
+	if chksum != "" {
+		prefix = fmt.Sprintf("checksumpicture = %s AND ", chksum)
+	}
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &store.Pictures{},
 		Fields:     []string{"MIMEType", "checksumpicture", "Media"},
-		Search:     "MIMEType LIKE 'video%'",
+		Search:     prefix + "MIMEType LIKE 'video%'",
 	}
-	res, err := id.Query(q, func(search *common.Query, result *common.Result) error {
+	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
 		pic := result.Data.(*store.Pictures)
 		fmt.Println("MIMEtype", pic.MIMEType, pic.ChecksumPicture)
 		err := os.Remove("input.mp4")
@@ -143,13 +168,24 @@ func main() {
 			fmt.Println("Error removing:", err)
 			return err
 		}
-		storeThumb(pic.ChecksumPicture, pic)
+		err = storeThumb(pic.ChecksumPicture, pic)
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			fmt.Println("Error preparing storage:", err)
+			return err
+		}
 
+		if pic.Thumbnail == nil && len(pic.Thumbnail) == 0 {
+			log.Log.Fatalf("Thumbnail empty")
+		}
+		fmt.Println("TLEN:", len(pic.Thumbnail))
 		list := [][]any{{pic.Thumbnail}}
 		input := &common.Entries{
-			Fields:     []string{"Thumbnail"},
-			DataStruct: &store.Pictures{},
-			Values:     list,
+			Fields: []string{"Thumbnail"},
+			//			DataStruct: &store.Pictures{},
+			Values: list,
 		}
 		input.Update = []string{fmt.Sprintf("checksumpicture = '%s'",
 			pic.ChecksumPicture)}
@@ -165,10 +201,10 @@ func main() {
 		fmt.Println("Error query ...:", err)
 		return
 	}
-	fmt.Println("RES:", res.Data)
+	fmt.Println("video thumbnail generated")
 }
 
-func storeThumb(chksum string, pic *store.Pictures) {
+func storeThumb(chksum string, pic *store.Pictures) error {
 
 	// c := exec.Command(
 	// 	"ffmpeg", "-i", "file.mp4",
@@ -180,11 +216,14 @@ func storeThumb(chksum string, pic *store.Pictures) {
 	)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
-	c.Run()
+	err := c.Run()
+	if err != nil {
+		return err
+	}
 	imgb, err := os.Open(chksum + "001.jpg")
 	if err != nil {
 		fmt.Println("Chksum error:", err)
-		return
+		return io.EOF
 	}
 	img, _ := jpeg.Decode(imgb)
 	defer imgb.Close()
@@ -202,4 +241,21 @@ func storeThumb(chksum string, pic *store.Pictures) {
 	var buffer bytes.Buffer
 	jpeg.Encode(&buffer, m, &jpeg.Options{jpeg.DefaultQuality})
 	pic.Thumbnail = buffer.Bytes()
+	return nil
+}
+
+func writeMemProfile(file string) {
+	if file != "" {
+		f, err := os.Create(file)
+		if err != nil {
+			panic("could not create memory profile: " + err.Error())
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			panic("could not write memory profile: " + err.Error())
+		}
+		defer f.Close()
+		fmt.Println("Memory profile written")
+	}
+
 }

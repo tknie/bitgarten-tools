@@ -134,14 +134,14 @@ func (pic *PictureBinary) LoadFile() error {
 	if err != nil {
 		return err
 	}
-	pic.Data.ChecksumPicture = createMd5(pic.Data.Media)
+	pic.Data.ChecksumPicture = CreateMd5(pic.Data.Media)
 	// pic.MetaData.ChecksumPicture = pic.Data.ChecksumPicture
 	log.Log.Debugf("PictureBinary checksum %s size=%d len=%d", pic.Data.ChecksumPicture, fi.Size(), len(pic.Data.Media))
 
 	return nil
 }
 
-func createMd5(input []byte) string {
+func CreateMd5(input []byte) string {
 	return fmt.Sprintf("%X", md5.Sum(input))
 }
 
@@ -254,7 +254,7 @@ func (pic *PictureBinary) CreateThumbnail() error {
 		pic.Data.Thumbnail = thmb
 		pic.MetaData.Width = w
 		pic.MetaData.Height = h
-		pic.Data.ChecksumThumbnail = createMd5(pic.Data.Thumbnail)
+		pic.Data.ChecksumThumbnail = CreateMd5(pic.Data.Thumbnail)
 		log.Log.Debugf("Thumbnail checksum %s", pic.Data.ChecksumThumbnail)
 	} else {
 		fmt.Println("No image, skip thumbnail generation ....")
@@ -278,7 +278,7 @@ func (pic *Pictures) CreateThumbnail() error {
 		pic.Thumbnail = thmb
 		pic.Width = w
 		pic.Height = h
-		pic.ChecksumThumbnail = createMd5(pic.Thumbnail)
+		pic.ChecksumThumbnail = CreateMd5(pic.Thumbnail)
 		pic.Md5 = pic.ChecksumThumbnail
 		log.Log.Debugf("Thumbnail checksum %s", pic.ChecksumThumbnail)
 
