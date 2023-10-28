@@ -132,8 +132,8 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 		sql.IncError("Read error "+fileName, err)
 		return nil, err
 	}
-	pic.ChecksumPicture = createMd5(pic.Media)
-	pic.ChecksumPictureSHA = createSHA(pic.Media)
+	pic.ChecksumPicture = CreateMd5(pic.Media)
+	pic.ChecksumPictureSHA = CreateSHA(pic.Media)
 
 	db.CheckExists(pic)
 	if pic.Available == store.BothAvailable {
@@ -151,10 +151,10 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	return pic, nil
 }
 
-func createMd5(input []byte) string {
+func CreateMd5(input []byte) string {
 	return fmt.Sprintf("%X", md5.Sum(input))
 }
 
-func createSHA(input []byte) string {
+func CreateSHA(input []byte) string {
 	return fmt.Sprintf("%X", sha256.Sum256(input))
 }

@@ -508,7 +508,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 
 func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	if pic.ChecksumPictureSHA == "" {
-		pic.ChecksumPictureSHA = createSHA(pic.Media)
+		pic.ChecksumPictureSHA = CreateSHA(pic.Media)
 	}
 	ti := ps.IncStarted()
 	ctx := context.Background()
@@ -665,6 +665,10 @@ func StopWorker() {
 	stop <- true
 }
 
-func createSHA(input []byte) string {
+func CreateSHA(input []byte) string {
 	return fmt.Sprintf("%X", sha256.Sum256(input))
+}
+
+func CreateMd5(input []byte) string {
+	return fmt.Sprintf("%X", md5.Sum(input))
 }
