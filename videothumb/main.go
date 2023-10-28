@@ -111,12 +111,16 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 
 func main() {
 	url := os.Getenv("POSTGRES_URL")
+	if url == "" {
+		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
+		return
+	}
 	ref, passwd, err := common.NewReference(url)
 	if err != nil {
 		fmt.Println("Error parsing URL", err)
 		return
 	}
-	fmt.Println("Got passwd <", passwd, ">")
+	// fmt.Println("Got passwd <", passwd, ">")
 	if passwd == "" {
 		passwd = os.Getenv("POSTGRES_PASSWORD")
 	}

@@ -60,7 +60,7 @@ type Albums struct {
 	Published     time.Time
 	// Created       time.Time
 	//	Updated_At    time.Time
-	Pictures []*AlbumPictures `db:":ignore"`
+	Pictures []*AlbumPictures `db:":ignore" flynn:":ignore"`
 }
 
 func Connect(url, pwd string) (*DatabaseInfo, error) {

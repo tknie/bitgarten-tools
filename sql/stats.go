@@ -61,9 +61,9 @@ var wgStat sync.WaitGroup
 
 var output = func() {
 	tn := time.Now().Format(timeFormat)
-	fmt.Printf("%s statistics started=%02d checked=%02d skipped=%02d too big=%02d errors=%02d\n",
+	fmt.Printf("%s statistics started=%05d checked=%05d skipped=%02d too big=%02d errors=%02d\n",
 		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
-	log.Log.Infof("%s statistics started=%02d checked=%02d skipped=%02d too big=%02d errors=%02d\n",
+	log.Log.Infof("%s statistics started=%05d checked=%05d skipped=%02d too big=%02d errors=%02d\n",
 		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
 	for i := 0; i < int(doneIndex)+1; i++ {
 		avg := time.Duration(0)
@@ -166,7 +166,7 @@ func (di *timeInfo) IncDuplicateLocation() {
 	di.used(int(duplicateLocationIndex))
 }
 
-func IncStarted() *timeInfo {
+func (ps *PictureConnection) IncStarted() *timeInfo {
 	ps.Started++
 	return &timeInfo{startTime: time.Now()}
 }

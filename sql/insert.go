@@ -58,7 +58,7 @@ func init() {
 func CreateConnection() (*DatabaseInfo, error) {
 	host := os.Getenv("POSTGRES_HOST")
 	if host == "" {
-		host = "lion.fritz.box"
+		host = "bear.fritz.box"
 	}
 	user := os.Getenv("POSTGRES_USER")
 	if user == "" {
@@ -510,7 +510,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	if pic.ChecksumPictureSHA == "" {
 		pic.ChecksumPictureSHA = createSHA(pic.Media)
 	}
-	ti := IncStarted()
+	ti := ps.IncStarted()
 	ctx := context.Background()
 	tx, err := di.db.BeginTx(ctx, nil)
 	if err != nil {

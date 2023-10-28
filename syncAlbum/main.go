@@ -133,6 +133,7 @@ func main() {
 	connSource, err := sql.Connect(sourceUrl, pwd)
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
+		fmt.Println("Set POSTGRES_SOURCE_URL and/or POSTGRES_SOURCE_PASSWORD to define remote database")
 		return
 	}
 	//	destUrl := "postgres://admin@bear:5433/bitgarten"
@@ -141,6 +142,7 @@ func main() {
 	destSource, err := sql.Connect(destUrl, pwd)
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
+		fmt.Println("Set POSTGRES_DESTINATION_URL and/or POSTGRES_DESTINATION_PASSWORD to define remote database")
 		return
 	}
 	switch {
