@@ -26,4 +26,4 @@ $(EXECS): $(OBJECTS) ; $(info $(M) building executable $(@:$(BIN)/%=%)…) @ ## 
 		-o $@ ./$(@:$(BIN)/%=%)
 
 clean:
-	rm -f $(EXECS)
+	rm -f $(EXECS) *.log

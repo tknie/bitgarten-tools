@@ -33,6 +33,7 @@ import (
 	"os/exec"
 	"runtime"
 	"runtime/pprof"
+	"tux-lobload/sql"
 	"tux-lobload/store"
 
 	"github.com/tknie/adabas-go-api/adatypes"
@@ -51,6 +52,12 @@ type Albums struct {
 	Title       string
 	Description string
 }
+
+var gid = common.RegDbID(0)
+
+const SELECT_ALBUM = `with albumIdSelect(Id) as ( SELECT Id FROM Albums WHERE Title = '%s'), checksumSelect as (  
+	SELECT ChecksumPicture FROM AlbumPictures, albumIdSelect WHERE albumid = albumIdSelect.Id AND MIMEType LIKE 'video%%')
+	SELECT Pictures.ChecksumPicture,MIMEType,Media FROM Pictures, checksumSelect WHERE Pictures.checksumpicture = checksumSelect.ChecksumPicture`
 
 func init() {
 	level := zapcore.ErrorLevel
@@ -117,7 +124,10 @@ func main() {
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	var chksum string
+	var title string
 	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
+	flag.StringVar(&title, "a", "", "Search for album title")
+	flag.Parse()
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -150,62 +160,127 @@ func main() {
 		fmt.Println("Error connect ...:", err)
 		return
 	}
-	prefix := ""
-	if chksum != "" {
-		prefix = fmt.Sprintf("checksumpicture = %s AND ", chksum)
-	}
+	gid = id
 	q := &common.Query{TableName: "Pictures",
-		DataStruct: &store.Pictures{},
-		Fields:     []string{"MIMEType", "checksumpicture", "Media"},
-		Search:     prefix + "MIMEType LIKE 'video%'",
+		DataStruct:   &store.Pictures{},
+		Fields:       []string{"MIMEType", "checksumpicture", "Media"},
+		FctParameter: id,
 	}
+	if title != "" {
+		// prefix = searchTitle(title, id)
+		prefix := fmt.Sprintf(SELECT_ALBUM, title)
+		if prefix == "" {
+			log.Log.Fatal("Error evaluating album id...", prefix)
+		}
+		q.Search = prefix
+		err = id.BatchSelectFct(q, generateQueryVideoThumbnail)
+		if err != nil {
+			fmt.Println("Error query ...:", err)
+			return
+		}
+	} else {
+		prefix := "MIMEType LIKE 'video%'"
+		if chksum != "" {
+			cprefix := fmt.Sprintf("title = %s AND ", title)
+			prefix = cprefix + prefix
+		}
+		q.Search = prefix
+		_, err = id.Query(q, generateQueryVideoThumbnail)
+		if err != nil {
+			fmt.Println("Error query ...:", err)
+			return
+		}
+	}
+	fmt.Println("video thumbnail generated")
+}
+
+func generateQueryVideoThumbnail(search *common.Query, result *common.Result) error {
+	id := search.FctParameter.(common.RegDbID)
+	pic := result.Data.(*store.Pictures)
+	return generateVideoThumbnail(id, pic)
+}
+
+func generateVideoThumbnail(id common.RegDbID, pic *store.Pictures) error {
+	fmt.Println("MIMEtype", pic.MIMEType, pic.ChecksumPicture)
+	err := os.Remove("input.mp4")
+	if err != nil && !os.IsNotExist(err) {
+		fmt.Println("Error removing:", err)
+		return err
+	}
+	err = os.WriteFile("file.mp4", pic.Media, 0644)
+	if err != nil {
+		fmt.Println("Error removing:", err)
+		return err
+	}
+	err = storeThumb(pic.ChecksumPicture, pic)
+	if err != nil {
+		if err == io.EOF {
+			return nil
+		}
+		fmt.Println("Error preparing storage:", err)
+		return err
+	}
+
+	if pic.Thumbnail == nil && len(pic.Thumbnail) == 0 {
+		log.Log.Fatalf("Thumbnail empty")
+	}
+	fmt.Println("TLEN:", len(pic.Thumbnail))
+	list := [][]any{{pic.Thumbnail}}
+	input := &common.Entries{
+		Fields: []string{"Thumbnail"},
+		//			DataStruct: &store.Pictures{},
+		Values: list,
+	}
+	input.Update = []string{fmt.Sprintf("checksumpicture = '%s'",
+		pic.ChecksumPicture)}
+	n, err := id.Update("Pictures", input)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Update n=", n)
+
+	return nil
+}
+
+func searchTitle(title string, id common.RegDbID) string {
+	q := &common.Query{TableName: "Albums",
+		DataStruct: &sql.Albums{},
+		Fields:     []string{"Id"},
+		Search:     fmt.Sprintf("Title = '%s'", title),
+	}
+	aid := uint64(0)
+	_, err := id.Query(q, func(search *common.Query, result *common.Result) error {
+		a := result.Data.(*sql.Albums)
+		aid = a.Id
+		return nil
+	})
+	fmt.Println("AID: ", aid)
+	if err != nil {
+		return ""
+	}
+	q = &common.Query{TableName: "AlbumPictures",
+		DataStruct: &sql.AlbumPictures{},
+		Fields:     []string{"AlbumId", "ChecksumPicture"},
+		Search:     fmt.Sprintf("albumid = %d AND MIMEType LIKE 'video%%'", aid),
+	}
+	pictureMDs := make([]string, 0)
 	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
-		pic := result.Data.(*store.Pictures)
-		fmt.Println("MIMEtype", pic.MIMEType, pic.ChecksumPicture)
-		err := os.Remove("input.mp4")
-		if err != nil && !os.IsNotExist(err) {
-			fmt.Println("Error removing:", err)
-			return err
-		}
-		err = os.WriteFile("file.mp4", pic.Media, 0644)
-		if err != nil {
-			fmt.Println("Error removing:", err)
-			return err
-		}
-		err = storeThumb(pic.ChecksumPicture, pic)
-		if err != nil {
-			if err == io.EOF {
-				return nil
-			}
-			fmt.Println("Error preparing storage:", err)
-			return err
-		}
-
-		if pic.Thumbnail == nil && len(pic.Thumbnail) == 0 {
-			log.Log.Fatalf("Thumbnail empty")
-		}
-		fmt.Println("TLEN:", len(pic.Thumbnail))
-		list := [][]any{{pic.Thumbnail}}
-		input := &common.Entries{
-			Fields: []string{"Thumbnail"},
-			//			DataStruct: &store.Pictures{},
-			Values: list,
-		}
-		input.Update = []string{fmt.Sprintf("checksumpicture = '%s'",
-			pic.ChecksumPicture)}
-		n, err := id.Update("Pictures", input)
-		if err != nil {
-			return err
-		}
-		fmt.Println("Update n=", n)
-
+		ap := result.Data.(*sql.AlbumPictures)
+		pictureMDs = append(pictureMDs, ap.ChecksumPicture)
 		return nil
 	})
 	if err != nil {
-		fmt.Println("Error query ...:", err)
-		return
+		return ""
 	}
-	fmt.Println("video thumbnail generated")
+	result := "checksumpicture IN ("
+	for i, md5 := range pictureMDs {
+		if i != 0 {
+			result += ","
+		}
+		result += "'" + md5 + "'"
+	}
+	result += ")"
+	return result
 }
 
 func storeThumb(chksum string, pic *store.Pictures) error {

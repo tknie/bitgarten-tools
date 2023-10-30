@@ -11,10 +11,10 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/tknie/adabas-go-api v1.7.11-0.20230927173718-c1f8db24a2a8
-	github.com/tknie/flynn v0.0.0-20230927182234-9c1914abe6c7
+	github.com/tknie/flynn v0.0.0-20231029172315-a0dfbf7b5df9
 	github.com/tknie/log v0.0.0-20231006083545-fabe25f4fb0e
 	go.uber.org/zap v1.26.0
-	golang.org/x/net v0.15.0
+	golang.org/x/net v0.17.0
 )
 
 require (
@@ -32,7 +32,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
