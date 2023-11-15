@@ -307,9 +307,15 @@ func storeThumb(chksum string, pic *store.Pictures) error {
 	img, _ := jpeg.Decode(imgb)
 	defer imgb.Close()
 
-	wmb, _ := os.Open("watermark.png")
-	watermark, _ := png.Decode(wmb)
+	wmb, err := os.Open("watermark.png")
+	if err != nil {
+		log.Log.Fatalf("Error opening watermark")
+	}
+	watermark, err := png.Decode(wmb)
 	defer wmb.Close()
+	if err != nil {
+		log.Log.Fatalf("Error decoding watermark")
+	}
 
 	offset := image.Pt(1, 1)
 	b := img.Bounds()
@@ -318,7 +324,10 @@ func storeThumb(chksum string, pic *store.Pictures) error {
 	draw.Draw(m, watermark.Bounds().Add(offset), watermark, image.ZP, draw.Over)
 
 	var buffer bytes.Buffer
-	jpeg.Encode(&buffer, m, &jpeg.Options{jpeg.DefaultQuality})
+	err = jpeg.Encode(&buffer, m, &jpeg.Options{jpeg.DefaultQuality})
+	if err != nil {
+		log.Log.Fatalf("Error encoding with watermark")
+	}
 	pic.Thumbnail = buffer.Bytes()
 	return nil
 }

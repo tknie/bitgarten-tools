@@ -112,6 +112,7 @@ func main() {
 	var shortenPath bool
 	var nrThreadReader int
 	var nrThreadStorer int
+	var fileName string
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
@@ -120,11 +121,13 @@ func main() {
 	flag.IntVar(&nrThreadStorer, "T", 5, "Threads storing pictures")
 	flag.StringVar(&filter, "F", ".*@eadir.*,.*/._[^/]*", "Comma-separated list of regular expression which may excluded")
 	flag.BoolVar(&insertAlbum, "A", false, "Insert Albums")
+	flag.IntVar(&albumid, "a", 1, "Album ID to add pictures")
 	flag.BoolVar(&shortenPath, "s", false, "Shortend directory to last name only")
+	flag.StringVar(&fileName, "i", "", "File name for single picture store")
 	flag.Int64Var(&binarySize, "b", 50000000, "Maximum binary blob size")
 	flag.Parse()
 
-	if pictureDirectory == "" {
+	if pictureDirectory == "" && fileName == "" {
 		fmt.Println("Picture directory option is required")
 		flag.Usage()
 		return
@@ -159,9 +162,29 @@ func main() {
 	}
 
 	defer writeMemProfile(*memprofile)
+	sql.StartStats()
+	start := time.Now()
+	switch {
+	case fileName != "":
+		fmt.Printf("Store file '%s' to album id %d\n", fileName, albumid)
+		suffix := fileName[strings.LastIndex(fileName, ".")+1:]
+		suffix = strings.ToLower(suffix)
+		storeFile(fileName, suffix)
+		time.Sleep(1 * time.Minute)
+	case pictureDirectory != "":
+		storeDirectory(pictureDirectory, regs)
+	}
+	wgStore.Wait()
+
+	sql.EndStats()
+	fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
+	for i := 0; i < nrThreadReader; i++ {
+		sql.StopWorker()
+	}
+}
+
+func storeDirectory(pictureDirectory string, regs []*regexp.Regexp) {
 	if pictureDirectory != "" {
-		sql.StartStats()
-		start := time.Now()
 
 		if insertAlbum {
 			di, err := sql.CreateConnection()
@@ -191,6 +214,10 @@ func main() {
 			ti := sql.IncChecked()
 			suffix := path[strings.LastIndex(path, ".")+1:]
 			suffix = strings.ToLower(suffix)
+			if err != nil {
+				// return fmt.Errorf("error storing file: %v", err)
+				sql.IncErrorFile(err, path)
+			}
 			switch suffix {
 			case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
 				queueStoreFileInAlbumID(path, albumid)
@@ -209,14 +236,21 @@ func main() {
 			fmt.Println("Abort/Error during file walk:", err)
 			return
 		}
-		wgStore.Wait()
+	}
 
-		sql.EndStats()
-		fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
+}
+
+func storeFile(path, suffix string) error {
+	ti := sql.IncChecked()
+	switch suffix {
+	case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
+		queueStoreFileInAlbumID(path, albumid)
+		ti.IncDone()
+	default:
+		log.Log.Debugf("Suffix unknown: %s", suffix)
+		sql.IncSkipped()
 	}
-	for i := 0; i < nrThreadReader; i++ {
-		sql.StopWorker()
-	}
+	return nil
 }
 
 func checkQueryPath(reg *regexp.Regexp, path string) bool {

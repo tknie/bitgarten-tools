@@ -51,10 +51,10 @@ func StoreWorker() {
 		select {
 		case file := <-storeChannel:
 			err := storeFileInAlbumID(checker, file, albumid)
-			wgStore.Done()
 			if err != nil {
 				fmt.Println("Error inserting SQL picture:", err)
 			}
+			wgStore.Done()
 		case <-stop:
 			return
 		}
@@ -62,19 +62,24 @@ func StoreWorker() {
 }
 
 func storeFileInAlbumID(db *sql.DatabaseInfo, file *StoreFile, storeAlbum int) error {
+	log.Log.Debugf("Store file %s", file.fileName)
 	ti := sql.IncStored()
 	baseName := path.Base(file.fileName)
 	//dirName := path.Dir(fileName)
 	pic, err := LoadFile(db, file.fileName)
 	if err != nil {
+		log.Log.Errorf("Store file %s load failed: %v", file.fileName, err)
 		return err
 	}
 	sql.RegisterBlobSize(int64(len(pic.Media)))
+	log.Log.Debugf("Available = %d", pic.Available)
 	if pic.Available == store.BothAvailable {
 		ti.IncDuplicate()
 		ti.IncDuplicateLocation()
+		log.Log.Debugf("Duplicate found")
 		return nil
 	}
+	log.Log.Debugf("Store file %s", file.fileName)
 	ti.IncLoaded()
 	globalindex++
 	pic.Index = globalindex

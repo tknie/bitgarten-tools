@@ -467,17 +467,20 @@ func InsertWorker() {
 		fmt.Println("Connection error:", err)
 		return
 	}
+	counter := uint64(0)
 	defer di.Close()
 	for {
 		select {
 		case pic := <-picChannel:
+			log.Log.Debugf("Inserting pic in worker")
 			err = di.InsertPictures(pic)
 			if err != nil {
 				fmt.Println("Error inserting SQL picture:", err)
 			}
 			wg.Done()
+			counter++
 		case <-stop:
-			fmt.Printf("Stored data in %v\n", di.duraction)
+			fmt.Printf("Stored data in %v count=%d\n", di.duraction, counter)
 			return
 		}
 	}
@@ -507,6 +510,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 }
 
 func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
+	log.Log.Debugf("Insert picture in AlbumPictures")
 	if pic.ChecksumPictureSHA == "" {
 		pic.ChecksumPictureSHA = CreateSHA(pic.Media)
 	}
@@ -527,6 +531,8 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return err
 		}
 	}
+	fmt.Printf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
+		pic.ChecksumPictureSHA, pic.PictureName)
 	if pic.Available == store.NoAvailable {
 		fill := pic.Fill
 		if len(fill) > 1 {
@@ -555,6 +561,8 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			ti.IncDuplicate()
 			return nil
 		}
+		tx.Commit()
+		fmt.Println("Stored", pic.ChecksumPicture)
 		ti.IncInsert()
 	}
 	if pic.Available == store.NoAvailable || pic.Available == store.PicAvailable {
