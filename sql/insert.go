@@ -520,6 +520,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	if err != nil {
 		IncError("BeginTx "+pic.PictureName, err)
 		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
+		log.Log.Errorf("Error init Transaction storing file:", pic.PictureName, "->", err)
 		return err
 	}
 
@@ -528,43 +529,23 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		err = di.InsertAlbumPictures(pic, int(index), pic.StoreAlbum)
 		if err != nil {
 			fmt.Println("Error inserting album pictures")
+			log.Log.Errorf("Error inserting album: %v", err)
 			return err
 		}
 	}
 	fmt.Printf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
 		pic.ChecksumPictureSHA, pic.PictureName)
+	log.Log.Errorf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
+		pic.ChecksumPictureSHA, pic.PictureName)
 	if pic.Available == store.NoAvailable {
-		fill := pic.Fill
-		if len(fill) > 1 {
-			fmt.Println("Fill >1: " + fill)
-			fill = fill[0:1]
-		}
-		orientation := pic.ExifOrientation
-		if len(orientation) > 1 {
-			fmt.Println("Orienation >1: " + orientation)
-			orientation = orientation[0:1]
-		}
-		log.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
-		_, err = tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, Sha256Checksum, Title, Fill, Height, Width, Media, Thumbnail,mimetype,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation,created)"+
-			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)",
-			pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, fill, pic.Height,
-			pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
-			pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat), pic.ExifOrigTime.Format(timeFormat), pic.ExifXDimension, pic.ExifYDimension, orientation, pic.Generated)
+		err = insertPictureData(ti, ctx, tx, pic)
 		if err != nil {
-			tx.Rollback()
-			if !checkErrorContinue(err) {
-				IncError("ExecContext "+pic.PictureName, err)
-				fmt.Println("Error rolling back pic data md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
-				//fmt.Println("Error inserting Pictures", err, len(pic.Media))
-				return err
-			}
-			ti.IncDuplicate()
-			return nil
+			log.Log.Errorf("Reopen transaction")
+			tx, _ = di.db.BeginTx(ctx, nil)
 		}
-		tx.Commit()
-		fmt.Println("Stored", pic.ChecksumPicture)
-		ti.IncInsert()
+
 	}
+	log.Log.Debugf("Check picture location available: %d", pic.Available)
 	if pic.Available == store.NoAvailable || pic.Available == store.PicAvailable {
 		log.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
 		ins := "insert into PictureLocations (PictureName, ChecksumPicture, PictureHost, PictureDirectory)" +
@@ -572,6 +553,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		_, err = tx.ExecContext(ctx, ins,
 			pic.PictureName, pic.ChecksumPicture, hostname, pic.Directory)
 		if err != nil {
+			log.Log.Errorf("Insert location error: %v", err)
 			tx.Rollback()
 			if !checkErrorContinue(err) {
 				fmt.Println("Error inserting PictureLocations",
@@ -579,6 +561,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 				fmt.Println("Error rolling back Md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
 				return err
 			}
+			log.Log.Debugf("Error inserting locations: %v", err)
 			ti.IncDuplicateLocation()
 			return nil
 		}
@@ -591,7 +574,49 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		ti.IncCommit()
 		log.Log.Debugf("Commited pic", "Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
 		atomic.AddUint32(&sqlInsertCounter, 1)
+	} else {
+		err = tx.Commit()
+		if err != nil {
+			IncError("Commit error "+pic.PictureName, fmt.Errorf("error commiting: %v", err))
+			return err
+		}
+		ti.IncCommit()
 	}
+	return nil
+}
+
+func insertPictureData(ti *timeInfo, ctx context.Context, tx *sql.Tx, pic *store.Pictures) error {
+	fill := pic.Fill
+	if len(fill) > 1 {
+		fmt.Println("Fill >1: " + fill)
+		fill = fill[0:1]
+	}
+	orientation := pic.ExifOrientation
+	if len(orientation) > 1 {
+		fmt.Println("Orienation >1: " + orientation)
+		orientation = orientation[0:1]
+	}
+	log.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
+	_, err := tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, Sha256Checksum, Title, Fill, Height, Width, Media, Thumbnail,mimetype,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation,created)"+
+		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)",
+		pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, fill, pic.Height,
+		pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
+		pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat), pic.ExifOrigTime.Format(timeFormat), pic.ExifXDimension, pic.ExifYDimension, orientation, pic.Generated)
+	if err != nil {
+		tx.Rollback()
+		if !checkErrorContinue(err) {
+			IncError("ExecContext "+pic.PictureName, err)
+			fmt.Println("Error rolling back pic data md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
+			//fmt.Println("Error inserting Pictures", err, len(pic.Media))
+			return err
+		}
+		log.Log.Errorf("Error inser picture: %v", err)
+		ti.IncDuplicate()
+		return err
+	}
+	// tx.Commit()
+	fmt.Println("Stored", pic.ChecksumPicture)
+	ti.IncInsert()
 	return nil
 }
 

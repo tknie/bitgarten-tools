@@ -32,6 +32,8 @@ import (
 	"time"
 	"tux-lobload/sql"
 
+	"github.com/docker/go-units"
+
 	"github.com/tknie/adabas-go-api/adatypes"
 	"github.com/tknie/log"
 	"go.uber.org/zap"
@@ -106,9 +108,8 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 }
 
 func main() {
-	var pictureDirectory string
 	var filter string
-	var binarySize int64
+	var binarySize string
 	var shortenPath bool
 	var nrThreadReader int
 	var nrThreadStorer int
@@ -116,7 +117,6 @@ func main() {
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
-	flag.StringVar(&pictureDirectory, "D", "", "Directory of picture to be imported")
 	flag.IntVar(&nrThreadReader, "t", 5, "Threads preparing pictures")
 	flag.IntVar(&nrThreadStorer, "T", 5, "Threads storing pictures")
 	flag.StringVar(&filter, "F", ".*@eadir.*,.*/._[^/]*", "Comma-separated list of regular expression which may excluded")
@@ -124,14 +124,23 @@ func main() {
 	flag.IntVar(&albumid, "a", 1, "Album ID to add pictures")
 	flag.BoolVar(&shortenPath, "s", false, "Shortend directory to last name only")
 	flag.StringVar(&fileName, "i", "", "File name for single picture store")
-	flag.Int64Var(&binarySize, "b", 50000000, "Maximum binary blob size")
+	flag.StringVar(&binarySize, "b", "500MB", "Maximum binary blob size")
 	flag.Parse()
 
-	if pictureDirectory == "" && fileName == "" {
+	directories := flag.Args()
+	sz, err := units.FromHumanSize(binarySize)
+	if err != nil {
+		fmt.Printf("Picture size option is not valid: %s\n", binarySize)
+		flag.Usage()
+		return
+	}
+
+	if len(directories) == 0 && fileName == "" {
 		fmt.Println("Picture directory option is required")
 		flag.Usage()
 		return
 	}
+	fmt.Println("Directories:", directories)
 
 	for i := 0; i < nrThreadReader; i++ {
 		go StoreWorker()
@@ -139,7 +148,8 @@ func main() {
 	for i := 0; i < nrThreadStorer; i++ {
 		go sql.InsertWorker()
 	}
-	MaxBlobSize = binarySize
+	MaxBlobSize = sz
+	fmt.Println("Max lob size:", units.HumanSize(float64(MaxBlobSize)))
 	ShortPath = shortenPath
 
 	if *cpuprofile != "" {
@@ -171,8 +181,10 @@ func main() {
 		suffix = strings.ToLower(suffix)
 		storeFile(fileName, suffix)
 		time.Sleep(1 * time.Minute)
-	case pictureDirectory != "":
-		storeDirectory(pictureDirectory, regs)
+	case len(directories) > 0:
+		for _, pictureDirectory := range directories {
+			storeDirectory(pictureDirectory, regs)
+		}
 	}
 	wgStore.Wait()
 

@@ -12,6 +12,7 @@ import (
 	"tux-lobload/sql"
 	"tux-lobload/store"
 
+	"github.com/docker/go-units"
 	"github.com/tknie/log"
 )
 
@@ -109,7 +110,9 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	if fi.Size() > MaxBlobSize {
 		sql.IncToBig()
 		sql.DeferredBlobSize(fi.Size())
-		err := fmt.Errorf("file %s tooo big %d > %d", fileName, fi.Size(), MaxBlobSize)
+		fileSize := units.HumanSize(float64(fi.Size()))
+		maxSize := units.HumanSize(float64(MaxBlobSize))
+		err := fmt.Errorf("file %s tooo big %s > %s", fileName, fileSize, maxSize)
 		sql.IncError("File too big "+fileName, err)
 		return nil, err
 	}

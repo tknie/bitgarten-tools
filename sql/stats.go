@@ -42,7 +42,7 @@ type PictureConnection struct {
 	ToBig           uint64
 	RequestBlobSize int64
 	MaxBlobSize     int64
-	Errors          map[string]uint64
+	Errors          sync.Map
 	Filter          []string
 	NrErrors        uint64
 }
@@ -51,7 +51,7 @@ type timeInfo struct {
 	startTime time.Time
 }
 
-var ps = &PictureConnection{Errors: make(map[string]uint64)}
+var ps = &PictureConnection{}
 
 const timeFormat = "2006-01-02 15:04:05"
 
@@ -108,11 +108,11 @@ func EndStats() {
 
 	fmt.Printf("%s Done\n", time.Now().Format(timeFormat))
 	output()
-	for e, n := range ps.Errors {
+	ps.Errors.Range(func(e, n any) bool {
 		fmt.Println("Error:", e, ":", n)
 		log.Log.Errorf("End stats %03d -> %s", n, e)
-	}
-
+		return true
+	})
 }
 
 func schedule(what func(), delay time.Duration) {
@@ -206,11 +206,11 @@ func IncError(prefix string, err error) {
 	if err == nil {
 		return
 	}
-	if e, ok := ps.Errors[prefix+":"+err.Error()]; ok {
-		ps.Errors[err.Error()] = e + 1
+	if e, ok := ps.Errors.Load(prefix + ":" + err.Error()); ok {
+		ps.Errors.Store(err.Error(), e.(uint64)+1)
 		return
 	}
-	ps.Errors[prefix+":"+err.Error()] = 1
+	ps.Errors.Store(prefix+":"+err.Error(), uint64(1))
 }
 
 func IncErrorFile(err error, fileName string) {
@@ -219,11 +219,11 @@ func IncErrorFile(err error, fileName string) {
 		return
 	}
 	log.Log.Errorf("Increase error for %s: %v", fileName, err)
-	if e, ok := ps.Errors[fileName+"->"+err.Error()]; ok {
-		ps.Errors[fileName+"->"+err.Error()] = e + 1
+	if e, ok := ps.Errors.Load(fileName + "->" + err.Error()); ok {
+		ps.Errors.Store(fileName+"->"+err.Error(), e.(uint64)+1)
 		return
 	}
-	ps.Errors[fileName+"->"+err.Error()] = 1
+	ps.Errors.Store(fileName+"->"+err.Error(), uint64(1))
 }
 
 func (di *timeInfo) used(index int) {
