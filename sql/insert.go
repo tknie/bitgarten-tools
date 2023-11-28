@@ -533,8 +533,8 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return err
 		}
 	}
-	fmt.Printf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
-		pic.ChecksumPictureSHA, pic.PictureName)
+	// fmt.Printf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
+	// 	pic.ChecksumPictureSHA, pic.PictureName)
 	log.Log.Errorf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
 		pic.ChecksumPictureSHA, pic.PictureName)
 	if pic.Available == store.NoAvailable {
@@ -615,7 +615,7 @@ func insertPictureData(ti *timeInfo, ctx context.Context, tx *sql.Tx, pic *store
 		return err
 	}
 	// tx.Commit()
-	fmt.Println("Stored", pic.ChecksumPicture)
+	log.Log.Debugf("Stored %s", pic.ChecksumPicture)
 	ti.IncInsert()
 	return nil
 }
