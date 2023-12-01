@@ -70,6 +70,8 @@ var output = func() {
 		if ps.StatInfo[i].counter > 0 {
 			avg = ps.StatInfo[i].duration / time.Duration(ps.StatInfo[i].counter)
 		}
+		fmt.Printf("%s statistics %18s -> counter=%04d duration=%v average=%v\n", tn, indexInfo[i],
+			ps.StatInfo[i].counter, ps.StatInfo[i].duration, avg)
 		log.Log.Infof("%s statistics %18s -> counter=%04d duration=%v average=%v", tn, indexInfo[i],
 			ps.StatInfo[i].counter, ps.StatInfo[i].duration, avg)
 	}
@@ -95,7 +97,7 @@ func ByteCountBinary(b int64) string {
 
 func StartStats() {
 
-	schedule(output, 5*time.Second)
+	schedule(output, 15*time.Second)
 
 }
 
