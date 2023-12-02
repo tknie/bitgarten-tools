@@ -46,7 +46,10 @@ func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 	name := ""
 	for rows.Next() {
 		pic.Available = store.PicAvailable
-		rows.Scan(&dir, &name)
+		err := rows.Scan(&dir, &name)
+		if err != nil {
+			log.Fatal("Error scanning read location check")
+		}
 
 		switch {
 		case name == "" && dir != pic.ChecksumPictureSHA:
