@@ -1,3 +1,22 @@
+/*
+* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+*
+* SPDX-License-Identifier: Apache-2.0
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
+*
+*       http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*
+ */
+
 package sql
 
 import (
@@ -70,10 +89,11 @@ var output = func() {
 		if ps.StatInfo[i].counter > 0 {
 			avg = ps.StatInfo[i].duration / time.Duration(ps.StatInfo[i].counter)
 		}
+		avg = avg.Round(time.Second)
 		fmt.Printf("%s statistics %18s -> counter=%04d duration=%v average=%v\n", tn, indexInfo[i],
-			ps.StatInfo[i].counter, ps.StatInfo[i].duration, avg)
+			ps.StatInfo[i].counter, ps.StatInfo[i].duration.Round(time.Second), avg)
 		log.Log.Infof("%s statistics %18s -> counter=%04d duration=%v average=%v", tn, indexInfo[i],
-			ps.StatInfo[i].counter, ps.StatInfo[i].duration, avg)
+			ps.StatInfo[i].counter, ps.StatInfo[i].duration.Round(time.Second), avg)
 	}
 	fmt.Printf("%s statistics max Blocksize=%s deferred Blocksize=%v\n",
 		tn, ByteCountBinary(ps.MaxBlobSize), ByteCountBinary(ps.RequestBlobSize))
