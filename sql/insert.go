@@ -615,6 +615,7 @@ func insertPictureData(ti *timeInfo, ctx context.Context, tx *sql.Tx, pic *store
 		fmt.Println("Orienation >1: " + orientation)
 		orientation = orientation[0:1]
 	}
+	pic.ExifModel = removeQuotes(pic.ExifModel)
 	log.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
 	_, err := tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, Sha256Checksum, Title, Fill, Height, Width, Media, Thumbnail,mimetype,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation,created)"+
 		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)",
@@ -637,6 +638,13 @@ func insertPictureData(ti *timeInfo, ctx context.Context, tx *sql.Tx, pic *store
 	log.Log.Debugf("Stored %s", pic.ChecksumPicture)
 	ti.IncInsert()
 	return nil
+}
+
+func removeQuotes(in string) string {
+	toModel := strings.Trim(in, "\"")
+	toModel = strings.Trim(toModel, "<>")
+	toModel = strings.Trim(toModel, " ")
+	return toModel
 }
 
 func (dc *DataConfig) MySQLConnection() (string, string) {
