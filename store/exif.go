@@ -36,17 +36,24 @@ func (pic *Pictures) ExifReader() error {
 		return err
 	}
 	pic.Exif = p.buffer.String()
-	log.Log.Debugf("Exif result: %s", pic.Exif)
+	log.Log.Errorf("Exif result: %s", pic.Exif)
 	return nil
+}
+
+func removeQuotes(in string) string {
+	toModel := strings.Trim(in, "\"")
+	toModel = strings.Trim(toModel, "<>")
+	toModel = strings.Trim(toModel, " ")
+	return toModel
 }
 
 func (p *Printer) Walk(name exif.FieldName, tag *tiff.Tag) error {
 	p.buffer.WriteString(fmt.Sprintf("%40s: %s\n", name, tag))
 	switch name {
 	case "Model":
-		p.pic.ExifModel = tag.String()
+		p.pic.ExifModel = removeQuotes(tag.String())
 	case "Make":
-		p.pic.ExifMake = tag.String()
+		p.pic.ExifMake = removeQuotes(tag.String())
 	case "DateTime":
 		t, err := getTime(tag.String())
 		if err != nil {
@@ -59,9 +66,12 @@ func (p *Printer) Walk(name exif.FieldName, tag *tiff.Tag) error {
 			return err
 		}
 		p.pic.ExifOrigTime = t
-	case "PixelXDimension", "PixelYDimension":
+	case "PixelXDimension":
 		x, _ := tag.Int(0)
 		p.pic.ExifXDimension = int32(x)
+	case "PixelYDimension":
+		x, _ := tag.Int(0)
+		p.pic.ExifYDimension = int32(x)
 	case "Orientation":
 		p.pic.ExifOrientation = tag.String()
 	}
