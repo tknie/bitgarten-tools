@@ -99,6 +99,7 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 type exif struct {
 	Checksumpicture string
 	Exifmodel       string
+	Exifmake        string
 	Exiftaken       time.Time
 }
 
@@ -125,19 +126,25 @@ func main() {
 	query := &common.Query{
 		TableName:  tableName,
 		DataStruct: &exif{},
-		Fields:     []string{"exifmodel", "exiftaken", "checksumpicture"},
+		Fields:     []string{"exifmodel", "exifmake", "exiftaken", "checksumpicture"},
 	}
 	count := int64(0)
 	r, err := id.Query(query, func(search *common.Query, result *common.Result) error {
 		x := result.Data.(*exif)
-		if strings.HasPrefix(x.Exifmodel, "\"") || strings.HasPrefix(x.Exifmodel, "<") {
+		if strings.HasPrefix(x.Exifmodel, "\"") || strings.HasPrefix(x.Exifmodel, "<") ||
+			strings.HasPrefix(x.Exifmake, "\"") || strings.HasPrefix(x.Exifmake, "<") {
 			toModel := strings.Trim(x.Exifmodel, "\"")
 			toModel = strings.Trim(toModel, "<>")
 			toModel = strings.Trim(toModel, " ")
-			fmt.Printf("<%s> -> <%s>\n", x.Exifmodel, toModel)
+			fmt.Printf("MODEL: %s: <%s> -> <%s>\n", x.Checksumpicture, x.Exifmodel, toModel)
 			x.Exifmodel = toModel
+			toModel = strings.Trim(x.Exifmake, "\"")
+			toModel = strings.Trim(toModel, "<>")
+			toModel = strings.Trim(toModel, " ")
+			fmt.Printf("MAKE : %s: <%s> -> <%s>\n", x.Checksumpicture, x.Exifmake, toModel)
+			x.Exifmake = toModel
 			list := [][]any{{x}}
-			update := &common.Entries{Fields: []string{"exifmodel"},
+			update := &common.Entries{Fields: []string{"exifmodel", "exifmake"},
 				DataStruct: x,
 				Values:     list,
 				Update:     []string{"checksumpicture = '" + x.Checksumpicture + "'"},
