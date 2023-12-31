@@ -239,7 +239,6 @@ func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 	}
 	defer flynn.Unregister(id)
 	list := [][]any{{
-		pic.Id,
 		pic.ChecksumPicture,
 		pic.Sha256checksum,
 		pic.Thumbnail,
@@ -260,7 +259,7 @@ func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 		pic.Updated_at,
 	}}
 	input := &common.Entries{
-		Fields: []string{"Id",
+		Fields: []string{
 			"ChecksumPicture",
 			"Sha256checksum",
 			"Thumbnail",
