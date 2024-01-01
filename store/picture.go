@@ -1,19 +1,33 @@
+/*
+* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+*
+* SPDX-License-Identifier: Apache-2.0
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
+*
+*       http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*
+ */
+
 package store
 
 import (
 	"bytes"
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"io"
-	"io/ioutil"
-	"mime/multipart"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,7 +35,6 @@ import (
 
 	"github.com/nfnt/resize"
 	"github.com/tknie/adabas-go-api/adabas"
-	"github.com/tknie/adabas-go-api/adatypes"
 	"github.com/tknie/log"
 )
 
@@ -315,171 +328,9 @@ func (pic *PictureBinary) ReadDatabase(hash, repository string) (err error) {
 		return
 	}
 	if len(result.Data) == 0 {
-		return fmt.Errorf("No data found")
+		return fmt.Errorf("no data found")
 	}
 	resultPic := result.Data[0].(*PictureBinary)
 	*pic = *resultPic
 	return
-}
-
-type entry struct {
-	fillType string
-	imgName  string
-	text     string
-}
-
-var entries []entry
-
-func loadMovie(fileName string, ada *adabas.Adabas) error {
-	fmt.Println("Load movie", fileName)
-	return nil
-}
-
-// StorePicture store picture data
-func (pic *PictureBinary) StorePicture() error {
-	s := &Store{}
-	s.Store = append(s.Store, pic)
-	err := pic.LoadFile()
-	if err != nil {
-		panic("Error loading file " + err.Error())
-	}
-	if strings.HasPrefix(pic.MetaData.MIMEType, "image") {
-		pic.CreateThumbnail()
-	}
-	jsonPicture, jerr := json.Marshal(s)
-	if jerr != nil {
-		panic("Error json marshalling file " + jerr.Error())
-	}
-
-	sr, err := SendJSON(PictureName, jsonPicture)
-	if err != nil {
-		return err
-	}
-	if sr == nil {
-		return fmt.Errorf("Error store nil")
-	}
-	// i, _ := strconv.Atoi(sr.Stored[0])
-	// p.Isn = uint32(i)
-	// pic.MetaData.Isn = uint32(sr.Stored[0])
-	fmt.Println("Created record on ISN=", pic.MetaData.Index)
-	pic.sendBinary(PictureName, true)
-	if strings.HasPrefix(pic.MetaData.MIMEType, "image") {
-		pic.sendBinary(PictureName, false)
-	}
-	return nil
-}
-
-func (pic *PictureBinary) sendBinary(mapName string, isPicture bool) *StoreResponse {
-	data := pic.Data.Media
-	field := "Media"
-	if !isPicture {
-		data = pic.Data.Thumbnail
-		field = "Thumbnail"
-	}
-	mapURL := strings.Replace(URL, "rest/", "binary/", -1) +
-		"/" + mapName + "/" + strconv.Itoa(int(pic.MetaData.Index)) + "/" + field
-	log.Log.Debugf("Binary URL:>", mapURL, "on ISN=", pic.MetaData.Index)
-
-	bodyBuf := &bytes.Buffer{}
-	bodyWriter := multipart.NewWriter(bodyBuf)
-
-	//bodyWriter.WriteField(k, v.(string))
-	fileWriter, err := bodyWriter.CreateFormFile("uploadLob", pic.FileName)
-	if err != nil {
-		fmt.Println(err)
-		//fmt.Println("Create form file error: ", error)
-		return nil
-	}
-	fileWriter.Write(data)
-	contentType := bodyWriter.FormDataContentType()
-	bodyWriter.Close()
-	fmt.Println("Put binary")
-	req, err := http.NewRequest("PUT", mapURL, bodyBuf)
-	c := strings.Split(Credentials, ":")
-	req.SetBasicAuth(c[0], c[1])
-	req.Header.Set("X-Custom-Header", "myvalue")
-	req.Header.Set("Content-Type", contentType)
-	req.Header.Set("Accept", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Client do error:", err)
-		fmt.Println(resp, err)
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	body, _ := ioutil.ReadAll(resp.Body)
-	if resp.StatusCode != 200 {
-		fmt.Println("response Status:", resp.Status)
-		fmt.Println("response Headers:", resp.Header)
-		fmt.Println("response Body:", string(body))
-		fmt.Println("Malformed binary request")
-		return nil
-	}
-	s := &StoreResponse{}
-	json.Unmarshal(body, s)
-	return s
-}
-
-// DeleteMd5 delete picture key
-func (psx *PictureConnection) DeleteMd5(a *adabas.Adabas, key string) error {
-	result, err := psx.readCheck.ReadLogicalWith("Md5=" + key)
-	if err != nil {
-		fmt.Printf("Error checking Md5=%s: %v\n", key, err)
-		panic("Read error " + err.Error())
-		//		return false, err
-	}
-
-	deleteRequest, err := adabas.NewMapNameDeleteRequest(a, psx.store.MapName)
-	defer deleteRequest.BackoutTransaction()
-	if err != nil {
-		return err
-	}
-	for _, r := range result.Values {
-		deleteRequest.Delete(r.Isn)
-	}
-	return nil
-}
-
-// DeleteIsn delete image Isn
-func (psx *PictureConnection) DeleteIsn(a *adabas.Adabas, isn adatypes.Isn) error {
-	fmt.Printf("Delete image with ISN=%d\n", isn)
-	deleteRequest, err := adabas.NewMapNameDeleteRequest(a, psx.store.MapName)
-	defer deleteRequest.BackoutTransaction()
-	if err != nil {
-		return err
-	}
-	err = deleteRequest.Delete(isn)
-	if err != nil {
-		return err
-	}
-	err = deleteRequest.EndTransaction()
-	return err
-}
-
-// DeletePath delete image given with path
-func (psx *PictureConnection) DeletePath(a *adabas.Adabas, path string) error {
-	if path == "" {
-		return nil
-	}
-	fmt.Printf("Delete image with path=%s\n", path)
-	readRequest, err := adabas.NewReadRequest(a, psx.store.MapName)
-	if err != nil {
-		return err
-	}
-	readRequest.QueryFields("")
-	result, resErr := readRequest.ReadLogicalWith("PictureName=" + path)
-	if resErr != nil {
-		return resErr
-	}
-	if result.NrRecords() != 1 {
-		fmt.Printf("Found more then one or no record: %d\n", result.NrRecords())
-		return fmt.Errorf("Found more then one record")
-	}
-	for _, record := range result.Values {
-		psx.DeleteIsn(a, record.Isn)
-	}
-	return nil
 }

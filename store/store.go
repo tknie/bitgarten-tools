@@ -1,19 +1,39 @@
+/*
+* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+*
+* SPDX-License-Identifier: Apache-2.0
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
+*
+*       http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*
+ */
+
 package store
 
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strings"
-
-	"github.com/tknie/log"
-)
+import "os"
 
 var URL string
 var Credentials string
 var PictureName string
+
+// Hostname of this host
+var Hostname = "Unknown"
+
+func init() {
+	host, err := os.Hostname()
+	if err == nil {
+		Hostname = host
+	}
+}
 
 // Store store record
 type Store struct {
@@ -26,51 +46,4 @@ type StoreResponse struct {
 	NrStored int64 `json:"NrStored,omitempty"`
 	// Stored stored json
 	Stored []int64 `json:"Stored"`
-}
-
-// SendJSON send json data to server
-func SendJSON(mapName string, jsonStr []byte) (*StoreResponse, error) {
-	mapURL := URL + "/" + mapName
-	log.Log.Debugf("URL:>", mapURL)
-
-	req, err := http.NewRequest("POST", mapURL, bytes.NewBuffer(jsonStr))
-	if err != nil {
-		return nil, err
-	}
-	c := strings.Split(Credentials, ":")
-	req.SetBasicAuth(c[0], c[1])
-	req.Header.Set("X-Custom-Header", "myvalue")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Client do errorx:", err)
-		fmt.Println(resp, err)
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	body, _ := ioutil.ReadAll(resp.Body)
-	if resp.StatusCode != 200 {
-		if !strings.Contains(string(body), "ADAGE62000") {
-			fmt.Println("URL  :", resp.Status)
-			fmt.Println("response Status  :", mapURL)
-			fmt.Println("response Headers :", resp.Header)
-			fmt.Println("response Body    :", string(body))
-			fmt.Println("Malformed request:", mapURL)
-		} else {
-			fmt.Println("Record already stored")
-			return nil, fmt.Errorf("Record already stored %d", resp.StatusCode)
-		}
-		//return nil, fmt.Errorf("Malformed call %d", resp.StatusCode)
-		panic(fmt.Sprintf("Malformed call %d", resp.StatusCode))
-	}
-	s := &StoreResponse{}
-	err = json.Unmarshal(body, s)
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
 }

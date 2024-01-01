@@ -7,7 +7,7 @@ BIN             = $(CURDIR)/bin/$(GOOS)_$(GOARCH)
 EXECS           = $(BIN)/checker $(BIN)/exifclean $(BIN)/videothumb $(BIN)/thumbnail \
 				  $(BIN)/picloadql $(BIN)/syncAlbum $(BIN)/checkMedia $(BIN)/updoption
 OBJECTS         = sql/*.go store/picture.go store/store.go cmd/exifclean/*.go \
-				  store/adabas.go store/album.go cmd/checkMedia/main.go \
+				  store/album.go cmd/checkMedia/main.go \
                   cmd/checker/main.go cmd/picloadql/*.go cmd/videothumb/main.go \
                   sql/*.go store/*.go cmd/syncAlbum/main.go cmd/updoption/main.go
 CGO_CFLAGS      = $(if $(ACLDIR),-I$(ACLDIR)/inc,)
