@@ -23,7 +23,6 @@ import (
 	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/adabas-go-api/adatypes"
 	"github.com/tknie/log"
-	"golang.org/x/net/html"
 )
 
 // PictureBinary definition
@@ -330,113 +329,6 @@ type entry struct {
 }
 
 var entries []entry
-
-// LoadIndex load index info
-func (psx *PictureConnection) LoadIndex(insert bool, fileName string, ada *adabas.Adabas) error {
-	fmt.Println("Load index", fileName)
-	i := strings.LastIndex(fileName, "/")
-	directory := fileName[:i]
-	albumName := directory[strings.LastIndex(directory, "/")+1:]
-	fmt.Println("Got album name ", albumName, " directory=", directory)
-	ps := string(os.PathSeparator)
-	f, err := os.Open(fileName)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	defer f.Close()
-	doc, derr := html.Parse(f)
-	if derr != nil {
-		return derr
-	}
-	var fctHtml func(*html.Node)
-	fctHtml = func(n *html.Node) {
-		if n.Type == html.ElementNode {
-			switch n.Data {
-			case "a":
-				for _, a := range n.Attr {
-					if a.Key == "class" && strings.Contains(a.Val, "navbar-brand") {
-						var buffer bytes.Buffer
-						for c := n.FirstChild; c != nil; c = c.NextSibling {
-							buffer.WriteString(c.Data)
-						}
-						log.Log.Debugf("Title -> %s", buffer.String())
-						break
-					}
-				}
-			case "div":
-				for _, a := range n.Attr {
-					if a.Key == "class" && strings.Contains(a.Val, "item") {
-						e := entry{}
-						log.Log.Debugf("Found item: %s", a.Val)
-						for c := n.FirstChild; c != nil; c = c.NextSibling {
-							switch c.Data {
-							case "video":
-								for _, sa := range c.Attr {
-									log.Log.Debugf("VideoX -> %s", sa.Val)
-									if sa.Key == "class" {
-										e.fillType = sa.Val
-									}
-								}
-								for s := c.FirstChild; s != nil; s = s.NextSibling {
-									if s.Data == "source" {
-										log.Log.Debugf("VideoY -> %s", s.Data)
-										for _, sb := range s.Attr {
-											if sb.Key == "src" {
-												log.Log.Debugf("VideoZ -> %s", sb.Key, sb.Val)
-												li := strings.LastIndex(sb.Val, "/")
-												e.imgName = sb.Val[li+1:]
-											}
-										}
-									}
-								}
-							case "div":
-								for _, sa := range c.Attr {
-									switch sa.Key {
-									case "style":
-										log.Log.Debugf("Style -> %s", sa.Val)
-										e.imgName = sa.Val[strings.Index(sa.Val, "/")+1 : strings.LastIndex(sa.Val, "'")]
-									case "class":
-										if sa.Val == "carousel-caption" {
-											log.Log.Debugf("classX -> %s", sa.Val)
-											for s := c.FirstChild; s != nil; s = s.NextSibling {
-												for sb := s.FirstChild; sb != nil; sb = sb.NextSibling {
-													log.Log.Debugf(" -> %s", sb.Data)
-													e.text = sb.Data
-												}
-											}
-										} else {
-											log.Log.Debugf("Fill -> %s", sa.Val)
-											e.fillType = sa.Val
-										}
-									}
-								}
-							}
-						}
-						err = psx.LoadPicture(insert, directory+ps+"img"+ps+e.imgName, ada)
-						if err != nil {
-							log.Log.Debugf("Loaded %s with error=%v", directory+ps+"img"+ps+e.imgName, err)
-							fmt.Println("Error loading picture:", err)
-							os.Exit(1)
-						}
-						entries = append(entries, e)
-						break
-					}
-				}
-			default:
-			}
-		}
-
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			fctHtml(c)
-		}
-	}
-	fctHtml(doc)
-
-	// fmt.Println("Entries:", entries)
-
-	return nil
-}
 
 func loadMovie(fileName string, ada *adabas.Adabas) error {
 	fmt.Println("Load movie", fileName)
