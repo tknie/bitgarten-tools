@@ -34,7 +34,6 @@ import (
 	"github.com/rwcarlsen/goexif/exif"
 
 	"github.com/nfnt/resize"
-	"github.com/tknie/adabas-go-api/adabas"
 	"github.com/tknie/log"
 )
 
@@ -301,36 +300,4 @@ func (pic *Pictures) CreateThumbnail() error {
 
 	}
 	return nil
-}
-
-// ReadDatabase read picture binary from database
-func (pic *PictureBinary) ReadDatabase(hash, repository string) (err error) {
-	connection, err := adabas.NewConnection("acj;map;config=[" + repository + "]")
-	if err != nil {
-		return
-	}
-	defer connection.Close()
-
-	request, rerr := connection.CreateMapReadRequest(PictureBinary{})
-	if rerr != nil {
-		fmt.Println("Error create request", rerr)
-		err = rerr
-		return
-	}
-	err = request.QueryFields("Data")
-	if err != nil {
-		return
-	}
-	result, resErr := request.ReadLogicalWith("Md5=" + hash)
-	if resErr != nil {
-		fmt.Println("Error reading ISN order", resErr)
-		err = resErr
-		return
-	}
-	if len(result.Data) == 0 {
-		return fmt.Errorf("no data found")
-	}
-	resultPic := result.Data[0].(*PictureBinary)
-	*pic = *resultPic
-	return
 }
