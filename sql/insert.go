@@ -619,7 +619,9 @@ func insertPictureData(ti *timeInfo, ctx context.Context, tx *sql.Tx, pic *store
 		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)",
 		pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, fill, pic.Height,
 		pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
-		pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat), pic.ExifOrigTime.Format(timeFormat), pic.ExifXDimension, pic.ExifYDimension, orientation, pic.Generated)
+		pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat),
+		pic.ExifOrigTime.Format(timeFormat), pic.ExifXDimension, pic.ExifYDimension,
+		orientation, pic.Generated)
 	if err != nil {
 		tx.Rollback()
 		if !checkErrorContinue(err) {

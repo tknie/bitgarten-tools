@@ -35,6 +35,13 @@ func (pic *Pictures) ExifReader() error {
 		log.Log.Errorf("Exif reader error (%s): %v\n", pic.Title, err)
 		return err
 	}
+	lat, lon, err := x.LatLong()
+	if err != nil {
+		log.Log.Errorf("Exif GPS error (%s): %v\n", pic.Title, err)
+	} else {
+		p.buffer.WriteString(fmt.Sprintf("%s: %f,%f\n", "GPS", lat, lon))
+		pic.GPScoordinates = fmt.Sprintf("%f,%f", lat, lon)
+	}
 	pic.Exif = p.buffer.String()
 	log.Log.Errorf("Exif result: %s", pic.Exif)
 	return nil
@@ -48,7 +55,7 @@ func removeQuotes(in string) string {
 }
 
 func (p *Printer) Walk(name exif.FieldName, tag *tiff.Tag) error {
-	p.buffer.WriteString(fmt.Sprintf("%40s: %s\n", name, tag))
+	p.buffer.WriteString(fmt.Sprintf("%s: %s\n", name, tag))
 	switch name {
 	case "Model":
 		p.pic.ExifModel = removeQuotes(tag.String())

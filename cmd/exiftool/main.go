@@ -1,0 +1,114 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"tux-lobload/store"
+
+	"github.com/tknie/adabas-go-api/adatypes"
+	"github.com/tknie/flynn"
+	"github.com/tknie/flynn/common"
+	"github.com/tknie/log"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+func init() {
+	level := zapcore.ErrorLevel
+	ed := os.Getenv("ENABLE_DEBUG")
+	switch ed {
+	case "1":
+		level = zapcore.DebugLevel
+		adatypes.Central.SetDebugLevel(true)
+	case "2":
+		level = zapcore.InfoLevel
+	}
+
+	err := initLogLevelWithFile("exiftool.log", level)
+	if err != nil {
+		fmt.Println("Error initialize logging")
+		os.Exit(255)
+	}
+}
+
+func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
+	p := os.Getenv("LOGPATH")
+	if p == "" {
+		p = "."
+	}
+	name := p + string(os.PathSeparator) + fileName
+
+	rawJSON := []byte(`{
+		"level": "error",
+		"encoding": "console",
+		"outputPaths": [ "loadpicture.log"],
+		"errorOutputPaths": ["stderr"],
+		"encoderConfig": {
+		  "messageKey": "message",
+		  "levelKey": "level",
+		  "levelEncoder": "lowercase"
+		}
+	  }`)
+
+	var cfg zap.Config
+	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
+		fmt.Println("Error initialize logging (json)")
+		os.Exit(255)
+	}
+	cfg.Level.SetLevel(level)
+	cfg.OutputPaths = []string{name}
+	logger, err := cfg.Build()
+	if err != nil {
+		fmt.Println("Error initialize logging (build)")
+		os.Exit(255)
+	}
+	defer logger.Sync()
+
+	sugar := logger.Sugar()
+
+	adatypes.Central.Log = sugar
+	log.Log = sugar
+	log.Log.Infof("Start logging with level %s", level)
+	log.SetDebugLevel(level == zapcore.DebugLevel)
+
+	return
+}
+
+func main() {
+	url := os.Getenv("POSTGRES_URL")
+	id, err := flynn.Register(url)
+	if err != nil {
+		fmt.Println("POSTGRES error", err)
+		return
+	}
+	query := &common.Query{
+		TableName:  "pictures",
+		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
+		DataStruct: &store.Pictures{},
+		Limit:      500,
+		Search:     "mimetype LIKE 'image/%' and exif is NULL",
+	}
+	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
+		p := result.Data.(*store.Pictures)
+		err := p.ExifReader()
+		if err != nil {
+			return nil
+		}
+		insert := &common.Entries{
+			Fields:     []string{"exif", "GPScoordinates"},
+			DataStruct: p,
+			Values:     [][]any{{p}},
+			Update:     []string{"checksumpicture='" + p.ChecksumPicture + "'"},
+		}
+		n, err := id.Update("pictures", insert)
+		if err != nil {
+			fmt.Println("Error inserting", n, ":", err)
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Query error:", err)
+	}
+}

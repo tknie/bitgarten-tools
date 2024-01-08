@@ -125,6 +125,30 @@ func (di *DatabaseInfo) ListAlbums() error {
 	return nil
 }
 
+func (di *DatabaseInfo) GetAlbums() ([]*Albums, error) {
+	id, err := di.Open()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("List Album titles:")
+	albums := make([]*Albums, 0)
+	q := &common.Query{TableName: "Albums",
+		DataStruct: Albums{},
+		Fields:     []string{"Title", "Id", "Published"},
+	}
+	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
+		album := result.Data.(*Albums)
+		copyAlbum := &Albums{}
+		*copyAlbum = *album
+		albums = append(albums, copyAlbum)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return albums, nil
+}
+
 func (di *DatabaseInfo) ReadAlbum(albumTitle string) (*Albums, error) {
 	var album *Albums
 	id, err := di.Open()
