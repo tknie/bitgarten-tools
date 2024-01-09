@@ -35,7 +35,7 @@ func (pic *Pictures) ExifReader() error {
 		log.Log.Errorf("Exif reader error (%s): %v", pic.Title, err)
 		return err
 	}
-	lat, lon, err := x.LatLong()
+	pic.GPSlatitude, pic.GPSlongitude, err := x.LatLong()
 	if err != nil {
 		log.Log.Debugf("Exif GPS error (%s): %v", pic.Title, err)
 	} else {

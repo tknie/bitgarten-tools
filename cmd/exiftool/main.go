@@ -108,7 +108,7 @@ func main() {
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
 		p := result.Data.(*store.Pictures)
 		if (skipped+count)%100 == 0 {
-			fmt.Println("\rExtract and store exif on", count, "records, skipped are", skipped)
+			fmt.Printf("Extract and store exif on %d records, skipped are %d\r", count, skipped)
 		}
 		err := p.ExifReader()
 		if err != nil {
@@ -135,5 +135,6 @@ func main() {
 	if err != nil {
 		fmt.Println("Query error:", err)
 	}
-	fmt.Println("Finally worked on", count, "records and", skipped, " are skipped")
+	fmt.Println()
+	fmt.Printf("Finally worked on %d records and %d are skipped\n", count, skipped)
 }

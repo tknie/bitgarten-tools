@@ -114,6 +114,8 @@ type Pictures struct {
 	ExifYDimension     int32     `adabas:":ignore"`
 	ExifOrientation    string    `adabas:":ignore"`
 	GPScoordinates     string
+	GPSlatitude        float64
+	GPSlongitude       float64
 	Available          Available `adabas:":ignore"`
 	StoreAlbum         int       `adabas:":ignore"`
 	// PictureLocations  []PictureLocations `adabas:"::PL"`
