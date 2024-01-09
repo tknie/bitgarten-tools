@@ -35,12 +35,12 @@ func (pic *Pictures) ExifReader() error {
 		log.Log.Errorf("Exif reader error (%s): %v", pic.Title, err)
 		return err
 	}
-	pic.GPSlatitude, pic.GPSlongitude, err := x.LatLong()
+	pic.GPSlatitude, pic.GPSlongitude, err = x.LatLong()
 	if err != nil {
 		log.Log.Debugf("Exif GPS error (%s): %v", pic.Title, err)
 	} else {
-		p.buffer.WriteString(fmt.Sprintf("%s: %f,%f\n", "GPS", lat, lon))
-		pic.GPScoordinates = fmt.Sprintf("%f,%f", lat, lon)
+		p.buffer.WriteString(fmt.Sprintf("%s: %f,%f\n", "GPS", pic.GPSlatitude, pic.GPSlongitude))
+		pic.GPScoordinates = fmt.Sprintf("%f,%f", pic.GPSlatitude, pic.GPSlongitude)
 	}
 	pic.Exif = p.buffer.String()
 	log.Log.Debugf("Exif result: %s", pic.Exif)
