@@ -118,7 +118,7 @@ func main() {
 		p.Exif = strings.ReplaceAll(p.Exif, "\\", "\\\\")
 		count++
 		insert := &common.Entries{
-			Fields:     []string{"exif", "GPScoordinates"},
+			Fields:     []string{"exif", "GPScoordinates", "GPSlatitude", "GPSlongitude"},
 			DataStruct: p,
 			Values:     [][]any{{p}},
 			Update:     []string{"checksumpicture='" + p.ChecksumPicture + "'"},
