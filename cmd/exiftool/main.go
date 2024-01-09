@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"tux-lobload/store"
 
 	"github.com/tknie/adabas-go-api/adatypes"
@@ -86,7 +87,7 @@ func main() {
 	flag.Parse()
 
 	url := os.Getenv("POSTGRES_URL")
-	id, err := flynn.Handle(url)
+	id, err := flynn.Register(url)
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return
@@ -94,7 +95,7 @@ func main() {
 	if preFilter != "" {
 		preFilter = fmt.Sprintf(" AND title LIKE '%s%%'", preFilter)
 	}
-	fmt.Println("Connect to ", id.String())
+	fmt.Println("Connect to ", url)
 	count := uint64(0)
 	query := &common.Query{
 		TableName:  "pictures",
@@ -109,6 +110,7 @@ func main() {
 		if err != nil {
 			return nil
 		}
+		p.Exif = strings.ReplaceAll(p.Exif, "\\", "\\\\")
 		count++
 		insert := &common.Entries{
 			Fields:     []string{"exif", "GPScoordinates"},
@@ -131,4 +133,5 @@ func main() {
 	if err != nil {
 		fmt.Println("Query error:", err)
 	}
+	fmt.Println("Finally work on", count, "records")
 }
