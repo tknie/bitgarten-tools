@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"tux-lobload/store"
@@ -76,18 +77,31 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 }
 
 func main() {
+
+	limit := 0
+	preFilter := ""
+
+	flag.IntVar(&limit, "l", 50, "Maximum number of records loaded")
+	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
+	flag.Parse()
+
 	url := os.Getenv("POSTGRES_URL")
-	id, err := flynn.Register(url)
+	id, err := flynn.Handle(url)
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return
 	}
+	if preFilter != "" {
+		preFilter = fmt.Sprintf(" AND title LIKE '%s%%'", preFilter)
+	}
+	fmt.Println("Connect to ", id.String())
+	count := uint64(0)
 	query := &common.Query{
 		TableName:  "pictures",
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
-		Limit:      500,
-		Search:     "mimetype LIKE 'image/%' and exif is NULL",
+		Limit:      uint32(limit),
+		Search:     "mimetype LIKE 'image/%' and exif is NULL" + preFilter,
 	}
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
 		p := result.Data.(*store.Pictures)
@@ -95,6 +109,7 @@ func main() {
 		if err != nil {
 			return nil
 		}
+		count++
 		insert := &common.Entries{
 			Fields:     []string{"exif", "GPScoordinates"},
 			DataStruct: p,
@@ -104,7 +119,12 @@ func main() {
 		n, err := id.Update("pictures", insert)
 		if err != nil {
 			fmt.Println("Error inserting", n, ":", err)
+			fmt.Println("Pic:", p.ChecksumPicture)
+			fmt.Println(p.Exif)
 			return err
+		}
+		if count%100 == 0 {
+			fmt.Println("\rExtract and store exif on", count, "records")
 		}
 		return nil
 	})
