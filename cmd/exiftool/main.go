@@ -97,6 +97,7 @@ func main() {
 	}
 	fmt.Println("Connect to ", url)
 	count := uint64(0)
+	skipped := uint64(0)
 	query := &common.Query{
 		TableName:  "pictures",
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
@@ -106,8 +107,12 @@ func main() {
 	}
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
 		p := result.Data.(*store.Pictures)
+		if (skipped+count)%100 == 0 {
+			fmt.Println("\rExtract and store exif on", count, "records, skipped are", skipped)
+		}
 		err := p.ExifReader()
 		if err != nil {
+			skipped++
 			return nil
 		}
 		p.Exif = strings.ReplaceAll(p.Exif, "\\", "\\\\")
@@ -125,13 +130,10 @@ func main() {
 			fmt.Println(p.Exif)
 			return err
 		}
-		if count%100 == 0 {
-			fmt.Println("\rExtract and store exif on", count, "records")
-		}
 		return nil
 	})
 	if err != nil {
 		fmt.Println("Query error:", err)
 	}
-	fmt.Println("Finally work on", count, "records")
+	fmt.Println("Finally worked on", count, "records and", skipped, " are skipped")
 }
