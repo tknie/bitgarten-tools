@@ -26,24 +26,24 @@ func (pic *Pictures) ExifReader() error {
 	buffer := bytes.NewReader(pic.Media)
 	x, err := exif.Decode(buffer)
 	if err != nil {
-		log.Log.Errorf("Exif decode error: %v", err)
+		log.Log.Debugf("Exif decode error: %v", err)
 		return err
 	}
 	p := &Printer{pic: pic}
 	err = x.Walk(p)
 	if err != nil {
-		log.Log.Errorf("Exif reader error (%s): %v\n", pic.Title, err)
+		log.Log.Errorf("Exif reader error (%s): %v", pic.Title, err)
 		return err
 	}
 	lat, lon, err := x.LatLong()
 	if err != nil {
-		log.Log.Errorf("Exif GPS error (%s): %v\n", pic.Title, err)
+		log.Log.Debugf("Exif GPS error (%s): %v", pic.Title, err)
 	} else {
 		p.buffer.WriteString(fmt.Sprintf("%s: %f,%f\n", "GPS", lat, lon))
 		pic.GPScoordinates = fmt.Sprintf("%f,%f", lat, lon)
 	}
 	pic.Exif = p.buffer.String()
-	log.Log.Errorf("Exif result: %s", pic.Exif)
+	log.Log.Debugf("Exif result: %s", pic.Exif)
 	return nil
 }
 
