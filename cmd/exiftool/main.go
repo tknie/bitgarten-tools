@@ -87,7 +87,12 @@ func main() {
 	flag.Parse()
 
 	url := os.Getenv("POSTGRES_URL")
-	id, err := flynn.Register(url)
+	id, err := flynn.Handle(url)
+	if err != nil {
+		fmt.Println("POSTGRES error", err)
+		return
+	}
+	wid, err := flynn.Handle(url)
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return
@@ -103,7 +108,7 @@ func main() {
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
 		Limit:      uint32(limit),
-		Search:     "mimetype LIKE 'image/%'" + preFilter,
+		Search:     "mimetype LIKE 'image/%' AND GPScoordinates IS NULL" + preFilter,
 	}
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
 		p := result.Data.(*store.Pictures)
@@ -123,7 +128,7 @@ func main() {
 			Values:     [][]any{{p}},
 			Update:     []string{"checksumpicture='" + p.ChecksumPicture + "'"},
 		}
-		n, err := id.Update("pictures", insert)
+		n, err := wid.Update("pictures", insert)
 		if err != nil {
 			fmt.Println("Error inserting", n, ":", err)
 			fmt.Println("Pic:", p.ChecksumPicture)
