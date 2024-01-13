@@ -4,14 +4,13 @@ GOOS           ?= $(shell $(GO) env GOOS)
 
 
 BIN             = $(CURDIR)/bin/$(GOOS)_$(GOARCH)
-EXECS           = $(BIN)/checker $(BIN)/exifclean $(BIN)/videothumb $(BIN)/thumbnail \
-				  $(BIN)/picloadql $(BIN)/syncAlbum $(BIN)/checkMedia $(BIN)/updoption \
-				  $(BIN)/tagAlbum
-OBJECTS         = sql/*.go store/picture.go store/store.go cmd/exifclean/*.go \
-				  store/album.go cmd/checkMedia/main.go \
-                  cmd/checker/main.go cmd/picloadql/*.go cmd/videothumb/main.go \
-                  sql/*.go store/*.go cmd/syncAlbum/main.go cmd/updoption/main.go \
-				  cmd/tagAlbum/main.go
+EXECS           = $(BIN)/exifclean $(BIN)/videothumb \
+				  $(BIN)/picloadql $(BIN)/syncAlbum  $(BIN)/checkMedia \
+				  $(BIN)/tagAlbum  $(BIN)/exiftool
+OBJECTS         = sql/*.go cmd/exifclean/*.go \
+				  store/album.go cmd/checkMedia/main.go cmd/tagAlbum/main.go \
+                  cmd/picloadql/*.go cmd/videothumb/main.go \
+                  store/*.go cmd/syncAlbum/main.go
 CGO_CFLAGS      = $(if $(ACLDIR),-I$(ACLDIR)/inc,)
 CGO_LDFLAGS     = $(if $(ACLDIR),-L$(ACLDIR)/lib -ladalnkx,)
 CGO_EXT_LDFLAGS = $(if $(ACLDIR),-lsagsmp2 -lsagxts3 -ladazbuf,)

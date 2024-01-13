@@ -95,7 +95,7 @@ func Connect(url, pwd string) (*DatabaseInfo, error) {
 }
 
 func (di *DatabaseInfo) Open() (common.RegDbID, error) {
-	id, err := flynn.RegisterDatabase(di.Reference, di.passwd)
+	id, err := flynn.Handler(di.Reference, di.passwd)
 	if err != nil {
 		return 0, err
 	}
@@ -203,7 +203,7 @@ func (di *DatabaseInfo) CheckPicture(checksum string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer flynn.Unregister(id)
+	defer id.FreeHandler()
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: Picture{},
 		Fields:     []string{"checksumpicture"},
@@ -226,7 +226,7 @@ func (di *DatabaseInfo) ReadPicture(checksum string) (*Picture, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer flynn.Unregister(id)
+	defer id.FreeHandler()
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: Picture{},
 		Fields:     []string{"*"},
@@ -259,7 +259,7 @@ func (di *DatabaseInfo) CheckAlbum(album *Albums) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer flynn.Unregister(id)
+	defer id.FreeHandler()
 	q := &common.Query{TableName: "Albums",
 		DataStruct: Albums{},
 		Fields:     []string{"id", "Title"},
@@ -282,7 +282,7 @@ func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error
 	if err != nil {
 		return false, err
 	}
-	defer flynn.Unregister(id)
+	defer id.FreeHandler()
 	q := &common.Query{TableName: "AlbumPictures",
 		DataStruct: AlbumPictures{},
 		Fields:     []string{"index", "albumid"},
@@ -306,7 +306,7 @@ func (di *DatabaseInfo) CheckMedia(f common.ResultFunction) error {
 	if err != nil {
 		return err
 	}
-	defer flynn.Unregister(id)
+	defer id.FreeHandler()
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &Picture{},
 		Fields:     []string{"ChecksumPicture", "Sha256checksum", "Media"},

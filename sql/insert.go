@@ -38,7 +38,6 @@ import (
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
 )
@@ -128,7 +127,7 @@ func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
 	if err != nil {
 		return err
 	}
-	defer flynn.Unregister(id)
+	defer id.FreeHandler()
 	list := [][]any{{
 		album.Type,
 		album.Key,
@@ -188,7 +187,7 @@ func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
 	if err != nil {
 		return err
 	}
-	defer flynn.Unregister(id)
+	defer id.FreeHandler()
 	list := [][]any{{
 		albumPic.Index,
 		albumPic.AlbumId,
@@ -237,7 +236,7 @@ func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 	if err != nil {
 		return err
 	}
-	defer flynn.Unregister(id)
+	defer id.FreeHandler()
 	list := [][]any{{
 		pic.ChecksumPicture,
 		pic.Sha256checksum,

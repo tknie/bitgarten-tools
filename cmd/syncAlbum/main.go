@@ -29,7 +29,6 @@ import (
 	"runtime/pprof"
 	"tux-lobload/sql"
 
-	"github.com/tknie/adabas-go-api/adatypes"
 	"github.com/tknie/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -48,7 +47,6 @@ func init() {
 	switch ed {
 	case "1":
 		level = zapcore.DebugLevel
-		adatypes.Central.SetDebugLevel(true)
 	case "2":
 		level = zapcore.InfoLevel
 	}
@@ -96,7 +94,6 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 	sugar := logger.Sugar()
 
 	sugar.Infof("Start logging with level %s", level)
-	adatypes.Central.Log = sugar
 	log.Log = sugar
 	log.SetDebugLevel(level == zapcore.DebugLevel)
 
