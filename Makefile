@@ -6,10 +6,10 @@ GOOS           ?= $(shell $(GO) env GOOS)
 BIN             = $(CURDIR)/bin/$(GOOS)_$(GOARCH)
 EXECS           = $(BIN)/exifclean $(BIN)/videothumb \
 				  $(BIN)/picloadql $(BIN)/syncAlbum  $(BIN)/checkMedia \
-				  $(BIN)/tagAlbum  $(BIN)/exiftool
+				  $(BIN)/tagAlbum  $(BIN)/exiftool $(BIN)/imagehash
 OBJECTS         = sql/*.go cmd/exifclean/*.go \
 				  store/album.go cmd/checkMedia/main.go cmd/tagAlbum/main.go \
-                  cmd/picloadql/*.go cmd/videothumb/main.go \
+                  cmd/picloadql/*.go cmd/videothumb/main.go cmd/imagehash/main.go \
                   store/*.go cmd/syncAlbum/main.go
 CGO_CFLAGS      = $(if $(ACLDIR),-I$(ACLDIR)/inc,)
 CGO_LDFLAGS     = $(if $(ACLDIR),-L$(ACLDIR)/lib -ladalnkx,)

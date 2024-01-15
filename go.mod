@@ -21,6 +21,7 @@ require (
 )
 
 require (
+	github.com/corona10/goimagehash v1.1.0
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/godror/godror v0.41.0 // indirect
 	github.com/godror/knownpb v0.1.1 // indirect
