@@ -101,7 +101,7 @@ func main() {
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
 		Limit:      uint32(limit),
-		Search:     "mimetype LIKE 'image/%'" + preFilter,
+		Search:     "markdelete = false AND mimetype LIKE 'image/%'" + preFilter,
 	}
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
 		p := result.Data.(*store.Pictures)
