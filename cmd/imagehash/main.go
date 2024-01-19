@@ -30,7 +30,7 @@ func init() {
 		level = zapcore.InfoLevel
 	}
 
-	err := initLogLevelWithFile("exiftool.log", level)
+	err := initLogLevelWithFile("imagehash.log", level)
 	if err != nil {
 		fmt.Println("Error initialize logging")
 		os.Exit(255)
@@ -47,7 +47,7 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 	rawJSON := []byte(`{
 		"level": "error",
 		"encoding": "console",
-		"outputPaths": [ "loadpicture.log"],
+		"outputPaths": [ "default.log"],
 		"errorOutputPaths": ["stderr"],
 		"encoderConfig": {
 		  "messageKey": "message",
