@@ -29,8 +29,11 @@ func (pic *Pictures) ExifReader() error {
 		log.Log.Debugf("Exif decode error: %v", err)
 		return err
 	}
+	return pic.analyseExif(x)
+}
+func (pic *Pictures) analyseExif(x *exif.Exif) error {
 	p := &Printer{pic: pic}
-	err = x.Walk(p)
+	err := x.Walk(p)
 	if err != nil {
 		log.Log.Errorf("Exif reader error (%s): %v", pic.Title, err)
 		return err

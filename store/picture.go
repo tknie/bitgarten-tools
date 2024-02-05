@@ -31,7 +31,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/rwcarlsen/goexif/exif"
+	"github.com/tknie/goheif"
 
 	"github.com/nfnt/resize"
 	"github.com/tknie/log"
@@ -136,10 +138,11 @@ func (pic *PictureBinary) LoadFile() error {
 		return err
 	}
 	defer f.Close()
+
 	fi, err := f.Stat()
 	pic.Data = &PictureData{}
 	if fi.Size() > pic.MaxBlobSize {
-		return fmt.Errorf("File tooo big %d>%d", fi.Size(), pic.MaxBlobSize)
+		return fmt.Errorf("file tooo big %d>%d", fi.Size(), pic.MaxBlobSize)
 	}
 	pic.Data.Media = make([]byte, fi.Size())
 	var n int
@@ -159,6 +162,48 @@ func CreateMd5(input []byte) string {
 	return fmt.Sprintf("%X", md5.Sum(input))
 }
 
+func resizeHeif(media []byte, max int) ([]byte, *exif.Exif, uint32, uint32, error) {
+	ra := bytes.NewReader(media)
+	exifData, err := goheif.ExtractExif(ra)
+	if err != nil {
+		fmt.Println("Error extrating exif:", err)
+		return nil, nil, 0, 0, err
+	}
+	e, err := exif.Decode(bytes.NewBuffer(exifData))
+	if err != nil {
+		fmt.Println("Error extrating exif:", err)
+		return nil, nil, 0, 0, err
+	}
+	r := bytes.NewBuffer(media)
+	srcImage, err := goheif.Decode(r)
+	if err != nil {
+		log.Log.Debugf("Decode image for thumbnail error %v", err)
+		return nil, nil, 0, 0, err
+	}
+
+	t, err := e.Get(exif.Orientation)
+	if err == nil {
+		switch t.String() {
+		case "1":
+		case "2":
+			srcImage = imaging.FlipV(srcImage)
+		case "3":
+			srcImage = imaging.Rotate180(srcImage)
+		case "4":
+			srcImage = imaging.Rotate180(imaging.FlipV(srcImage))
+		case "5":
+			srcImage = imaging.Rotate270(imaging.FlipV(srcImage))
+		case "6":
+			srcImage = imaging.Rotate270(srcImage)
+		case "7":
+			srcImage = imaging.Rotate90(imaging.FlipV(srcImage))
+		case "8":
+			srcImage = imaging.Rotate90(srcImage)
+		}
+	}
+	thumb, w, h, err := resizeImage(srcImage, max)
+	return thumb, e, w, h, err
+}
 func resizePicture(media []byte, max int) ([]byte, uint32, uint32, error) {
 	var buffer bytes.Buffer
 	buffer.Write(media)
@@ -167,6 +212,10 @@ func resizePicture(media []byte, max int) ([]byte, uint32, uint32, error) {
 		log.Log.Debugf("Decode image for thumbnail error %v", err)
 		return nil, 0, 0, err
 	}
+	return resizeImage(srcImage, max)
+}
+
+func resizeImage(srcImage image.Image, max int) ([]byte, uint32, uint32, error) {
 	maxX := uint(0)
 	maxY := uint(0)
 	b := srcImage.Bounds()
@@ -185,7 +234,7 @@ func resizePicture(media []byte, max int) ([]byte, uint32, uint32, error) {
 	// height = uint32(b.Max.Y)
 	//fmt.Println("New size: ", height, width)
 	buf := new(bytes.Buffer)
-	err = jpeg.Encode(buf, newImage, nil)
+	err := jpeg.Encode(buf, newImage, nil)
 	if err != nil {
 		// fmt.Println("Error generating thumbnail", err)
 		log.Log.Debugf("Encode image for thumbnail error %v", err)
@@ -262,7 +311,7 @@ func (pic *PictureBinary) CreateThumbnail() error {
 		// pic.MetaData.Height = h
 		thmb, w, h, err := resizePicture(pic.Data.Media, 200)
 		if err != nil {
-			fmt.Println("Error generating thumbnail", pic.MetaData.MIMEType, err)
+			fmt.Println("Error generating thumbnail (resize)", pic.MetaData.MIMEType, err)
 			return err
 		}
 		pic.Data.Thumbnail = thmb
@@ -283,10 +332,25 @@ func NewPictures(fileName string) *Pictures {
 
 // CreateThumbnail create thumbnail
 func (pic *Pictures) CreateThumbnail() error {
+	if strings.HasPrefix(pic.MIMEType, "image/h") {
+		thmb, e, w, h, err := resizeHeif(pic.Media, 200)
+		if err != nil {
+			fmt.Println("Error generating thumbnail of", pic.PictureName, ":", err)
+			return err
+		}
+		pic.Thumbnail = thmb
+		pic.Width = w
+		pic.Height = h
+		pic.ChecksumThumbnail = CreateMd5(pic.Thumbnail)
+		pic.Md5 = pic.ChecksumThumbnail
+		log.Log.Debugf("Thumbnail checksum %s", pic.ChecksumThumbnail)
+
+		return pic.analyseExif(e)
+	}
 	if strings.HasPrefix(pic.MIMEType, "image") {
 		thmb, w, h, err := resizePicture(pic.Media, 200)
 		if err != nil {
-			fmt.Println("Error generating thumbnail", pic.PictureName, ":", err)
+			fmt.Println("Error generating thumbnail of", pic.PictureName, ":", err)
 			return err
 		}
 		pic.Thumbnail = thmb

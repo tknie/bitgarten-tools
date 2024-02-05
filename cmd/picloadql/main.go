@@ -133,6 +133,13 @@ func main() {
 		return
 	}
 
+	if len(directories) == 0 {
+		e := os.Getenv("BITGARTEN_DIRECTORIES")
+		if e != "" {
+			directories = strings.Split(e, ",")
+		}
+	}
+
 	if len(directories) == 0 && fileName == "" {
 		fmt.Println("Picture directory option is required")
 		flag.Usage()
@@ -229,7 +236,7 @@ func storeDirectory(pictureDirectory string, regs []*regexp.Regexp) {
 				sql.IncErrorFile(err, path)
 			}
 			switch suffix {
-			case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
+			case "jpg", "jpeg", "heic", "gif", "m4v", "mov", "mp4", "webm":
 				queueStoreFileInAlbumID(path, albumid)
 				if err != nil {
 					// return fmt.Errorf("error storing file: %v", err)

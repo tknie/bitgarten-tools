@@ -72,7 +72,9 @@ func StoreWorker() {
 		case file := <-storeChannel:
 			err := storeFileInAlbumID(checker, file, albumid)
 			if err != nil {
-				fmt.Println("Error inserting SQL picture:", err)
+				if !strings.HasPrefix(err.Error(), "file empty") {
+					fmt.Println("Error inserting SQL picture:", err)
+				}
 			}
 			wgStore.Done()
 		case <-stop:
@@ -142,6 +144,8 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	fileType := filepath.Ext(fileName)
 	pic.Fill = "1"
 	switch strings.ToLower(fileType[1:]) {
+	case "heic", "heif":
+		pic.MIMEType = "image/" + fileType[1:]
 	case "jpeg", "jpg", "gif":
 		pic.MIMEType = "image/" + fileType[1:]
 	case "mp4", "mov", "m4v", "webm":
