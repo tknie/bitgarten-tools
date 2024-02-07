@@ -170,7 +170,7 @@ func main() {
 		FctParameter: id,
 	}
 
-	prefix := "title LIKE '%heic'"
+	prefix := "title LIKE '%heic' AND markdelete=false"
 	if chksum != "" {
 		prefix += fmt.Sprintf(" AND checksumpicture = '%s'", chksum)
 	}
@@ -272,7 +272,7 @@ func searchSimilarEntries(title string) {
 		DataStruct: &store.Pictures{},
 		Fields:     []string{"MIMEType", "checksumpicture", "title", "exiforigtime"},
 	}
-	q.Search = "title LIKE '" + xTitle + "%' and markdelete!=true"
+	q.Search = "title LIKE '" + xTitle + "%' and markdelete=false"
 	_, err = sid.Query(q, func(search *common.Query, result *common.Result) error {
 		pic := result.Data.(*store.Pictures)
 		if pic.Title != title {

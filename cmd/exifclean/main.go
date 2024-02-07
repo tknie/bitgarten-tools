@@ -120,6 +120,11 @@ func main() {
 		fmt.Println("Error opening connection:", err)
 		return
 	}
+	wid, err := flynn.Handler(ref, passwd)
+	if err != nil {
+		fmt.Println("Error opening connection:", err)
+		return
+	}
 	query := &common.Query{
 		TableName:  tableName,
 		DataStruct: &exif{},
@@ -146,12 +151,12 @@ func main() {
 				Values:     list,
 				Update:     []string{"checksumpicture = '" + x.Checksumpicture + "'"},
 			}
-			n, err := id.Update(tableName, update)
+			n, err := wid.Update(tableName, update)
 			if err != nil {
 				fmt.Println("Error updating record:", err)
 				return err
 			}
-			err = id.Commit()
+			err = wid.Commit()
 			if err != nil {
 				fmt.Println("Erro commiting record:", err)
 				return err
