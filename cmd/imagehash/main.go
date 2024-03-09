@@ -143,5 +143,5 @@ func hash(f io.Reader) (*goimagehash.ImageHash, error) {
 	if err != nil {
 		return nil, err
 	}
-	return goimagehash.AverageHash(i)
+	return goimagehash.PerceptionHash(i)
 }
