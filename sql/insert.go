@@ -615,7 +615,7 @@ func insertPictureData(ti *timeInfo, ctx context.Context, tx *sql.Tx, pic *store
 	}
 	log.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
 	_, err := tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, Sha256Checksum, Title, Fill, Height, Width, Media, Thumbnail,mimetype,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation,created ,exif,GPScoordinates, GPSlatitude, GPSlongitude)"+
-		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)",
+		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)",
 		pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, fill, pic.Height,
 		pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
 		pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat),
