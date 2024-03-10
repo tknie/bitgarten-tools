@@ -109,7 +109,9 @@ func main() {
 		buffer := bytes.NewBuffer(p.Media)
 		h, err := hash(buffer)
 		if err != nil {
-			return err
+			fmt.Printf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err)
+			log.Log.Errorf("Error generating hash for %s/%s: %v", p.Title, p.ChecksumPicture, err)
+			return nil
 		}
 		fmt.Printf("%s -> %+v\n", p.Title, h)
 		insertHash(p, h)
