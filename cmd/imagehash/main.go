@@ -101,7 +101,8 @@ func main() {
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
 		Limit:      uint32(limit),
-		Search:     "markdelete = false AND mimetype LIKE 'image/%'" + preFilter,
+		Search: "markdelete = false AND mimetype LIKE 'image/%'" + preFilter +
+			" and not exists(select 1 from picturehash ph where ph.checksumpicture = tn.checksumpicture and ph.updated_at < current_date + interval '1 week')",
 	}
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
 		p := result.Data.(*store.Pictures)
