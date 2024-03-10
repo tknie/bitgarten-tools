@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"io"
 	"os"
+	"strings"
 	"tux-lobload/store"
 
 	"github.com/corona10/goimagehash"
@@ -112,7 +113,7 @@ func main() {
 		p := result.Data.(*store.Pictures)
 		buffer := bytes.NewBuffer(p.Media)
 		var h *goimagehash.ImageHash
-		switch p.MIMEType {
+		switch strings.ToLower(p.MIMEType) {
 		case "image/heic":
 			h, err = hashHeic(buffer)
 			if err != nil {
