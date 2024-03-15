@@ -13,6 +13,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"text/template"
 	"tux-lobload/store"
 
 	"github.com/corona10/goimagehash"
@@ -28,6 +29,12 @@ var url = os.Getenv("POSTGRES_URL")
 var defaultHash = 1
 var hashes = []string{"averageHash", "perceptHash", "diffHash", "waveletHash"}
 var hashType = hashes[defaultHash]
+
+const searchHash = `{{if not .Deleted -}} markdelete = false AND {{end}}
+mimetype LIKE 'image/%' {{.Filter}}
+AND NOT EXISTS(SELECT 1 FROM picturehash ph 
+	WHERE ph.checksumpicture = tn.checksumpicture and 
+		ph.updated_at < current_date + interval '1 week')`
 
 type hashData struct {
 	Checksumpicture string
@@ -101,9 +108,11 @@ func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
 func main() {
 	limit := 10
 	preFilter := ""
+	deleted := false
 
 	flag.IntVar(&limit, "l", 50, "Maximum number of records loaded")
 	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
+	flag.BoolVar(&deleted, "D", false, "Scan deleted pictures as well")
 	flag.StringVar(&hashType, "h", hashes[defaultHash], "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
 	flag.Parse()
 
@@ -118,19 +127,28 @@ func main() {
 		return
 	}
 
+	// Prepare template
+	t1 := template.New("t1")
+	t1 = template.Must(t1.Parse(searchHash))
+	var sql bytes.Buffer
+	t1.Execute(&sql, struct {
+		Deleted bool
+		Filter  string
+	}{deleted, preFilter})
+
 	id, err := flynn.Handle(url)
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return
 	}
 	fmt.Println("Query database entries for one week not hashed")
+	fmt.Printf("Execute query:\n%s\n", sql.String())
 	query := &common.Query{
 		TableName:  "pictures",
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
 		Limit:      uint32(limit),
-		Search: "markdelete = false AND mimetype LIKE 'image/%'" + preFilter +
-			" and not exists(select 1 from picturehash ph where ph.checksumpicture = tn.checksumpicture and ph.updated_at < current_date + interval '1 week')",
+		Search:     sql.String(),
 	}
 	counter := uint64(0)
 	processed := uint64(0)
