@@ -137,7 +137,7 @@ func main() {
 	log.Log.Debugf("Received Albums count = %d", len(albums))
 	for _, a := range albums {
 		log.Log.Debugf("Work on Album -> %s", a.Title)
-		if a.Title != "New Album" {
+		if a.Title != "Default Album" {
 			a, err = connSource.ReadAlbum(a.Title)
 			if err != nil {
 				fmt.Println("Error reading album:", err)

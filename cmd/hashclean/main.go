@@ -1,3 +1,22 @@
+/*
+* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+*
+* SPDX-License-Identifier: Apache-2.0
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
+*
+*       http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*
+ */
+
 package main
 
 import (
@@ -31,11 +50,13 @@ var url = os.Getenv("POSTGRES_URL")
 var commit = false
 
 const defaultLimit = 20
+const defaultMinCount = 2
 
 var limit = defaultLimit
+var minCount = defaultMinCount
 
 const readHashs = `
-SELECT count(hash) AS count,
+SELECT count(perceptionhash) AS count,
 perceptionhash
    FROM picturehash p
   WHERE (EXISTS ( SELECT 1
@@ -72,7 +93,7 @@ func init() {
 		fmt.Println("Error initialize logging")
 		os.Exit(255)
 	}
-	os.Setenv("PGAPPNAME", "Bitgarten hash")
+	os.Setenv("PGAPPNAME", "Bitgarten cleanhash")
 }
 
 func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
@@ -121,6 +142,7 @@ func main() {
 	var hashType string
 
 	flag.IntVar(&limit, "l", defaultLimit, "Maximum number of records loaded")
+	flag.IntVar(&minCount, "m", defaultMinCount, "Minimum number of count per hash")
 	flag.StringVar(&hashType, "h", "", "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
 	flag.BoolVar(&commit, "c", false, "Enable commit to database")
 	flag.Parse()
@@ -152,10 +174,12 @@ func queryHash() ([]string, error) {
 		fmt.Println("POSTGRES error", err)
 		return nil, err
 	}
+	defer id.FreeHandler()
+
 	sql, err := templateSql(readHashs, struct {
 		Limit int
 		Count int
-	}{limit, 2})
+	}{limit, minCount})
 	if err != nil {
 		return nil, err
 	}
@@ -213,6 +237,8 @@ func queryPictureByHash(hash string) error {
 		fmt.Println("POSTGRES error", err)
 		return err
 	}
+	defer id.FreeHandler()
+
 	sqlCmd, err := templateSql(readPictureByHashs, hash)
 	if err != nil {
 		return err
@@ -248,33 +274,55 @@ func queryPictureByHash(hash string) error {
 	var firstFound *PictureByHash
 	tagMap := make(map[string]bool)
 	for _, pbh := range picturesByHash {
-		if !strings.Contains(pbh.Tags, "'bitgarten'") {
+		if strings.HasSuffix(strings.ToLower(pbh.Title), ".heic") {
 			if firstFound == nil {
 				firstFound = pbh
 			} else {
-				pbh.delete = true
-			}
-			if pbh.Tags != "" {
-				tags := strings.Split(pbh.Tags, ",")
-				for _, t := range tags {
-					tagMap[t] = true
+				if firstFound.Width <= pbh.Width {
+					if !strings.Contains(firstFound.Tags, "'bitgarten'") {
+						firstFound.delete = true
+					}
+					firstFound = pbh
 				}
 			}
 		} else {
-			if pbh.Tags != "" {
-				tags := strings.Split(pbh.Tags, ",")
-				for _, t := range tags {
-					if t != "'bitgarten'" {
+			if !strings.Contains(pbh.Tags, "'bitgarten'") {
+				if firstFound == nil {
+					firstFound = pbh
+				} else {
+					pbh.delete = true
+				}
+				if pbh.Tags != "" {
+					tags := strings.Split(pbh.Tags, ",")
+					for _, t := range tags {
 						tagMap[t] = true
 					}
 				}
+			} else {
+				if firstFound != nil && firstFound.Width == pbh.Width {
+					firstFound.delete = true
+					firstFound = pbh
+				}
+				if firstFound == nil {
+					firstFound = pbh
+				}
+				if pbh.Tags != "" {
+					tags := strings.Split(pbh.Tags, ",")
+					for _, t := range tags {
+						if t != "'bitgarten'" {
+							tagMap[t] = true
+						}
+					}
+				}
 			}
+
+			log.Log.Debugf("Find picture hash %#v", pbh)
 		}
-		log.Log.Debugf("Find picture hash %#v", pbh)
 	}
 	if firstFound == nil {
 		fmt.Printf("No first found out of %d\n", len(picturesByHash))
 	} else {
+		fmt.Printf("Start cleanup for %s entries=%d\n", hash, len(picturesByHash))
 		err = cleanUpPictures(tagMap, firstFound, picturesByHash)
 		if err != nil {
 			fmt.Println("Error cleanup pictures:", err)
@@ -303,19 +351,34 @@ func cleanUpPictures(tagMap map[string]bool, firstFound *PictureByHash, pictures
 	if newTags != firstFound.Tags {
 		oldTagMap := KeysMap(firstFound.Tags)
 		newTagMap := KeysMap(newTags)
-		changed := true
+		changed := false
 		for k := range newTagMap {
-			if !oldTagMap[k] {
-				oldTagMap[k] = true
-				changed = true
+			if k != "" {
+				if !oldTagMap[k] {
+					oldTagMap[k] = true
+					changed = true
+
+					fmt.Printf("Insert tag for %s to <%s> (%s)\n", firstFound.Checksumpicture, k, strings.Trim(k, "'"))
+					input := &common.Entries{
+						Fields: []string{"tagname", "checksumpicture"},
+						Update: []string{"checksumpicture='" + firstFound.Checksumpicture + "'"},
+						Values: [][]any{{strings.Trim(k, "'"), firstFound.Checksumpicture}},
+					}
+					err := id.Insert("picturetags", input)
+					if err != nil {
+						log.Log.Debugf("Error insert tag name %s for %s", k, firstFound.Checksumpicture)
+						return err
+					}
+				}
 			}
 		}
 		if changed {
-			fmt.Println("Need tag update to -> ", firstFound.Checksumpicture, newTags)
+			fmt.Println("Updated tag for", firstFound.Checksumpicture, "to", newTags, "from", firstFound.Tags)
 		}
 	}
 
 	for _, pbh := range picturesByHash {
+		log.Log.Debugf("Cleanup picture %#v", pbh)
 		if pbh.delete {
 			if pbh.Tags != "" {
 				fmt.Println("Need to delete all tags for -> ", pbh.Checksumpicture, "tags=", pbh.Tags)
