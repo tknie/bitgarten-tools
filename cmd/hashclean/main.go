@@ -1,5 +1,5 @@
 /*
-* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -28,8 +28,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"tux-lobload/sql"
 
-	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
 	"go.uber.org/zap"
@@ -46,7 +46,6 @@ type PictureHashCount struct {
 	PerceptionHash string
 }
 
-var url = os.Getenv("POSTGRES_URL")
 var commit = false
 
 const defaultLimit = 20
@@ -169,7 +168,7 @@ func main() {
 }
 
 func queryHash() ([]string, error) {
-	id, err := flynn.Handle(url)
+	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return nil, err
@@ -232,7 +231,7 @@ func templateSql(t string, p any) (string, error) {
 }
 
 func queryPictureByHash(hash string) error {
-	id, err := flynn.Handle(url)
+	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return err
@@ -334,7 +333,7 @@ func queryPictureByHash(hash string) error {
 }
 
 func cleanUpPictures(tagMap map[string]bool, firstFound *PictureByHash, picturesByHash []*PictureByHash) error {
-	id, err := flynn.Handle(url)
+	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return err
@@ -364,7 +363,7 @@ func cleanUpPictures(tagMap map[string]bool, firstFound *PictureByHash, pictures
 						Update: []string{"checksumpicture='" + firstFound.Checksumpicture + "'"},
 						Values: [][]any{{strings.Trim(k, "'"), firstFound.Checksumpicture}},
 					}
-					err := id.Insert("picturetags", input)
+					_, err := id.Insert("picturetags", input)
 					if err != nil {
 						log.Log.Debugf("Error insert tag name %s for %s", k, firstFound.Checksumpicture)
 						return err
@@ -399,7 +398,7 @@ func cleanUpPictures(tagMap map[string]bool, firstFound *PictureByHash, pictures
 				Update: []string{"checksumpicture='" + pbh.Checksumpicture + "'"},
 				Values: [][]any{{true}},
 			}
-			ra, err := id.Update("pictures", input)
+			_, ra, err := id.Update("pictures", input)
 			if err != nil {
 				return nil
 			}

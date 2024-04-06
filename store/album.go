@@ -1,5 +1,5 @@
 /*
-* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -19,8 +19,12 @@
 
 package store
 
+import "time"
+
 // Picture picture description
 type Picture struct {
+	Index       int
+	AlbumID     int
 	Description string `adabas:"::PD"`
 	Name        string `adabas:"::PN"`
 	Md5         string `adabas:"::PM"`
@@ -35,11 +39,11 @@ type Picture struct {
 type Album struct {
 	Index            uint64     `adabas:":isn"`
 	Directory        string     `adabas:"::DI"`
-	Date             int64      `adabas:"::DT"`
+	Published        time.Time  `adabas:"::DT"`
 	Key              string     `adabas:"::KY"`
 	Title            string     `adabas:"::TI"`
 	AlbumDescription string     `adabas:"::TD"`
-	Thumbnail        string     `adabas:"::TH"`
+	Thumbnailhash    string     `adabas:"::TH"`
 	Pictures         []*Picture `adabas:"::ET"`
 }
 

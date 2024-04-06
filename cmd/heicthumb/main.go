@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -28,6 +28,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strings"
+	"tux-lobload/sql"
 	"tux-lobload/store"
 
 	"github.com/tknie/flynn"
@@ -133,30 +134,16 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	url := os.Getenv("POSTGRES_URL")
-	if url == "" {
-		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
-		return
-	}
-	fmt.Println("Start generating heic thumbnails")
-	var err error
-	ref, passwd, err = common.NewReference(url)
+	id, err := sql.DatabaseHandler()
 	if err != nil {
-		fmt.Println("Error parsing URL", err)
-		return
-	}
-	// fmt.Println("Got passwd <", passwd, ">")
-	if passwd == "" {
-		passwd = os.Getenv("POSTGRES_PASSWORD")
-	}
-	id, err := flynn.Handler(ref, passwd)
-	if err != nil {
-		fmt.Println("Error connect ...:", err)
+		fmt.Println("Error opening connection:", err)
 		return
 	}
 	defer id.FreeHandler()
+
+	fmt.Println("Start generating heic thumbnails")
 	if storeData {
-		wid, err = flynn.Handler(ref, passwd)
+		wid, err := sql.DatabaseHandler()
 		if err != nil {
 			fmt.Println("Error connect write ...:", err)
 			return
@@ -224,7 +211,7 @@ func storeThumb(pic *store.Pictures) error {
 		Values:     [][]any{{pic}},
 		Update:     []string{"checksumpicture='" + pic.ChecksumPicture + "'"},
 	}
-	n, err := wid.Update("pictures", update)
+	_, n, err := wid.Update("pictures", update)
 	if err != nil {
 		fmt.Println("Error updating", n, ":", err)
 		fmt.Println("Pic:", pic.ChecksumPicture)
@@ -283,7 +270,7 @@ func searchSimilarEntries(title string) {
 					Values: [][]any{{true}},
 					Update: []string{"checksumpicture='" + pic.ChecksumPicture + "'"},
 				}
-				n, err := did.Update("pictures", update)
+				_, n, err := did.Update("pictures", update)
 				if err != nil {
 					fmt.Println("Error mark delete", n, ":", err)
 					fmt.Println("Pic:", pic.ChecksumPicture)

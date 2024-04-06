@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -26,8 +26,8 @@ import (
 	"os"
 	"strings"
 	"time"
+	"tux-lobload/sql"
 
-	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
 	"go.uber.org/zap"
@@ -107,20 +107,12 @@ func main() {
 
 	log.Log.Debugf("Start exifclean")
 
-	url := os.Getenv("POSTGRES_URL")
-
-	ref, passwd, err := common.NewReference(url)
-	if err != nil {
-		fmt.Println("URL error:", err)
-		return
-	}
-
-	id, err := flynn.Handler(ref, passwd)
+	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error opening connection:", err)
 		return
 	}
-	wid, err := flynn.Handler(ref, passwd)
+	wid, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error opening connection:", err)
 		return
@@ -151,7 +143,7 @@ func main() {
 				Values:     list,
 				Update:     []string{"checksumpicture = '" + x.Checksumpicture + "'"},
 			}
-			n, err := wid.Update(tableName, update)
+			_, n, err := wid.Update(tableName, update)
 			if err != nil {
 				fmt.Println("Error updating record:", err)
 				return err

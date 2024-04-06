@@ -1,5 +1,5 @@
 /*
-* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -41,12 +41,10 @@ import (
 
 const timeFormat = "2006-01-02 15:04:05"
 
-var hostname string
 var insertAlbum = false
 var albumid = 1
 
 func init() {
-	hostname, _ = os.Hostname()
 	level := zapcore.ErrorLevel
 	ed := os.Getenv("ENABLE_DEBUG")
 	switch ed {
@@ -213,7 +211,7 @@ func storeDirectory(pictureDirectory string, regs []*regexp.Regexp) {
 			albumid, err = di.InsertNewAlbum(dir)
 			if err != nil {
 				fmt.Println("Error inserting album:", err)
-				return
+				log.Log.Fatal("Error creating Album")
 			}
 		}
 		fmt.Printf("%s Loading path %s\n", time.Now().Format(timeFormat), pictureDirectory)

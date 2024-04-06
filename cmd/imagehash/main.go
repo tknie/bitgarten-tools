@@ -1,5 +1,5 @@
 /*
-* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -33,10 +33,10 @@ import (
 	"slices"
 	"strings"
 	"text/template"
+	"tux-lobload/sql"
 	"tux-lobload/store"
 
 	"github.com/corona10/goimagehash"
-	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/goheif"
 	"github.com/tknie/log"
@@ -44,7 +44,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var url = os.Getenv("POSTGRES_URL")
 var defaultHash = 1
 var hashes = []string{"averageHash", "perceptHash", "diffHash", "waveletHash"}
 var hashType = hashes[defaultHash]
@@ -149,25 +148,25 @@ func main() {
 	// Prepare template
 	t1 := template.New("t1")
 	t1 = template.Must(t1.Parse(searchHash))
-	var sql bytes.Buffer
-	t1.Execute(&sql, struct {
+	var sqlCmd bytes.Buffer
+	t1.Execute(&sqlCmd, struct {
 		Deleted bool
 		Filter  string
 	}{deleted, preFilter})
 
-	id, err := flynn.Handle(url)
+	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return
 	}
 	fmt.Println("Query database entries for one week not hashed")
-	fmt.Printf("Execute query:\n%s\n", sql.String())
+	fmt.Printf("Execute query:\n%s\n", sqlCmd.String())
 	query := &common.Query{
 		TableName:  "pictures",
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
 		Limit:      uint32(limit),
-		Search:     sql.String(),
+		Search:     sqlCmd.String(),
 	}
 	counter := uint64(0)
 	processed := uint64(0)
@@ -227,7 +226,7 @@ func main() {
 }
 
 func insertHash(p *store.Pictures, ph *hashData) error {
-	wid, err := flynn.Handle(url)
+	wid, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return nil
@@ -238,7 +237,7 @@ func insertHash(p *store.Pictures, ph *hashData) error {
 		// Values:     [][]any{{p.ChecksumPicture, h.GetHash(), byte(h.GetKind())}},
 		Values: [][]any{{ph}},
 	}
-	err = wid.Insert("picturehash", insert)
+	_, err = wid.Insert("picturehash", insert)
 	if err != nil {
 		fmt.Printf("Error inserting %s/%s: %v\n", p.Title, p.ChecksumPicture, err)
 		return err

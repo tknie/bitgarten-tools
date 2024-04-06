@@ -1,5 +1,5 @@
 /*
-* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -35,13 +35,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var hostname string
 var checkPictureChannel = make(chan *sql.Picture, 10)
 var stop = make(chan bool)
 var wgCheck sync.WaitGroup
 
 func init() {
-	hostname, _ = os.Hostname()
 	level := zapcore.ErrorLevel
 	ed := os.Getenv("ENABLE_DEBUG")
 	switch ed {
@@ -129,10 +127,7 @@ func main() {
 	defer writeMemProfile(*memprofile)
 
 	initCheck()
-	sourceUrl := os.Getenv("POSTGRES_URL")
-	pwd := os.Getenv("POSTGRES_PASSWORD")
-	fmt.Println("Connect : " + sourceUrl)
-	connSource, err := sql.Connect(sourceUrl, pwd)
+	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		fmt.Printf("Error connecting URL: %v", err)
 		return

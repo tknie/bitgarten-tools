@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -91,7 +91,7 @@ func Connect(url, pwd string) (*DatabaseInfo, error) {
 		passwd = pwd
 	}
 	log.Log.Infof("Connecting to .... %s", ref.Host)
-	return &DatabaseInfo{nil, ref, passwd, 0}, nil
+	return &DatabaseInfo{0, ref, passwd, 0}, nil
 }
 
 func (di *DatabaseInfo) Open() (common.RegDbID, error) {

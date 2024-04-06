@@ -1,5 +1,5 @@
 /*
-* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -34,14 +34,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const timeFormat = "2006-01-02 15:04:05"
-
-var hostname string
 var insertAlbum = false
-var albumid = 1
 
 func init() {
-	hostname, _ = os.Hostname()
 	level := zapcore.ErrorLevel
 	ed := os.Getenv("ENABLE_DEBUG")
 	switch ed {
@@ -124,18 +119,14 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 	var a *sql.Albums
-	// sourceUrl := "postgres://admin@localhost:5432/bitgarten"
-	sourceUrl := os.Getenv("POSTGRES_SOURCE_URL")
-	pwd := os.Getenv("POSTGRES_SOURCE_PASSWORD")
-	connSource, err := sql.Connect(sourceUrl, pwd)
+	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
 		fmt.Println("Set POSTGRES_SOURCE_URL and/or POSTGRES_SOURCE_PASSWORD to define remote database")
 		return
 	}
-	//	destUrl := "postgres://admin@bear:5433/bitgarten"
 	destUrl := os.Getenv("POSTGRES_DESTINATION_URL")
-	pwd = os.Getenv("POSTGRES_DESTINATION_PASSWORD")
+	pwd := os.Getenv("POSTGRES_DESTINATION_PASSWORD")
 	destSource, err := sql.Connect(destUrl, pwd)
 	if err != nil {
 		fmt.Println("Error creating connection:", err)

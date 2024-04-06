@@ -1,5 +1,5 @@
 /*
-* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -25,9 +25,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"tux-lobload/sql"
 	"tux-lobload/store"
 
-	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
 	"go.uber.org/zap"
@@ -102,13 +102,12 @@ func main() {
 	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
 	flag.Parse()
 
-	url := os.Getenv("POSTGRES_URL")
-	id, err := flynn.Handle(url)
+	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return
 	}
-	wid, err := flynn.Handle(url)
+	wid, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
 		return
@@ -116,7 +115,6 @@ func main() {
 	if preFilter != "" {
 		preFilter = fmt.Sprintf(" AND title LIKE '%s%%'", preFilter)
 	}
-	fmt.Println("Connect to ", url)
 	count := uint64(0)
 	skipped := uint64(0)
 	query := &common.Query{
@@ -144,7 +142,7 @@ func main() {
 			Values:     [][]any{{p}},
 			Update:     []string{"checksumpicture='" + p.ChecksumPicture + "'"},
 		}
-		n, err := wid.Update("pictures", insert)
+		_, n, err := wid.Update("pictures", insert)
 		if err != nil {
 			fmt.Println("Error inserting", n, ":", err)
 			fmt.Println("Pic:", p.ChecksumPicture)

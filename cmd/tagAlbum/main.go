@@ -1,5 +1,5 @@
 /*
-* Copyright © 2018-2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -111,12 +111,8 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-	sourceUrl := os.Getenv("POSTGRES_URL")
-	pwd := os.Getenv("POSTGRES_PASSWORD")
-	connSource, err := sql.Connect(sourceUrl, pwd)
+	connSource, err := sql.DatabaseConnect()
 	if err != nil {
-		fmt.Println("Error creating connection:", err)
-		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
 		return
 	}
 
@@ -137,7 +133,7 @@ func main() {
 	log.Log.Debugf("Received Albums count = %d", len(albums))
 	for _, a := range albums {
 		log.Log.Debugf("Work on Album -> %s", a.Title)
-		if a.Title != "Default Album" {
+		if a.Title != sql.DefaultAlbum {
 			a, err = connSource.ReadAlbum(a.Title)
 			if err != nil {
 				fmt.Println("Error reading album:", err)
@@ -161,7 +157,7 @@ func main() {
 						"tagname",
 					},
 					Values: list}
-				err = id.Insert("picturetags", input)
+				_, err = id.Insert("picturetags", input)
 				if err != nil {
 					fmt.Println("Error inserting:", err)
 					return

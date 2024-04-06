@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -20,7 +20,6 @@
 package sql
 
 import (
-	"context"
 	"crypto/md5"
 	"crypto/sha256"
 	"database/sql"
@@ -35,9 +34,8 @@ import (
 	"tux-lobload/store"
 
 	"github.com/go-sql-driver/mysql"
-	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
 )
@@ -51,14 +49,17 @@ type DataConfig struct {
 }
 
 type DatabaseInfo struct {
-	db        *sql.DB
+	// Deprecated: Get rid of native SQL driver
+	// db        *sql.DB
+	id        common.RegDbID
 	Reference *common.Reference
 	passwd    string
 	duraction time.Duration
 }
 
+const DefaultAlbum = "Default Album"
+
 var Md5Map sync.Map
-var hostname = ""
 
 var picChannel = make(chan *store.Pictures)
 var stop = make(chan bool)
@@ -69,50 +70,28 @@ var sqlSkipCounter = uint32(0)
 var albEntryIndex = int32(0)
 
 func init() {
-	hostname, _ = os.Hostname()
-	hostname = strings.Split(hostname, ".")[0]
 }
 
 func CreateConnection() (*DatabaseInfo, error) {
-	host := os.Getenv("POSTGRES_HOST")
-	if host == "" {
-		host = "bear.fritz.box"
+	ref, passwd, err := DatabaseLocation()
+	if err != nil {
+		return nil, err
 	}
-	user := os.Getenv("POSTGRES_USER")
-	if user == "" {
-		user = "admin"
-	}
-	passwd := os.Getenv("POSTGRES_PASS")
-	if passwd == "" {
-		passwd = "lxXx"
-	}
-	portS := os.Getenv("POSTGRES_PORT")
-	port := 5432
-	var err error
-	if portS != "" {
-		port, err = strconv.Atoi(portS)
-		if err != nil {
-			fmt.Println("Error converting port", portS)
-			return nil, err
-		}
-	}
-	dbName := os.Getenv("POSTGRES_DB")
-	if dbName == "" {
-		dbName = "bitgarten"
-	}
-	dc := &DataConfig{User: user, Password: passwd, URL: host,
-		Port: port, Database: dbName}
-	driver, url := dc.PostgresXConnection()
-	connStr := url
 
-	log.Log.Infof("Connecting to ....%s", host)
-	db, err := sql.Open(driver,
-		connStr)
+	dc := &DataConfig{User: ref.User, Password: passwd, URL: ref.Host,
+		Port: ref.Port, Database: ref.Database}
+	_, url := dc.PostgresXConnection()
+	ref, pwd, err := common.NewReference(url)
+	if err != nil {
+		return nil, err
+	}
+	log.Log.Infof("Connecting to ....%s", ref.Host)
+	id, err := flynn.Handler(ref, pwd)
 	if err != nil {
 		fmt.Println("Error db open:", err)
 		return nil, err
 	}
-	return &DatabaseInfo{db, nil, "", 0}, nil
+	return &DatabaseInfo{id, nil, "", 0}, nil
 }
 
 func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
@@ -152,14 +131,14 @@ func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
 		Values: list}
 	if found > 0 {
 		input.Update = []string{"title='" + strings.Replace(album.Title, "'", "''", -1) + "'"}
-		n, err := id.Update("Albums", input)
+		_, n, err := id.Update("Albums", input)
 		if err != nil {
 			return err
 		}
 		log.Log.Debugf("Update %d entries", n)
 		album.Id = found
 	} else {
-		err = id.Insert("Albums", input)
+		_, err = id.Insert("Albums", input)
 		if err != nil {
 			return err
 		}
@@ -215,13 +194,13 @@ func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
 	if found {
 		input.Update = []string{fmt.Sprintf("index = %d AND albumid = %d",
 			albumPic.Index, albumPic.AlbumId)}
-		n, err := id.Update("AlbumPictures", input)
+		_, n, err := id.Update("AlbumPictures", input)
 		if err != nil {
 			return err
 		}
 		log.Log.Debugf("Update %d entries", n)
 	} else {
-		err = id.Insert("AlbumPictures", input)
+		_, err = id.Insert("AlbumPictures", input)
 		log.Log.Debugf("Update AlbumPictures entry")
 	}
 	if err != nil {
@@ -278,7 +257,7 @@ func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 			"Created",
 			"Updated_at"},
 		Values: list}
-	err = id.Insert("Pictures", input)
+	_, err = id.Insert("Pictures", input)
 	if err != nil {
 		return err
 	}
@@ -287,60 +266,47 @@ func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 }
 
 func (di *DatabaseInfo) Close() {
-	if di != nil && di.db != nil {
-		di.db.Close()
+	if di != nil && di.id != 0 {
+		di.id.FreeHandler()
 	}
 }
 
 func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
 
-	// Create a new context, and begin a transaction
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
-	conn, err := di.db.Conn(ctx)
-	if err != nil {
-		return 0, err
+	di.id.BeginTransaction()
+
+	entries := &common.Entries{
+		Fields:    []string{"Title", "Key", "Directory", "ThumbnailHash", "published"},
+		Returning: []string{"ID"},
+		Values:    [][]any{{DefaultAlbum, "Key", directory, "", time.Now()}},
 	}
-	conn.Raw(func(driverConn any) error {
-		c := driverConn.(*stdlib.Conn).Conn()
-		pgxdecimal.Register(c.TypeMap())
-		return nil
-	})
-	// pgxdecimal.Register(c.TypeMap())
-	// ctx := context.Background()
-	tx, err := di.db.BeginTx(ctx, nil)
-	if err != nil {
-		fmt.Printf("Error beginning Albums transaction: %v\n", err)
-		return -1, err
-	}
-	// fmt.Println("Insert album", time.Unix(int64(album.Date), 0))
-	// stmt, err := tx.Prepare("insert into Albums ( ID, Title, Key, Directory, Thumbnail ) VALUES($1,$2,$3,$4,$5)")
-	// if err != nil {
-	// 	fmt.Printf("Error preparing SQL Albums: %v\n", err)
-	// 	return err
-	// }
+	r, err := di.id.Insert("Albums", entries)
 	newID := 0
-	err = tx.QueryRow("insert into Albums ( Title, Key, Directory, ThumbnailHash, published ) VALUES($1,$2,$3,$4,$5) RETURNING ID",
-		"New Album", "Key", directory, "", time.Now()).Scan(&newID)
 	if err != nil {
 		if !checkErrorContinue(err) {
 			fmt.Printf("Error inserting Albums(unknown): %v\n", err)
-			tx.Rollback()
+			di.id.Rollback()
 			return 0, err
 		}
-		r, err := di.db.Query("select id FROM Albums where title = 'New Album'")
+		query := &common.Query{Fields: []string{"id"}, TableName: "Albums",
+			Search: "title = '" + DefaultAlbum + "'"}
+		_, err := di.id.Query(query, func(search *common.Query, result *common.Result) error {
+			fmt.Println(result.Rows)
+			newID = int(result.Rows[0].(int32))
+			return nil
+		})
 		if err != nil {
 			fmt.Printf("Error quering Albums(unknown): %v\n", err)
 			return -1, err
 		}
-		if r.Next() {
-			r.Scan(&newID)
-			return newID, nil
-		}
 		return -1, err
 	}
+	fmt.Println(r[0][0])
+	newID, _ = strconv.Atoi(r[0][0].(string))
+	fmt.Println("Album created", newID)
+	log.Log.Debugf("Album created: %d", newID)
 
-	err = tx.Commit()
+	err = di.id.Commit()
 	if err != nil {
 		fmt.Println("Commit tx error:", err)
 		log.Log.Fatal(err)
@@ -355,30 +321,27 @@ func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
 }
 
 func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
-
-	// Create a new context, and begin a transaction
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
-	conn, _ := di.db.Conn(ctx)
-	conn.Raw(func(driverConn any) error {
-		c := driverConn.(*stdlib.Conn).Conn()
-		pgxdecimal.Register(c.TypeMap())
-		return nil
-	})
-	// pgxdecimal.Register(c.TypeMap())
-	// ctx := context.Background()
-	tx, err := di.db.BeginTx(ctx, nil)
+	id, err := DatabaseHandler()
 	if err != nil {
-		fmt.Printf("Error beginning Albums transaction: %v\n", err)
-		log.Log.Fatal(err)
+		return err
 	}
 
-	// fmt.Println("Insert album", time.Unix(int64(album.Date), 0))
-	// stmt, err := tx.Prepare("insert into Albums ( ID, Title, key, Directory, Thumbnail ) VALUES($1,$2,$3,$4,$5)")
-	// if err != nil {
-	// 	fmt.Printf("Error preparing SQL Albums: %v\n", err)
-	// 	return err
-	// }
+	err = id.BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	// TODO move to flynn
+	// Create a new context, and begin a transaction
+	// ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+	// defer cancelfunc()
+	// conn, _ := di.db.Conn(ctx)
+	// conn.Raw(func(driverConn any) error {
+	// 	c := driverConn.(*stdlib.Conn).Conn()
+	// 	pgxdecimal.Register(c.TypeMap())
+	// 	return nil
+	// })
+
 	newID := 0
 	k := strings.Trim(album.Key, " ")
 	if k == "" {
@@ -388,13 +351,16 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 		}
 		album.Key = createStringMd5(album.Title)
 	}
-	if m, ok := Md5Map.Load(album.Thumbnail); ok {
-		album.Thumbnail = m.(string)
+	if m, ok := Md5Map.Load(album.Thumbnailhash); ok {
+		album.Thumbnailhash = m.(string)
 	}
-	err = tx.QueryRow("insert into Albums ( Title, key, Directory, ThumbnailHash, published ) VALUES($1,$2,$3,$4,$5) RETURNING ID",
-		album.Title, album.Key, album.Directory, album.Thumbnail, time.UnixMilli(int64(album.Date*1000))).Scan(&newID)
+	insert := &common.Entries{Fields: []string{"Title", "key", "Directory", "ThumbnailHash", "published"},
+		DataStruct: album,
+		Values:     [][]any{{album}},
+		Returning:  []string{"ID"}}
+	data, err := di.id.Insert("Albums", insert)
 	if err != nil {
-		err2 := tx.Rollback()
+		err2 := di.id.Rollback()
 		fmt.Println("Rollback ...", err2)
 		if !checkErrorContinue(err) {
 			fmt.Printf("Error inserting Albums(unknown): %v\n", err)
@@ -402,6 +368,7 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 		}
 		return nil
 	}
+	newID = data[0][0].(int)
 	for i, p := range album.Pictures {
 		log.Log.Debugf("Insert picture Md5=%s", p.Md5)
 		if p.Md5 == "" {
@@ -411,13 +378,22 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 			p.Md5 = strings.Trim(m.(string), " ")
 			fmt.Printf("MD5 AP <%s>", p.Md5)
 		}
-		_, err := tx.Exec("insert into AlbumPictures ( Index, AlbumId, Name, Description, ChecksumPicture,  Fill, Height, Width, SkipTime, MIMEType)"+
-			" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-			strconv.Itoa(i+1), strconv.Itoa(int(newID)), p.Name, p.Description,
-			p.Md5, p.Fill, strconv.Itoa(int(p.Height)), strconv.Itoa(int(p.Width)),
-			strconv.Itoa(int(p.Interval)), p.MIMEType)
+		p.Index = i + 1
+		p.AlbumID = newID
+		insertPic := &common.Entries{Fields: []string{"Index", "AlbumId", "Name",
+			"Description", "ChecksumPicture",
+			"Fill", "Height", "Width", "SkipTime", "MIMEType"},
+			DataStruct: p,
+			Values:     [][]any{{p}},
+			Returning:  []string{"ID"}}
+		_, err := di.id.Insert("AlbumPictures", insertPic)
+		// 	_, err := tx.Exec("insert into AlbumPictures ( Index, AlbumId, Name, Description, ChecksumPicture,  Fill, Height, Width, SkipTime, MIMEType)"+
+		// " VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+		// strconv.Itoa(i+1), strconv.Itoa(int(newID)), p.Name, p.Description,
+		// p.Md5, p.Fill, strconv.Itoa(int(p.Height)), strconv.Itoa(int(p.Width)),
+		// strconv.Itoa(int(p.Interval)), p.MIMEType)
 		if err != nil {
-			err2 := tx.Rollback()
+			err2 := di.id.Rollback()
 			fmt.Println("Rollback ...", err2)
 			if !checkErrorContinue(err) {
 				fmt.Printf("Error inserting in AlbumPictures: %v\n", err)
@@ -426,7 +402,7 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 			return nil
 		}
 	}
-	err = tx.Commit()
+	err = di.id.Commit()
 	if err != nil {
 		fmt.Println("Commit tx error:", err)
 		log.Log.Fatal(err)
@@ -492,7 +468,7 @@ func InsertWorker() {
 			log.Log.Debugf("Inserting pic in worker")
 			err = di.InsertPictures(pic)
 			if err != nil {
-				fmt.Println("Error inserting SQL picture:", err)
+				fmt.Println("Worker error inserting picture:", err)
 			}
 			wg.Done()
 			counter++
@@ -504,22 +480,28 @@ func InsertWorker() {
 }
 
 func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid int) error {
-	ctx := context.Background()
-	tx, err := di.db.BeginTx(ctx, nil)
+	err := di.id.BeginTransaction()
 	if err != nil {
 		IncError("Begin Tx "+pic.PictureName, err)
 		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
 		return err
 	}
 	log.Log.Debugf("Insert album picture info Md5=%s", pic.Md5)
-	_, err = tx.ExecContext(ctx, "insert into AlbumPictures (index,albumid,name,description,checksumpicture,mimetype,fill,skiptime,height,width)"+
-		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-		strconv.Itoa(index), albumid, pic.Title, pic.Title+" description", pic.ChecksumPicture, pic.MIMEType, pic.Fill, "5000", strconv.Itoa(int(pic.Height)), strconv.Itoa(int(pic.Width)))
+	insert := &common.Entries{
+		Fields: []string{"index", "albumid", "name", "description",
+			"checksumpicture", "mimetype", "fill", "skiptime", "height", "width"},
+		Values: [][]any{{index, albumid,
+			pic.Title, pic.Title + " description", pic.ChecksumPicture, pic.MIMEType,
+			pic.Fill, "5000", strconv.Itoa(int(pic.Height)), strconv.Itoa(int(pic.Width))}},
+	}
+	log.Log.Debugf("Pic value: %#v", insert.Values[0])
+	_, err = di.id.Insert("AlbumPictures", insert)
 	if err != nil {
 		fmt.Println("Error inserting picture album info: ", index, err)
-		return err
+		//return err
+		log.Log.Fatalf("Error storing: %#v", insert.Values)
 	}
-	err = tx.Commit()
+	err = di.id.Commit()
 	if err != nil {
 		return err
 	}
@@ -532,8 +514,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		pic.ChecksumPictureSHA = CreateSHA(pic.Media)
 	}
 	ti := ps.IncStarted()
-	ctx := context.Background()
-	tx, err := di.db.BeginTx(ctx, nil)
+	err := di.id.BeginTransaction()
 	if err != nil {
 		IncError("BeginTx "+pic.PictureName, err)
 		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
@@ -543,6 +524,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 
 	if pic.StoreAlbum > 0 {
 		index := atomic.AddInt32(&albEntryIndex, 1)
+		pic.Index = uint64(index)
 		err = di.InsertAlbumPictures(pic, int(index), pic.StoreAlbum)
 		if err != nil {
 			fmt.Println("Error inserting album pictures")
@@ -555,23 +537,23 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	log.Log.Errorf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
 		pic.ChecksumPictureSHA, pic.PictureName)
 	if pic.Available == store.NoAvailable {
-		err = insertPictureData(ti, ctx, tx, pic)
+		err = insertPictureData(ti, pic)
 		if err != nil {
 			log.Log.Errorf("Reopen transaction")
-			tx, _ = di.db.BeginTx(ctx, nil)
+			_ = di.id.BeginTransaction()
 		}
 
 	}
 	log.Log.Debugf("Check picture location available: %d", pic.Available)
 	if pic.Available == store.NoAvailable || pic.Available == store.PicAvailable {
 		log.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
-		ins := "insert into PictureLocations (PictureName, ChecksumPicture, PictureHost, PictureDirectory)" +
-			" VALUES($1,$2,$3,$4)"
-		_, err = tx.ExecContext(ctx, ins,
-			pic.PictureName, pic.ChecksumPicture, hostname, pic.Directory)
+		insert := &common.Entries{Fields: []string{"PictureName", "ChecksumPicture", "PictureHost", "PictureDirectory"},
+			Values: [][]any{{pic.PictureName, pic.ChecksumPicture, store.Hostname, pic.Directory}},
+		}
+		_, err = di.id.Insert("PictureLocations", insert)
 		if err != nil {
 			log.Log.Errorf("Insert location error: %v", err)
-			tx.Rollback()
+			di.id.Rollback()
 			if !checkErrorContinue(err) {
 				fmt.Println("Error inserting PictureLocations",
 					pic.ChecksumPicture, pic.PictureName, err)
@@ -583,7 +565,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return nil
 		}
 
-		err = tx.Commit()
+		err = di.id.Commit()
 		if err != nil {
 			IncError("Commit error "+pic.PictureName, fmt.Errorf("error commiting: %v", err))
 			return err
@@ -592,7 +574,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		log.Log.Debugf("Commited pic", "Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
 		atomic.AddUint32(&sqlInsertCounter, 1)
 	} else {
-		err = tx.Commit()
+		err = di.id.Commit()
 		if err != nil {
 			IncError("Commit error "+pic.PictureName, fmt.Errorf("error commiting: %v", err))
 			return err
@@ -602,7 +584,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	return nil
 }
 
-func insertPictureData(ti *timeInfo, ctx context.Context, tx *sql.Tx, pic *store.Pictures) error {
+func insertPictureData(ti *timeInfo, pic *store.Pictures) error {
 	fill := pic.Fill
 	if len(fill) > 1 {
 		fmt.Println("Fill >1: " + fill)
@@ -613,16 +595,25 @@ func insertPictureData(ti *timeInfo, ctx context.Context, tx *sql.Tx, pic *store
 		fmt.Println("Orienation >1: " + orientation)
 		orientation = orientation[0:1]
 	}
-	log.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
-	_, err := tx.ExecContext(ctx, "insert into Pictures (ChecksumPicture, Sha256Checksum, Title, Fill, Height, Width, Media, Thumbnail,mimetype,exifmodel,exifmake,exiftaken,exiforigtime,exifxdimension,exifydimension,exiforientation,created ,exif,GPScoordinates, GPSlatitude, GPSlongitude)"+
-		" VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)",
-		pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, fill, pic.Height,
-		pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
-		pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat),
-		pic.ExifOrigTime.Format(timeFormat), pic.ExifXDimension, pic.ExifYDimension,
-		orientation, pic.Generated, pic.Exif, pic.GPScoordinates, pic.GPSlatitude, pic.GPSlongitude)
+	id, err := DatabaseHandler()
 	if err != nil {
-		tx.Rollback()
+		return err
+	}
+	log.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
+	inserts := &common.Entries{
+		Fields: []string{"ChecksumPicture", "Sha256Checksum", "Title", "Fill",
+			"Height", "Width", "Media", "Thumbnail", "mimetype", "exifmodel", "exifmake",
+			"exiftaken", "exiforigtime", "exifxdimension", "exifydimension",
+			"exiforientation", "created", "exif", "GPScoordinates", "GPSlatitude", "GPSlongitude"},
+		Values: [][]any{{pic.ChecksumPicture, pic.ChecksumPictureSHA, pic.Title, fill, pic.Height,
+			pic.Width, pic.Media, pic.Thumbnail, pic.MIMEType,
+			pic.ExifModel, pic.ExifMake, pic.ExifTaken.Format(timeFormat),
+			pic.ExifOrigTime.Format(timeFormat), pic.ExifXDimension, pic.ExifYDimension,
+			orientation, pic.Generated, pic.Exif, pic.GPScoordinates, pic.GPSlatitude, pic.GPSlongitude}},
+	}
+	_, err = id.Insert("Pictures", inserts)
+	if err != nil {
+		id.Rollback()
 		if !checkErrorContinue(err) {
 			IncError("ExecContext "+pic.PictureName, err)
 			fmt.Println("Error rolling back pic data md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)

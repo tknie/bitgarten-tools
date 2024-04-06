@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -36,7 +36,6 @@ import (
 	"tux-lobload/sql"
 	"tux-lobload/store"
 
-	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
 	"go.uber.org/zap"
@@ -138,21 +137,7 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	url := os.Getenv("POSTGRES_URL")
-	if url == "" {
-		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
-		return
-	}
-	ref, passwd, err := common.NewReference(url)
-	if err != nil {
-		fmt.Println("Error parsing URL", err)
-		return
-	}
-	// fmt.Println("Got passwd <", passwd, ">")
-	if passwd == "" {
-		passwd = os.Getenv("POSTGRES_PASSWORD")
-	}
-	id, err := flynn.Handler(ref, passwd)
+	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error connect ...:", err)
 		return
@@ -230,7 +215,7 @@ func generateVideoThumbnail(id common.RegDbID, pic *store.Pictures) error {
 	}
 	input.Update = []string{fmt.Sprintf("checksumpicture = '%s'",
 		pic.ChecksumPicture)}
-	n, err := id.Update("Pictures", input)
+	_, n, err := id.Update("Pictures", input)
 	if err != nil {
 		return err
 	}

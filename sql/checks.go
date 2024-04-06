@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -21,8 +21,11 @@ package sql
 
 import (
 	"fmt"
-	"log"
 	"tux-lobload/store"
+
+	"github.com/tknie/log"
+
+	"github.com/tknie/flynn/common"
 )
 
 const query = `with p(checksumpicture,sha256checksum) as (
@@ -53,26 +56,18 @@ const query = `with p(checksumpicture,sha256checksum) as (
 
 func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 	pic.Available = store.NoAvailable
-	rows, err := di.db.Query(query, pic.ChecksumPicture, pic.Directory, pic.PictureName, hostname)
-	if err != nil {
-		fmt.Println("Query error:", err)
-		log.Fatalf("Query error database call...%v", err)
-		return
-	}
-	defer rows.Close()
 
-	dir := ""
-	name := ""
-	for rows.Next() {
+	batch := &common.Query{TableName: "pictures", Search: query,
+		Parameters: []any{pic.ChecksumPicture, pic.Directory, pic.PictureName, store.Hostname}}
+	err := di.id.BatchSelectFct(batch, func(search *common.Query, result *common.Result) error {
 		pic.Available = store.PicAvailable
-		err := rows.Scan(&dir, &name)
-		if err != nil {
-			log.Fatal("Error scanning read location check")
-		}
+		dir := result.Rows[0].(string)
+		name := result.Rows[1].(string)
+		log.Log.Debugf("dir=%s,name=%s", dir, name)
 
 		switch {
 		case name == "" && dir != pic.ChecksumPictureSHA:
-			fmt.Println("SHA mismatch", pic.PictureName)
+			fmt.Printf("SHA mismatch <%s> <name=%s> <dir=%s> <chksum=%s>\n", pic.PictureName, name, dir, pic.ChecksumPicture)
 			err := fmt.Errorf("SHA mismatch %s/%s", pic.Directory, pic.PictureName)
 			IncError("SHA differs "+pic.PictureName, err)
 			pic.Available = store.NoAvailable
@@ -80,5 +75,11 @@ func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 			pic.Available = store.BothAvailable
 		default:
 		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Query error:", err)
+		log.Log.Fatalf("Query error database call...%v", err)
+		return
 	}
 }
