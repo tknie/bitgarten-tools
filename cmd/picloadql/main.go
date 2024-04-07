@@ -20,96 +20,27 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
-	"regexp"
 	"runtime"
 	"runtime/pprof"
 	"strings"
-	"time"
-	"tux-lobload/sql"
+	"tux-lobload/tools"
 
 	"github.com/docker/go-units"
-
-	"github.com/tknie/log"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
-const timeFormat = "2006-01-02 15:04:05"
-
-var insertAlbum = false
-var albumid = 1
-
-func init() {
-	level := zapcore.ErrorLevel
-	ed := os.Getenv("ENABLE_DEBUG")
-	switch ed {
-	case "1":
-		level = zapcore.DebugLevel
-	case "2":
-		level = zapcore.InfoLevel
-	}
-
-	err := initLogLevelWithFile("picloadql.log", level)
-	if err != nil {
-		fmt.Println("Error initialize logging")
-		os.Exit(255)
-	}
-}
-
-func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
-	p := os.Getenv("LOGPATH")
-	if p == "" {
-		p = "."
-	}
-	name := p + string(os.PathSeparator) + fileName
-
-	rawJSON := []byte(`{
-		"level": "error",
-		"encoding": "console",
-		"outputPaths": [ "loadpicture.log"],
-		"errorOutputPaths": ["stderr"],
-		"encoderConfig": {
-		  "messageKey": "message",
-		  "levelKey": "level",
-		  "levelEncoder": "lowercase"
-		}
-	  }`)
-
-	var cfg zap.Config
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		fmt.Println("Error initialize logging (json)")
-		os.Exit(255)
-	}
-	cfg.Level.SetLevel(level)
-	cfg.OutputPaths = []string{name}
-	logger, err := cfg.Build()
-	if err != nil {
-		fmt.Println("Error initialize logging (build)")
-		os.Exit(255)
-	}
-	defer logger.Sync()
-
-	sugar := logger.Sugar()
-
-	log.Log = sugar
-	log.Log.Infof("Start logging with level %s", level)
-	log.SetDebugLevel(level == zapcore.DebugLevel)
-
-	return
-}
-
 func main() {
+	tools.InitLogLevelWithFile("picloadql.log")
 	var filter string
 	var binarySize string
 	var shortenPath bool
 	var nrThreadReader int
 	var nrThreadStorer int
 	var fileName string
+	var albumid int
+	var insertAlbum bool
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
@@ -122,6 +53,18 @@ func main() {
 	flag.StringVar(&fileName, "i", "", "File name for single picture store")
 	flag.StringVar(&binarySize, "b", "500MB", "Maximum binary blob size")
 	flag.Parse()
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			panic("could not create CPU profile: " + err.Error())
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			panic("could not start CPU profile: " + err.Error())
+		}
+		defer pprof.StopCPUProfile()
+	}
+	defer writeMemProfile(*memprofile)
 
 	directories := flag.Args()
 	sz, err := units.FromHumanSize(binarySize)
@@ -144,132 +87,11 @@ func main() {
 		return
 	}
 	fmt.Println("Directories:", directories)
-
-	for i := 0; i < nrThreadReader; i++ {
-		go StoreWorker()
-	}
-	for i := 0; i < nrThreadStorer; i++ {
-		go sql.InsertWorker()
-	}
-	MaxBlobSize = sz
-	fmt.Println("Max lob size:", units.HumanSize(float64(MaxBlobSize)))
-	ShortPath = shortenPath
-
-	if *cpuprofile != "" {
-		f, err := os.Create(*cpuprofile)
-		if err != nil {
-			panic("could not create CPU profile: " + err.Error())
-		}
-		if err := pprof.StartCPUProfile(f); err != nil {
-			panic("could not start CPU profile: " + err.Error())
-		}
-		defer pprof.StopCPUProfile()
-	}
-	regs := make([]*regexp.Regexp, 0)
-	for _, r := range strings.Split(filter, ",") {
-		reg, err := regexp.Compile(r)
-		if err != nil {
-			log.Log.Fatalf("Regular expression error (%s): %v", r, err)
-		}
-		regs = append(regs, reg)
-	}
-
-	defer writeMemProfile(*memprofile)
-	sql.StartStats()
-	start := time.Now()
-	switch {
-	case fileName != "":
-		fmt.Printf("Store file '%s' to album id %d\n", fileName, albumid)
-		suffix := fileName[strings.LastIndex(fileName, ".")+1:]
-		suffix = strings.ToLower(suffix)
-		storeFile(fileName, suffix)
-		time.Sleep(1 * time.Minute)
-	case len(directories) > 0:
-		for _, pictureDirectory := range directories {
-			storeDirectory(pictureDirectory, regs)
-		}
-	}
-	wgStore.Wait()
-
-	sql.EndStats()
-	fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
-	for i := 0; i < nrThreadReader; i++ {
-		sql.StopWorker()
-	}
-}
-
-func storeDirectory(pictureDirectory string, regs []*regexp.Regexp) {
-	if pictureDirectory != "" {
-
-		if insertAlbum {
-			di, err := sql.CreateConnection()
-			if err != nil {
-				fmt.Println("Error connecting:", err)
-				return
-			}
-			dir := filepath.Base(pictureDirectory)
-			albumid, err = di.InsertNewAlbum(dir)
-			if err != nil {
-				fmt.Println("Error inserting album:", err)
-				log.Log.Fatal("Error creating Album")
-			}
-		}
-		fmt.Printf("%s Loading path %s\n", time.Now().Format(timeFormat), pictureDirectory)
-		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
-			if info == nil || info.IsDir() {
-				log.Log.Infof("Info empty or dir: %s", path)
-				return nil
-			}
-			for _, reg := range regs {
-				if !checkQueryPath(reg, path) {
-					return nil
-				}
-			}
-
-			ti := sql.IncChecked()
-			suffix := path[strings.LastIndex(path, ".")+1:]
-			suffix = strings.ToLower(suffix)
-			if err != nil {
-				// return fmt.Errorf("error storing file: %v", err)
-				sql.IncErrorFile(err, path)
-			}
-			switch suffix {
-			case "jpg", "jpeg", "heic", "gif", "m4v", "mov", "mp4", "webm":
-				queueStoreFileInAlbumID(path, albumid)
-				if err != nil {
-					// return fmt.Errorf("error storing file: %v", err)
-					sql.IncErrorFile(err, path)
-				}
-				ti.IncDone()
-			default:
-				log.Log.Debugf("Suffix unknown: %s", suffix)
-				sql.IncSkipped()
-			}
-			return nil
-		})
-		if err != nil {
-			fmt.Println("Abort/Error during file walk:", err)
-			return
-		}
-	}
-
-}
-
-func storeFile(path, suffix string) error {
-	ti := sql.IncChecked()
-	switch suffix {
-	case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
-		queueStoreFileInAlbumID(path, albumid)
-		ti.IncDone()
-	default:
-		log.Log.Debugf("Suffix unknown: %s", suffix)
-		sql.IncSkipped()
-	}
-	return nil
-}
-
-func checkQueryPath(reg *regexp.Regexp, path string) bool {
-	return !reg.MatchString(path)
+	tools.PicLoad(&tools.PicLoadParameter{NrThreadReader: nrThreadReader,
+		NrThreadStorer: nrThreadStorer, MaxBlobSize: sz, Filter: filter,
+		AlbumId: albumid, InsertAlbum: insertAlbum,
+		ShortenPath: shortenPath, FileName: fileName,
+		Directories: directories})
 }
 
 func writeMemProfile(file string) {

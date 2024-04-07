@@ -20,80 +20,17 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"tux-lobload/sql"
-
-	"github.com/tknie/flynn/common"
-	"github.com/tknie/log"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"tux-lobload/tools"
 )
 
-func init() {
-	level := zapcore.ErrorLevel
-	ed := os.Getenv("ENABLE_DEBUG")
-	switch ed {
-	case "1":
-		level = zapcore.DebugLevel
-	case "2":
-		level = zapcore.InfoLevel
-	}
-
-	err := initLogLevelWithFile("tagAlbum.log", level)
-	if err != nil {
-		fmt.Println("Error initialize logging")
-		os.Exit(255)
-	}
-}
-
-func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
-	p := os.Getenv("LOGPATH")
-	if p == "" {
-		p = "."
-	}
-	name := p + string(os.PathSeparator) + fileName
-
-	rawJSON := []byte(`{
-		 "level": "error",
-		 "encoding": "console",
-		 "outputPaths": [ "loadpicture.log"],
-		 "errorOutputPaths": ["stderr"],
-		 "encoderConfig": {
-		   "messageKey": "message",
-		   "levelKey": "level",
-		   "levelEncoder": "lowercase"
-		 }
-	   }`)
-
-	var cfg zap.Config
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		fmt.Println("Error initialize logging (json)")
-		os.Exit(255)
-	}
-	cfg.Level.SetLevel(level)
-	cfg.OutputPaths = []string{name}
-	logger, err := cfg.Build()
-	if err != nil {
-		fmt.Println("Error initialize logging (build)")
-		os.Exit(255)
-	}
-	defer logger.Sync()
-
-	sugar := logger.Sugar()
-
-	sugar.Infof("Start logging with level %s", level)
-	log.Log = sugar
-	log.SetDebugLevel(level == zapcore.DebugLevel)
-
-	return
-}
-
 func main() {
+	tools.InitLogLevelWithFile("tagAlbum.log")
+
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	listSource := false
@@ -111,61 +48,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-	connSource, err := sql.DatabaseConnect()
-	if err != nil {
-		return
-	}
-
-	if listSource {
-		err = connSource.ListAlbums()
-		if err != nil {
-			fmt.Println("List albums error:", err)
-			return
-		}
-		return
-	}
-
-	albums, err := connSource.GetAlbums()
-	if err != nil {
-		fmt.Println("Error reading albums:", err)
-		return
-	}
-	log.Log.Debugf("Received Albums count = %d", len(albums))
-	for _, a := range albums {
-		log.Log.Debugf("Work on Album -> %s", a.Title)
-		if a.Title != sql.DefaultAlbum {
-			a, err = connSource.ReadAlbum(a.Title)
-			if err != nil {
-				fmt.Println("Error reading album:", err)
-				return
-			}
-			a.Display()
-			id, err := connSource.Open()
-			if err != nil {
-				fmt.Println("Error opening:", err)
-				return
-			}
-			for _, p := range a.Pictures {
-				fmt.Println(p.Description + " " + p.ChecksumPicture)
-				list := [][]any{{
-					p.ChecksumPicture,
-					"bitgarten",
-				}}
-				input := &common.Entries{
-					Fields: []string{
-						"checksumpicture",
-						"tagname",
-					},
-					Values: list}
-				_, err = id.Insert("picturetags", input)
-				if err != nil {
-					fmt.Println("Error inserting:", err)
-					return
-				}
-			}
-
-		}
-	}
+	tools.TagAlbum(&tools.TagAlbumParameter{ListSource: listSource})
 }
 
 func writeMemProfile(file string) {

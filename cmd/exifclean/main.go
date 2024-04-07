@@ -20,145 +20,20 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"fmt"
-	"os"
-	"strings"
-	"time"
-	"tux-lobload/sql"
+	"tux-lobload/tools"
 
-	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
-func init() {
-	level := zapcore.ErrorLevel
-	ed := os.Getenv("ENABLE_DEBUG")
-	switch ed {
-	case "1":
-		level = zapcore.DebugLevel
-	case "2":
-		level = zapcore.InfoLevel
-	}
-
-	err := initLogLevelWithFile("exifclean.log", level)
-	if err != nil {
-		fmt.Println("Error initialize logging")
-		os.Exit(255)
-	}
-}
-
-func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
-	p := os.Getenv("LOGPATH")
-	if p == "" {
-		p = "."
-	}
-	name := p + string(os.PathSeparator) + fileName
-
-	rawJSON := []byte(`{
-		"level": "error",
-		"encoding": "console",
-		"outputPaths": [ "loadpicture.log"],
-		"errorOutputPaths": ["stderr"],
-		"encoderConfig": {
-		  "messageKey": "message",
-		  "levelKey": "level",
-		  "levelEncoder": "lowercase"
-		}
-	  }`)
-
-	var cfg zap.Config
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		fmt.Println("Error initialize logging (json)")
-		os.Exit(255)
-	}
-	cfg.Level.SetLevel(level)
-	cfg.OutputPaths = []string{name}
-	logger, err := cfg.Build()
-	if err != nil {
-		fmt.Println("Error initialize logging (build)")
-		os.Exit(255)
-	}
-	defer logger.Sync()
-
-	sugar := logger.Sugar()
-
-	sugar.Infof("Start logging with level %s", level)
-	log.Log = sugar
-	log.SetDebugLevel(level == zapcore.DebugLevel)
-
-	return
-}
-
-type exif struct {
-	Checksumpicture string
-	Exifmodel       string
-	Exifmake        string
-	Exiftaken       time.Time
-}
-
 func main() {
+
+	tools.InitLogLevelWithFile("exifclean.log")
+
 	tableName := ""
 	flag.StringVar(&tableName, "t", "pictures", "Table name to search in")
 	flag.Parse()
 
 	log.Log.Debugf("Start exifclean")
-
-	id, err := sql.DatabaseHandler()
-	if err != nil {
-		fmt.Println("Error opening connection:", err)
-		return
-	}
-	wid, err := sql.DatabaseHandler()
-	if err != nil {
-		fmt.Println("Error opening connection:", err)
-		return
-	}
-	query := &common.Query{
-		TableName:  tableName,
-		DataStruct: &exif{},
-		Fields:     []string{"exifmodel", "exifmake", "exiftaken", "checksumpicture"},
-	}
-	count := int64(0)
-	r, err := id.Query(query, func(search *common.Query, result *common.Result) error {
-		x := result.Data.(*exif)
-		if strings.HasPrefix(x.Exifmodel, "\"") || strings.HasPrefix(x.Exifmodel, "<") ||
-			strings.HasPrefix(x.Exifmake, "\"") || strings.HasPrefix(x.Exifmake, "<") {
-			toModel := strings.Trim(x.Exifmodel, "\"")
-			toModel = strings.Trim(toModel, "<>")
-			toModel = strings.Trim(toModel, " ")
-			fmt.Printf("MODEL: %s: <%s> -> <%s>\n", x.Checksumpicture, x.Exifmodel, toModel)
-			x.Exifmodel = toModel
-			toModel = strings.Trim(x.Exifmake, "\"")
-			toModel = strings.Trim(toModel, "<>")
-			toModel = strings.Trim(toModel, " ")
-			fmt.Printf("MAKE : %s: <%s> -> <%s>\n", x.Checksumpicture, x.Exifmake, toModel)
-			x.Exifmake = toModel
-			list := [][]any{{x}}
-			update := &common.Entries{Fields: []string{"exifmodel", "exifmake"},
-				DataStruct: x,
-				Values:     list,
-				Update:     []string{"checksumpicture = '" + x.Checksumpicture + "'"},
-			}
-			_, n, err := wid.Update(tableName, update)
-			if err != nil {
-				fmt.Println("Error updating record:", err)
-				return err
-			}
-			err = wid.Commit()
-			if err != nil {
-				fmt.Println("Erro commiting record:", err)
-				return err
-			}
-			count += n
-		}
-		return nil
-	})
-	fmt.Println("Updates: ", count, r.Counter)
-	if err != nil {
-		fmt.Println("Aborted with error:", err)
-	}
+	tools.CleanExif(tableName)
 }

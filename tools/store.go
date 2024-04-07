@@ -17,7 +17,7 @@
 *
  */
 
-package main
+package tools
 
 import (
 	"crypto/md5"
@@ -55,7 +55,7 @@ type StoreFile struct {
 }
 
 var storeChannel = make(chan *StoreFile, 4)
-var stop = make(chan bool)
+var stopStore = make(chan bool)
 
 func queueStoreFileInAlbumID(fileName string, albumid int) {
 	wgStore.Add(1)
@@ -70,14 +70,14 @@ func StoreWorker() {
 	for {
 		select {
 		case file := <-storeChannel:
-			err := storeFileInAlbumID(checker, file, albumid)
+			err := storeFileInAlbumID(checker, file, file.albumid)
 			if err != nil {
 				if !strings.HasPrefix(err.Error(), "file empty") {
 					fmt.Println("Error inserting SQL picture:", err)
 				}
 			}
 			wgStore.Done()
-		case <-stop:
+		case <-stopStore:
 			return
 		}
 	}

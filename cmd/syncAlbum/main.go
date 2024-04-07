@@ -20,82 +20,18 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"tux-lobload/sql"
-
-	"github.com/tknie/log"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"tux-lobload/tools"
 )
 
-var insertAlbum = false
-
-func init() {
-	level := zapcore.ErrorLevel
-	ed := os.Getenv("ENABLE_DEBUG")
-	switch ed {
-	case "1":
-		level = zapcore.DebugLevel
-	case "2":
-		level = zapcore.InfoLevel
-	}
-
-	err := initLogLevelWithFile("syncAlbum.log", level)
-	if err != nil {
-		fmt.Println("Error initialize logging")
-		os.Exit(255)
-	}
-}
-
-func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
-	p := os.Getenv("LOGPATH")
-	if p == "" {
-		p = "."
-	}
-	name := p + string(os.PathSeparator) + fileName
-
-	rawJSON := []byte(`{
-		 "level": "error",
-		 "encoding": "console",
-		 "outputPaths": [ "loadpicture.log"],
-		 "errorOutputPaths": ["stderr"],
-		 "encoderConfig": {
-		   "messageKey": "message",
-		   "levelKey": "level",
-		   "levelEncoder": "lowercase"
-		 }
-	   }`)
-
-	var cfg zap.Config
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		fmt.Println("Error initialize logging (json)")
-		os.Exit(255)
-	}
-	cfg.Level.SetLevel(level)
-	cfg.OutputPaths = []string{name}
-	logger, err := cfg.Build()
-	if err != nil {
-		fmt.Println("Error initialize logging (build)")
-		os.Exit(255)
-	}
-	defer logger.Sync()
-
-	sugar := logger.Sugar()
-
-	sugar.Infof("Start logging with level %s", level)
-	log.Log = sugar
-	log.SetDebugLevel(level == zapcore.DebugLevel)
-
-	return
-}
-
 func main() {
+	tools.InitLogLevelWithFile("syncAlbum.log")
+	var insertAlbum = false
+
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	title := ""
@@ -118,92 +54,8 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-	var a *sql.Albums
-	connSource, err := sql.DatabaseConnect()
-	if err != nil {
-		fmt.Println("Error creating connection:", err)
-		fmt.Println("Set POSTGRES_SOURCE_URL and/or POSTGRES_SOURCE_PASSWORD to define remote database")
-		return
-	}
-	destUrl := os.Getenv("POSTGRES_DESTINATION_URL")
-	pwd := os.Getenv("POSTGRES_DESTINATION_PASSWORD")
-	destSource, err := sql.Connect(destUrl, pwd)
-	if err != nil {
-		fmt.Println("Error creating connection:", err)
-		fmt.Println("Set POSTGRES_DESTINATION_URL and/or POSTGRES_DESTINATION_PASSWORD to define remote database")
-		return
-	}
-	switch {
-	case listSource:
-		err = connSource.ListAlbums()
-		if err != nil {
-			fmt.Println("List albums error:", err)
-			return
-		}
-		return
-	case listDest:
-		err = destSource.ListAlbums()
-		if err != nil {
-			fmt.Println("List albums error:", err)
-			return
-		}
-		return
-	case title != "":
-		a, err = connSource.ReadAlbum(title)
-		if err != nil {
-			fmt.Println("Error reading album:", err)
-			return
-		}
-	default:
-	}
-	if a != nil {
-		a.Display()
-		for _, p := range a.Pictures {
-			f, err := destSource.CheckPicture(p.ChecksumPicture)
-			if err != nil {
-				fmt.Println("Error checking picature:", err)
-				return
-			}
-			if !f {
-				fmt.Println("Not in destination database, picture", p.ChecksumPicture, f)
-				err := copyPicture(connSource, destSource, p.ChecksumPicture)
-				if err != nil {
-					fmt.Println("Error copying picture:", err)
-					return
-				}
-			}
-		}
-		err = destSource.WriteAlbum(a)
-		if err != nil {
-			fmt.Println("Error writing album:", err)
-			return
-		}
-		for _, ap := range a.Pictures {
-			err = destSource.WriteAlbumPictures(ap)
-			if err != nil {
-				fmt.Println("Error writing album pictures:", err)
-				return
-			}
-		}
-	}
-}
-
-func copyPicture(connSource, destSource *sql.DatabaseInfo, checksum string) error {
-	p, err := connSource.ReadPicture(checksum)
-	if err != nil {
-		return err
-	}
-	c := fmt.Sprintf("%X", md5.Sum(p.Media))
-	if p.ChecksumPicture != c {
-		return fmt.Errorf("checksum mismatch: %s", p.ChecksumPicture)
-	}
-	fmt.Println("Successful read picture", p.ChecksumPicture, p.Created)
-	err = destSource.WritePicture(p)
-	if err != nil {
-		fmt.Println("Error writing picture:", err)
-		return err
-	}
-	return nil
+	tools.SyncAlbum(&tools.SyncAlbumParameter{ListSource: listSource,
+		ListDest: listDest, Title: title, InsertAlbum: insertAlbum})
 }
 
 func writeMemProfile(file string) {
@@ -219,5 +71,4 @@ func writeMemProfile(file string) {
 		defer f.Close()
 		fmt.Println("Memory profile written")
 	}
-
 }

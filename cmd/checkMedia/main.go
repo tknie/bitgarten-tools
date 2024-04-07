@@ -20,83 +20,17 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"sync"
 	"tux-lobload/sql"
+	"tux-lobload/tools"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
-
-var checkPictureChannel = make(chan *sql.Picture, 10)
-var stop = make(chan bool)
-var wgCheck sync.WaitGroup
-
-func init() {
-	level := zapcore.ErrorLevel
-	ed := os.Getenv("ENABLE_DEBUG")
-	switch ed {
-	case "1":
-		level = zapcore.DebugLevel
-	case "2":
-		level = zapcore.InfoLevel
-	}
-
-	err := initLogLevelWithFile("checkMedia.log", level)
-	if err != nil {
-		fmt.Println("Error initialize logging")
-		os.Exit(255)
-	}
-}
-
-func initLogLevelWithFile(fileName string, level zapcore.Level) (err error) {
-	p := os.Getenv("LOGPATH")
-	if p == "" {
-		p = "."
-	}
-	name := p + string(os.PathSeparator) + fileName
-
-	rawJSON := []byte(`{
-		"level": "error",
-		"encoding": "console",
-		"outputPaths": [ "loadpicture.log"],
-		"errorOutputPaths": ["stderr"],
-		"encoderConfig": {
-		  "messageKey": "message",
-		  "levelKey": "level",
-		  "levelEncoder": "lowercase"
-		}
-	  }`)
-
-	var cfg zap.Config
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		fmt.Println("Error initialize logging (json)")
-		os.Exit(255)
-	}
-	cfg.Level.SetLevel(level)
-	cfg.OutputPaths = []string{name}
-	logger, err := cfg.Build()
-	if err != nil {
-		fmt.Println("Error initialize logging (build)")
-		os.Exit(255)
-	}
-	defer logger.Sync()
-
-	sugar := logger.Sugar()
-
-	sugar.Infof("Start logging with level %s", level)
-	log.Log = sugar
-	log.SetDebugLevel(level == zapcore.DebugLevel)
-
-	return
-}
 
 func main() {
 	var dbidParameter string
@@ -107,6 +41,11 @@ func main() {
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
+	err := tools.InitLogLevelWithFile("checkMedia.log")
+	if err != nil {
+		fmt.Println("Error initialzing logging: %v", err)
+		return
+	}
 	flag.StringVar(&dbidParameter, "d", "23", "Map repository Database id")
 	flag.IntVar(&mapFnrParameter, "f", 4, "Map repository file number")
 	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
@@ -126,7 +65,7 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	initCheck()
+	tools.InitCheck()
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		fmt.Printf("Error connecting URL: %v", err)
@@ -139,14 +78,14 @@ func main() {
 		*p = *pic
 		counter++
 		log.Log.Debugf("Received record %s %s", pic.ChecksumPicture, pic.Sha256checksum)
-		checkPicture(p)
+		tools.CheckPicture(p)
 		// fmt.Println(pic.ChecksumPicture)
 		return nil
 	})
 	if err != nil {
 		fmt.Println("Got return check media", err)
 	}
-	wgCheck.Wait()
+	tools.CheckMediaWait()
 	fmt.Printf("Working ended successfully, checked %d\n", counter)
 }
 
@@ -164,39 +103,4 @@ func writeMemProfile(file string) {
 		fmt.Println("Memory profile written")
 	}
 
-}
-
-func initCheck() {
-	for i := 0; i < 4; i++ {
-		go pictureChecker()
-	}
-}
-
-func checkPicture(pic *sql.Picture) {
-	wgCheck.Add(1)
-	checkPictureChannel <- pic
-}
-
-func pictureChecker() {
-	for {
-		select {
-		case pic := <-checkPictureChannel:
-			log.Log.Debugf("Checking record %s %s", pic.ChecksumPicture, pic.Sha256checksum)
-
-			switch {
-			case len(pic.Media) == 0:
-				fmt.Println(pic.ChecksumPicture + " Media empty")
-				log.Log.Debugf("Error record len %s %s", pic.ChecksumPicture, pic.Sha256checksum)
-			case sql.CreateMd5(pic.Media) != pic.ChecksumPicture:
-				fmt.Println(pic.ChecksumPicture + " md5 error")
-				log.Log.Debugf("Error md5  %s", sql.CreateMd5(pic.Media))
-			case sql.CreateSHA(pic.Media) != pic.Sha256checksum:
-				fmt.Println(pic.ChecksumPicture + " sha error")
-				log.Log.Debugf("Error sha  %s", sql.CreateSHA(pic.Media))
-			}
-			wgCheck.Done()
-		case <-stop:
-			return
-		}
-	}
 }
