@@ -140,6 +140,9 @@ func (pic *PictureBinary) LoadFile() error {
 	defer f.Close()
 
 	fi, err := f.Stat()
+	if err != nil {
+		return err
+	}
 	pic.Data = &PictureData{}
 	if fi.Size() > pic.MaxBlobSize {
 		return fmt.Errorf("file tooo big %d>%d", fi.Size(), pic.MaxBlobSize)

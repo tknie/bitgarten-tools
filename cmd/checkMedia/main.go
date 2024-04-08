@@ -32,25 +32,29 @@ import (
 	"github.com/tknie/log"
 )
 
+const description = `This tool checks checksum of all picture entries and compares 
+it with the database checksumpicture data content.
+
+`
+
 func main() {
-	var dbidParameter string
-	var mapFnrParameter int
 	var limit int
 	var delete bool
-	var validate bool
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 	err := tools.InitLogLevelWithFile("checkMedia.log")
 	if err != nil {
-		fmt.Println("Error initialzing logging: %v", err)
+		fmt.Printf("Error initialzing logging: %v\n", err)
 		return
 	}
-	flag.StringVar(&dbidParameter, "d", "23", "Map repository Database id")
-	flag.IntVar(&mapFnrParameter, "f", 4, "Map repository file number")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
 	flag.BoolVar(&delete, "D", false, "Delete duplicate entries")
-	flag.BoolVar(&validate, "V", false, "Validate large object entries")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -79,6 +83,9 @@ func main() {
 		counter++
 		log.Log.Debugf("Received record %s %s", pic.ChecksumPicture, pic.Sha256checksum)
 		tools.CheckPicture(p)
+		if counter%1000 == 0 {
+			fmt.Printf("Working, checked %d\n", counter)
+		}
 		// fmt.Println(pic.ChecksumPicture)
 		return nil
 	})
