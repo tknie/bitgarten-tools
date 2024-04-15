@@ -84,7 +84,7 @@ func StoreWorker() {
 }
 
 func storeFileInAlbumID(db *sql.DatabaseInfo, file *StoreFile, storeAlbum int) error {
-	log.Log.Debugf("Store file %s", file.fileName)
+	log.Log.Debugf("Store file %s in AlbumId %d", file.fileName, storeAlbum)
 	ti := sql.IncStored()
 	baseName := path.Base(file.fileName)
 	//dirName := path.Dir(fileName)

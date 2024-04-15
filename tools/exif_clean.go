@@ -21,7 +21,6 @@ package tools
 import (
 	"fmt"
 	"strings"
-	"time"
 	"tux-lobload/sql"
 
 	"github.com/tknie/flynn/common"
@@ -32,7 +31,6 @@ type exif struct {
 	Checksumpicture string
 	Exifmodel       string
 	Exifmake        string
-	Exiftaken       time.Time
 }
 
 func CleanExif(tableName string) {
@@ -52,7 +50,7 @@ func CleanExif(tableName string) {
 	query := &common.Query{
 		TableName:  tableName,
 		DataStruct: &exif{},
-		Fields:     []string{"exifmodel", "exifmake", "exiftaken", "checksumpicture"},
+		Fields:     []string{"exifmodel", "exifmake", "checksumpicture"},
 	}
 	count := int64(0)
 	r, err := id.Query(query, func(search *common.Query, result *common.Result) error {
@@ -89,8 +87,9 @@ func CleanExif(tableName string) {
 		}
 		return nil
 	})
-	fmt.Println("Updates: ", count, r.Counter)
 	if err != nil {
 		fmt.Println("Aborted with error:", err)
+		return
 	}
+	fmt.Println("Updates: ", count, r.Counter)
 }

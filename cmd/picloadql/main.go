@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strings"
+	"tux-lobload/sql"
 	"tux-lobload/tools"
 
 	"github.com/docker/go-units"
@@ -52,6 +53,7 @@ func main() {
 	flag.BoolVar(&shortenPath, "s", false, "Shortend directory to last name only")
 	flag.StringVar(&fileName, "i", "", "File name for single picture store")
 	flag.StringVar(&binarySize, "b", "500MB", "Maximum binary blob size")
+	flag.BoolVar(&sql.ExitOnError, "E", false, "Exit if an error happens")
 	flag.Parse()
 
 	if *cpuprofile != "" {

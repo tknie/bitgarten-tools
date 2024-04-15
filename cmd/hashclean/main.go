@@ -21,6 +21,7 @@ package main
 
 import (
 	"flag"
+	"tux-lobload/sql"
 	"tux-lobload/tools"
 )
 
@@ -34,6 +35,7 @@ func main() {
 	flag.IntVar(&minCount, "m", tools.DefaultMinCount, "Minimum number of count per hash")
 	//	flag.StringVar(&hashType, "h", "", "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
 	flag.BoolVar(&commit, "c", false, "Enable commit to database")
+	flag.BoolVar(&sql.ExitOnError, "E", false, "Exit if an error happens")
 	flag.Parse()
 
 	tools.HashClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit})

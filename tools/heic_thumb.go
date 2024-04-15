@@ -33,14 +33,17 @@ import (
 //var wid common.RegDbID
 // var storeData bool
 
-var ref *common.Reference
-var passwd string
+// var ref *common.Reference
+//var passwd string
 
 type HeicThumbParameter struct {
-	Commit       bool
-	WriteHandler common.RegDbID
-	Title        string
-	ChkSum       string
+	Commit          bool
+	CreateThumbnail bool
+	WriteHandler    common.RegDbID
+	Title           string
+	ChkSum          string
+	FromDate        string
+	ToDate          string
 }
 
 func HeicThumb(parameter *HeicThumbParameter) {
@@ -58,6 +61,7 @@ func HeicThumb(parameter *HeicThumbParameter) {
 			fmt.Println("Error connect write ...:", err)
 			return
 		}
+		parameter.WriteHandler = wid
 		defer wid.FreeHandler()
 	}
 
@@ -67,12 +71,23 @@ func HeicThumb(parameter *HeicThumbParameter) {
 		FctParameter: id,
 	}
 
-	prefix := "title LIKE '%heic' AND markdelete=false"
+	prefix := "markdelete=false"
+	if parameter.CreateThumbnail {
+		prefix += " AND title LIKE '%heic'"
+	} else {
+		prefix += " AND (title LIKE '%heic' OR title LIKE '%mov')"
+	}
 	if parameter.ChkSum != "" {
 		prefix += fmt.Sprintf(" AND checksumpicture = '%s'", parameter.ChkSum)
 	}
 	if parameter.Title != "" {
 		prefix += fmt.Sprintf(" AND title = %s", parameter.Title)
+	}
+	if parameter.FromDate != "" {
+		prefix += " AND created > '" + parameter.FromDate + "'"
+	}
+	if parameter.ToDate != "" {
+		prefix += " AND created < '" + parameter.ToDate + " 23:59:59'"
 	}
 	q.Search = prefix
 	q.FctParameter = parameter
@@ -93,14 +108,14 @@ func HeicThumb(parameter *HeicThumbParameter) {
 }
 
 func generateQueryImageThumbnail(search *common.Query, result *common.Result) error {
-	id := search.FctParameter.(common.RegDbID)
+	//id := search.FctParameter.(common.RegDbID)
 	pic := result.Data.(*store.Pictures)
 	parameter := search.FctParameter.(*HeicThumbParameter)
-	return parameter.generateImageThumbnail(id, pic)
+	return parameter.generateImageThumbnail(pic)
 }
 
-func (parameter *HeicThumbParameter) generateImageThumbnail(id common.RegDbID, pic *store.Pictures) error {
-	if parameter.Commit {
+func (parameter *HeicThumbParameter) generateImageThumbnail(pic *store.Pictures) error {
+	if parameter.CreateThumbnail {
 		fmt.Println("Found and generate", pic.ChecksumPicture, pic.Title, pic.ExifOrigTime)
 		err := pic.CreateThumbnail()
 		if err != nil {
@@ -111,14 +126,17 @@ func (parameter *HeicThumbParameter) generateImageThumbnail(id common.RegDbID, p
 		return parameter.storeThumb(pic)
 	} else {
 		fmt.Println("Found", pic.ChecksumPicture, pic.Title, pic.ExifOrigTime)
-		searchSimilarEntries(pic.Title)
+		parameter.searchSimilarEntries(pic.Title)
 	}
 	return nil
 }
 
 func (parameter *HeicThumbParameter) storeThumb(pic *store.Pictures) error {
 	update := &common.Entries{
-		Fields:     []string{"exif", "Thumbnail", "exifmodel", "exifmake", "exiftaken", "exiforigtime", "exifxdimension", "exifydimension", "exiforientation", "GPScoordinates", "GPSlatitude", "GPSlongitude"},
+		Fields: []string{"exif", "Thumbnail",
+			"exifmodel", "exifmake", "exiftaken", "exiforigtime",
+			"exifxdimension", "exifydimension", "exiforientation",
+			"GPScoordinates", "GPSlatitude", "GPSlongitude"},
 		DataStruct: pic,
 		Values:     [][]any{{pic}},
 		Update:     []string{"checksumpicture='" + pic.ChecksumPicture + "'"},
@@ -134,7 +152,12 @@ func (parameter *HeicThumbParameter) storeThumb(pic *store.Pictures) error {
 	return nil
 }
 
-func searchSimilarEntries(title string) {
+func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
+	ref, passwd, err := sql.DatabaseLocation()
+	if err != nil {
+		fmt.Println("Error getting connection reference:", err)
+		return
+	}
 	sid, err := flynn.Handler(ref, passwd)
 	if err != nil {
 		fmt.Println("Error connect ...:", err)
@@ -149,7 +172,8 @@ func searchSimilarEntries(title string) {
 	}
 	defer did.FreeHandler()
 	log.Log.Debugf("DID ID:%d", did)
-	xTitle := strings.TrimSuffix(title, filepath.Ext(title))
+	extension := filepath.Ext(title)
+	xTitle := strings.TrimSuffix(title, extension)
 
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &store.Pictures{},
@@ -159,21 +183,26 @@ func searchSimilarEntries(title string) {
 	_, err = sid.Query(q, func(search *common.Query, result *common.Result) error {
 		pic := result.Data.(*store.Pictures)
 		if pic.Title != title {
-			if filepath.Ext(pic.Title) == ".jpeg" {
+			switch filepath.Ext(pic.Title) {
+			case ".jpeg", ".heic":
 				fmt.Println("  Deleting ", pic.ChecksumPicture, pic.Title, pic.MIMEType, pic.ExifOrigTime)
-				update := &common.Entries{
-					Fields: []string{"markdelete"},
-					Values: [][]any{{true}},
-					Update: []string{"checksumpicture='" + pic.ChecksumPicture + "'"},
+				if parameter.Commit {
+					update := &common.Entries{
+						Fields: []string{"markdelete"},
+						Values: [][]any{{true}},
+						Update: []string{"checksumpicture='" + pic.ChecksumPicture + "'"},
+					}
+					_, n, err := did.Update("pictures", update)
+					if err != nil {
+						fmt.Println("Error mark delete", n, ":", err)
+						fmt.Println("Pic:", pic.ChecksumPicture)
+						return err
+					}
 				}
-				_, n, err := did.Update("pictures", update)
-				if err != nil {
-					fmt.Println("Error mark delete", n, ":", err)
-					fmt.Println("Pic:", pic.ChecksumPicture)
-					return err
-				}
-			} else {
-				fmt.Println("  ", pic.ChecksumPicture, pic.Title, pic.MIMEType, pic.ExifOrigTime)
+			case ".mov":
+				fmt.Println("  Similar Movie ", pic.ChecksumPicture, pic.Title, pic.MIMEType, pic.ExifOrigTime)
+			default:
+				fmt.Println("  Similar ", pic.ChecksumPicture, pic.Title, pic.MIMEType, pic.ExifOrigTime)
 			}
 		}
 		return nil

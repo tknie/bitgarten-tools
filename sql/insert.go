@@ -55,6 +55,7 @@ type DatabaseInfo struct {
 	Reference *common.Reference
 	passwd    string
 	duraction time.Duration
+	workerNr  int32
 }
 
 const DefaultAlbum = "Default Album"
@@ -68,6 +69,10 @@ var sqlSendCounter = uint32(0)
 var sqlInsertCounter = uint32(0)
 var sqlSkipCounter = uint32(0)
 var albEntryIndex = int32(0)
+
+var ExitOnError = false
+
+var workerCounter = int32(0)
 
 func init() {
 }
@@ -91,7 +96,7 @@ func CreateConnection() (*DatabaseInfo, error) {
 		fmt.Println("Error db open:", err)
 		return nil, err
 	}
-	return &DatabaseInfo{id, nil, "", 0}, nil
+	return &DatabaseInfo{id, nil, "", 0, 0}, nil
 }
 
 func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
@@ -461,19 +466,24 @@ func InsertWorker() {
 		return
 	}
 	counter := uint64(0)
+	workerNr := atomic.AddInt32(&workerCounter, 1)
+	di.workerNr = workerNr
 	defer di.Close()
+	defer log.Log.Debugf("Leaving worker...")
 	for {
 		select {
 		case pic := <-picChannel:
-			log.Log.Debugf("Inserting pic in worker")
+			log.Log.Debugf("Inserting pic in worker %d", workerNr)
 			err = di.InsertPictures(pic)
 			if err != nil {
-				fmt.Println("Worker error inserting picture:", err)
+				fmt.Printf("worker (%d) error inserting picture: %v\n", workerNr, err)
 			}
+			log.Log.Debugf("Inserting pic worker %d done", workerNr)
 			wg.Done()
 			counter++
 		case <-stop:
 			fmt.Printf("Stored data in %v count=%d\n", di.duraction, counter)
+			log.Log.Debugf("Stored data in %v count=%d", di.duraction, counter)
 			return
 		}
 	}
@@ -509,7 +519,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 }
 
 func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
-	log.Log.Debugf("Insert picture in AlbumPictures")
+	log.Log.Debugf("Insert picture in AlbumPictures (worker %d)", di.workerNr)
 	if pic.ChecksumPictureSHA == "" {
 		pic.ChecksumPictureSHA = CreateSHA(pic.Media)
 	}
@@ -534,8 +544,8 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	}
 	// fmt.Printf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
 	// 	pic.ChecksumPictureSHA, pic.PictureName)
-	log.Log.Errorf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
-		pic.ChecksumPictureSHA, pic.PictureName)
+	log.Log.Errorf("Store file MD5=%s SHA=%s -> %s (worker %d)\n", pic.ChecksumPicture,
+		pic.ChecksumPictureSHA, pic.PictureName, di.workerNr)
 	if pic.Available == store.NoAvailable {
 		err = insertPictureData(ti, pic)
 		if err != nil {
@@ -546,7 +556,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	}
 	log.Log.Debugf("Check picture location available: %d", pic.Available)
 	if pic.Available == store.NoAvailable || pic.Available == store.PicAvailable {
-		log.Log.Debugf("Insert picture location CP=%s", pic.ChecksumPicture)
+		log.Log.Debugf("Insert picture location CP=%s worker=%d", pic.ChecksumPicture, di.workerNr)
 		insert := &common.Entries{Fields: []string{"PictureName", "ChecksumPicture", "PictureHost", "PictureDirectory"},
 			Values: [][]any{{pic.PictureName, pic.ChecksumPicture, store.Hostname, pic.Directory}},
 		}
@@ -565,13 +575,15 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return nil
 		}
 
+		log.Log.Debugf("Commiting picture location (worker %d)", di.workerNr)
 		err = di.id.Commit()
 		if err != nil {
 			IncError("Commit error "+pic.PictureName, fmt.Errorf("error commiting: %v", err))
 			return err
 		}
 		ti.IncCommit()
-		log.Log.Debugf("Commited pic", "Commited pic: md5=%s %s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
+		log.Log.Debugf("Commited pic", "Commited pic: md5=%s %s CP=%s worker=%d", pic.Md5, pic.PictureName,
+			pic.ChecksumPicture, di.workerNr)
 		atomic.AddUint32(&sqlInsertCounter, 1)
 	} else {
 		err = di.id.Commit()
@@ -581,6 +593,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		}
 		ti.IncCommit()
 	}
+	log.Log.Debugf("Success inserting picture (worker %d)", di.workerNr)
 	return nil
 }
 
@@ -599,7 +612,7 @@ func insertPictureData(ti *timeInfo, pic *store.Pictures) error {
 	if err != nil {
 		return err
 	}
-	log.Log.Debugf("Insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
+	log.Log.Debugf("Insert picture data Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
 	inserts := &common.Entries{
 		Fields: []string{"ChecksumPicture", "Sha256Checksum", "Title", "Fill",
 			"Height", "Width", "Media", "Thumbnail", "mimetype", "exifmodel", "exifmake",
@@ -615,9 +628,13 @@ func insertPictureData(ti *timeInfo, pic *store.Pictures) error {
 	if err != nil {
 		id.Rollback()
 		if !checkErrorContinue(err) {
-			IncError("ExecContext "+pic.PictureName, err)
 			fmt.Println("Error rolling back pic data md5=", pic.Md5, pic.PictureName, "CP=", pic.ChecksumPicture)
 			//fmt.Println("Error inserting Pictures", err, len(pic.Media))
+			log.Log.Debugf("Error rolling back pic data md5=%s name=%s CP=%s", pic.Md5, pic.PictureName, pic.ChecksumPicture)
+			IncError("ExecContext "+pic.PictureName, err)
+			if ExitOnError {
+				log.Log.Fatalf("Error happening")
+			}
 			return err
 		}
 		log.Log.Errorf("Error inser picture: %v", err)
@@ -625,7 +642,7 @@ func insertPictureData(ti *timeInfo, pic *store.Pictures) error {
 		return err
 	}
 	// tx.Commit()
-	log.Log.Debugf("Stored %s", pic.ChecksumPicture)
+	log.Log.Debugf("Done insert picture Md5=%s CP=%s", pic.Md5, pic.ChecksumPicture)
 	ti.IncInsert()
 	return nil
 }

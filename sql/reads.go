@@ -91,7 +91,7 @@ func Connect(url, pwd string) (*DatabaseInfo, error) {
 		passwd = pwd
 	}
 	log.Log.Infof("Connecting to .... %s", ref.Host)
-	return &DatabaseInfo{0, ref, passwd, 0}, nil
+	return &DatabaseInfo{0, ref, passwd, 0, 0}, nil
 }
 
 func (di *DatabaseInfo) Open() (common.RegDbID, error) {

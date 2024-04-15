@@ -36,10 +36,16 @@ func main() {
 	var chksum string
 	var storeData bool
 	var title string
+	var fromDate string
+	var toDate string
+	var createThumbnail bool
 
 	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
 	flag.StringVar(&title, "t", "", "Search for picture title")
+	flag.StringVar(&fromDate, "F", "", "Search for picture created from this date (format 2001-12-30)")
+	flag.StringVar(&toDate, "T", "", "Search for picture created before this date including (format 2001-12-30)")
 	flag.BoolVar(&storeData, "S", false, "Store data to database")
+	flag.BoolVar(&createThumbnail, "C", false, "Create thumbnails instead of search for similarity")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -54,7 +60,8 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	tools.HeicThumb(&tools.HeicThumbParameter{Commit: storeData, ChkSum: chksum, Title: title})
+	tools.HeicThumb(&tools.HeicThumbParameter{Commit: storeData, ChkSum: chksum, Title: title,
+		CreateThumbnail: createThumbnail, FromDate: fromDate, ToDate: toDate})
 
 }
 
