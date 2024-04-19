@@ -22,6 +22,7 @@ package store
 import (
 	"bytes"
 	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -163,6 +164,10 @@ func (pic *PictureBinary) LoadFile() error {
 
 func CreateMd5(input []byte) string {
 	return fmt.Sprintf("%X", md5.Sum(input))
+}
+
+func CreateSHA(input []byte) string {
+	return fmt.Sprintf("%X", sha256.Sum256(input))
 }
 
 func resizeHeif(media []byte, max int) ([]byte, *exif.Exif, uint32, uint32, error) {

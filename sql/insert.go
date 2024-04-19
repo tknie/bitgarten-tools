@@ -21,7 +21,6 @@ package sql
 
 import (
 	"crypto/md5"
-	"crypto/sha256"
 	"database/sql"
 	"fmt"
 	"io"
@@ -521,7 +520,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	log.Log.Debugf("Insert picture in AlbumPictures (worker %d)", di.workerNr)
 	if pic.ChecksumPictureSHA == "" {
-		pic.ChecksumPictureSHA = CreateSHA(pic.Media)
+		pic.ChecksumPictureSHA = store.CreateSHA(pic.Media)
 	}
 	ti := ps.IncStarted()
 	err := di.id.BeginTransaction()
@@ -723,12 +722,4 @@ func Display() (err error) {
 
 func StopWorker() {
 	stop <- true
-}
-
-func CreateSHA(input []byte) string {
-	return fmt.Sprintf("%X", sha256.Sum256(input))
-}
-
-func CreateMd5(input []byte) string {
-	return fmt.Sprintf("%X", md5.Sum(input))
 }

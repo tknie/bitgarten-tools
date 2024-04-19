@@ -125,7 +125,6 @@ func (parameter *HeicThumbParameter) generateImageThumbnail(pic *store.Pictures)
 		fmt.Printf("%s -> %v\n", pic.Title, pic.ExifOrigTime)
 		return parameter.storeThumb(pic)
 	} else {
-		fmt.Println("Found", pic.ChecksumPicture, pic.Title, pic.ExifOrigTime)
 		parameter.searchSimilarEntries(pic.Title)
 	}
 	return nil
@@ -153,6 +152,9 @@ func (parameter *HeicThumbParameter) storeThumb(pic *store.Pictures) error {
 }
 
 func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
+	if strings.HasPrefix(strings.ToUpper(title), "IMG") {
+		return
+	}
 	ref, passwd, err := sql.DatabaseLocation()
 	if err != nil {
 		fmt.Println("Error getting connection reference:", err)
@@ -180,12 +182,17 @@ func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
 		Fields:     []string{"MIMEType", "checksumpicture", "title", "exiforigtime"},
 	}
 	q.Search = "title LIKE '" + xTitle + "%' and markdelete=false"
+	first := true
 	_, err = sid.Query(q, func(search *common.Query, result *common.Result) error {
 		pic := result.Data.(*store.Pictures)
 		if pic.Title != title {
+			if first {
+				fmt.Println("Found", title)
+			}
+			first = false
 			switch filepath.Ext(pic.Title) {
 			case ".jpeg", ".heic":
-				fmt.Println("  Deleting ", pic.ChecksumPicture, pic.Title, pic.MIMEType, pic.ExifOrigTime)
+				fmt.Println("  Deleting ", pic.Title, pic.ChecksumPicture, pic.MIMEType, pic.ExifOrigTime)
 				if parameter.Commit {
 					update := &common.Entries{
 						Fields: []string{"markdelete"},
@@ -200,9 +207,9 @@ func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
 					}
 				}
 			case ".mov":
-				fmt.Println("  Similar Movie ", pic.ChecksumPicture, pic.Title, pic.MIMEType, pic.ExifOrigTime)
+				fmt.Println("  Similar Movie ", pic.Title, pic.ChecksumPicture, pic.MIMEType, pic.ExifOrigTime)
 			default:
-				fmt.Println("  Similar ", pic.ChecksumPicture, pic.Title, pic.MIMEType, pic.ExifOrigTime)
+				fmt.Println("  Similar ", pic.Title, pic.ChecksumPicture, pic.MIMEType, pic.ExifOrigTime)
 			}
 		}
 		return nil
@@ -211,4 +218,106 @@ func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
 		fmt.Println("Error query ...:", err)
 	}
 	log.Log.Debugf("End query similar")
+}
+
+func HeicScale(parameter *HeicThumbParameter) {
+	if parameter.Title == "" {
+		fmt.Println("Album not set")
+		return
+	}
+	connSource, err := sql.DatabaseConnect()
+	if err != nil {
+		return
+	}
+
+	albums, err := connSource.GetAlbums()
+	if err != nil {
+		fmt.Println("Error reading albums:", err)
+		return
+	}
+	log.Log.Debugf("Received Albums count = %d", len(albums))
+	a, err := connSource.ReadAlbum(parameter.Title)
+	if err != nil {
+		fmt.Println("Error reading album:", err)
+		return
+	}
+	a.Display()
+	id, err := connSource.Open()
+	if err != nil {
+		fmt.Println("Error opening:", err)
+		return
+	}
+	id.FreeHandler()
+	if parameter.Commit {
+		err = id.BeginTransaction()
+		if err != nil {
+			fmt.Println("Error starting transaction:", err)
+			return
+		}
+	}
+	for _, albumPicture := range a.Pictures {
+		fmt.Println("Scale", albumPicture.Name+" "+albumPicture.Description+" "+albumPicture.ChecksumPicture)
+		pic, err := connSource.ReadPicture(albumPicture.ChecksumPicture)
+		if err != nil {
+			fmt.Println("Error reading picture")
+			id.Rollback()
+			return
+		}
+		err = pic.Resize(1280)
+		if err != nil {
+			fmt.Println("Resize of picture fails:", err)
+			id.Rollback()
+			return
+		}
+		log.Log.Debugf("Resize picture %s->%s to %d,%d", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
+		fmt.Printf("Resize picture %s->%s to %d,%d\n", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
+		if parameter.Commit {
+			// Store picture
+			list := [][]any{{
+				pic,
+			}}
+			input := &common.Entries{
+				Fields:     []string{"*"},
+				DataStruct: pic,
+				Values:     list}
+			_, err = id.Insert("picturetags", input)
+			if err != nil {
+				fmt.Println("Error inserting:", err)
+				id.Rollback()
+				return
+			}
+			albumPicture.ChecksumPicture = pic.ChecksumPicture
+			// Store AlbumPicture
+			list = [][]any{{albumPicture}}
+			input = &common.Entries{
+				Fields: []string{
+					"checksumpicture",
+				},
+				DataStruct: albumPicture,
+				Values:     list}
+			_, _, err = id.Update("AlbumPictures", input)
+			if err != nil {
+				fmt.Println("Error inserting:", err)
+				id.Rollback()
+				return
+			}
+			list = [][]any{{
+				pic.ChecksumPicture,
+				"bitgarten",
+			}}
+			input = &common.Entries{
+				Fields: []string{
+					"checksumpicture",
+					"tagname",
+				},
+				Values: list}
+			_, err = id.Insert("picturetags", input)
+			if err != nil {
+				fmt.Println("Error inserting:", err)
+				id.Rollback()
+				return
+			}
+		}
+	}
+	a.Display()
 }

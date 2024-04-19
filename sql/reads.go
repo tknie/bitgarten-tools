@@ -20,11 +20,16 @@
 package sql
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"sort"
 	"strings"
 	"time"
+	"tux-lobload/store"
 
+	"github.com/nfnt/resize"
 	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
@@ -314,4 +319,52 @@ func (di *DatabaseInfo) CheckMedia(f common.ResultFunction) error {
 
 	_, err = id.Query(q, f)
 	return err
+}
+
+func (pic *Picture) Resize(max int) error {
+	var buffer bytes.Buffer
+	buffer.Write(pic.Media)
+	srcImage, _, err := image.Decode(&buffer)
+	if err != nil {
+		log.Log.Debugf("Decode image for thumbnail error %v", err)
+		return err
+	}
+	m, x, y, err := resizeImage(srcImage, max)
+	if err != nil {
+		return err
+	}
+	pic.Media = m
+	pic.Width = uint64(x)
+	pic.Height = uint64(y)
+	pic.ChecksumPicture = store.CreateMd5(pic.Media)
+	pic.Sha256checksum = store.CreateSHA(pic.Media)
+	return nil
+}
+
+func resizeImage(srcImage image.Image, max int) ([]byte, uint32, uint32, error) {
+	maxX := uint(0)
+	maxY := uint(0)
+	b := srcImage.Bounds()
+	width := uint32(b.Max.X)
+	height := uint32(b.Max.Y)
+	if width > height {
+		maxX = uint(max)
+	} else {
+		maxY = uint(max)
+	}
+	// fmt.Println("Original size: ", height, width, "to", max, "window", maxX, maxY)
+	//dstImageFill := imaging.Fill(srcImage, 100, 100, imaging.Center, imaging.Lanczos)
+	newImage := resize.Resize(maxX, maxY, srcImage, resize.Lanczos3)
+	b = newImage.Bounds()
+	width = uint32(b.Max.X)
+	height = uint32(b.Max.Y)
+	// fmt.Println("New size: ", height, width)
+	buf := new(bytes.Buffer)
+	err := jpeg.Encode(buf, newImage, nil)
+	if err != nil {
+		// fmt.Println("Error generating thumbnail", err)
+		log.Log.Debugf("Encode image for thumbnail error %v", err)
+		return nil, 0, 0, err
+	}
+	return buf.Bytes(), width, height, nil
 }

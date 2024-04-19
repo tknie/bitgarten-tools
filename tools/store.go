@@ -20,8 +20,6 @@
 package tools
 
 import (
-	"crypto/md5"
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"path"
@@ -163,8 +161,8 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 		sql.IncError("Read error "+fileName, err)
 		return nil, err
 	}
-	pic.ChecksumPicture = CreateMd5(pic.Media)
-	pic.ChecksumPictureSHA = CreateSHA(pic.Media)
+	pic.ChecksumPicture = store.CreateMd5(pic.Media)
+	pic.ChecksumPictureSHA = store.CreateSHA(pic.Media)
 
 	db.CheckExists(pic)
 	if pic.Available == store.BothAvailable {
@@ -180,12 +178,4 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	log.Log.Debugf("PictureBinary md5=%s sha512=%s size=%d len=%d", pic.ChecksumPicture, pic.ChecksumPictureSHA, fi.Size(), len(pic.Media))
 
 	return pic, nil
-}
-
-func CreateMd5(input []byte) string {
-	return fmt.Sprintf("%X", md5.Sum(input))
-}
-
-func CreateSHA(input []byte) string {
-	return fmt.Sprintf("%X", sha256.Sum256(input))
 }

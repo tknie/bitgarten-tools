@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sync"
 	"tux-lobload/sql"
+	"tux-lobload/store"
 
 	"github.com/tknie/log"
 )
@@ -55,12 +56,12 @@ func pictureChecker() {
 			case len(pic.Media) == 0:
 				fmt.Println(pic.ChecksumPicture + " Media empty")
 				log.Log.Debugf("Error record len %s %s", pic.ChecksumPicture, pic.Sha256checksum)
-			case sql.CreateMd5(pic.Media) != pic.ChecksumPicture:
+			case store.CreateMd5(pic.Media) != pic.ChecksumPicture:
 				fmt.Println(pic.ChecksumPicture + " md5 error")
-				log.Log.Debugf("Error md5  %s", sql.CreateMd5(pic.Media))
-			case sql.CreateSHA(pic.Media) != pic.Sha256checksum:
+				log.Log.Debugf("Error md5  %s", store.CreateMd5(pic.Media))
+			case store.CreateSHA(pic.Media) != pic.Sha256checksum:
 				fmt.Println(pic.ChecksumPicture + " sha error")
-				log.Log.Debugf("Error sha  %s", sql.CreateSHA(pic.Media))
+				log.Log.Debugf("Error sha  %s", store.CreateSHA(pic.Media))
 			}
 			wgCheck.Done()
 		case <-stopCheck:
