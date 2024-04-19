@@ -84,6 +84,8 @@ github.com/tknie/flynn v0.0.0-20240408203816-34505bcf3a0d h1:2Sj3HjIEJ6c5tzE2fVd
 github.com/tknie/flynn v0.0.0-20240408203816-34505bcf3a0d/go.mod h1:XLTfgJXwEV93/dU9BYrOg9GxJqkZ9VB++Ffs37IzOEk=
 github.com/tknie/flynn v0.0.0-20240413192913-7ede5b9c121e h1:S7ENAD5Py+ahk0rNTljqlTiu3XoOtfL7Ko1zZdET35w=
 github.com/tknie/flynn v0.0.0-20240413192913-7ede5b9c121e/go.mod h1:7Dl8HSLeJXDm5u37VQowevq8YbogzfrYiajQysWOsoo=
+github.com/tknie/flynn v0.0.0-20240415204706-f7629d385ca8 h1:RaOEGSdPkf45d785QxzHHS5kETDL7/XzVf6Nwyf44ts=
+github.com/tknie/flynn v0.0.0-20240415204706-f7629d385ca8/go.mod h1:7Dl8HSLeJXDm5u37VQowevq8YbogzfrYiajQysWOsoo=
 github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae h1:EY2CEji+jwHG16tP0kOfuw2V8M5naCyWp7VqADAEO/E=
 github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae/go.mod h1:dVvJAEmU8sloNLQh1wq2+GPwxa/9gg3VXuK/FO8eGX4=
 github.com/tknie/log v0.0.0-20231006083545-fabe25f4fb0e h1:aNgWs7XTC4vcIcmzQT496neJexEvjx0Kv2/ho2xUlgo=
@@ -111,6 +113,8 @@ golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0 h1:985EYyeCOxTpcgOTJpflJUwOe
 golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0/go.mod h1:/lliqkxwWAhPjf5oSOIJup2XcqJaw8RGS6k3TGEc7GI=
 golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8 h1:ESSUROHIBHg7USnszlcdmjBEwdMj9VUvU+OPk4yl2mc=
 golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8/go.mod h1:/lliqkxwWAhPjf5oSOIJup2XcqJaw8RGS6k3TGEc7GI=
+golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f h1:99ci1mjWVBWwJiEKYY6jWa4d2nTQVIEhZIptnrVb1XY=
+golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f/go.mod h1:/lliqkxwWAhPjf5oSOIJup2XcqJaw8RGS6k3TGEc7GI=
 golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/image v0.15.0 h1:kOELfmgrmJlw4Cdb7g/QGuB3CvDrXbqEIww/pNtNBm8=
 golang.org/x/image v0.15.0/go.mod h1:HUYqC05R2ZcZ3ejNQsIHQDQiwWM4JBqmm6MKANTp4LE=
