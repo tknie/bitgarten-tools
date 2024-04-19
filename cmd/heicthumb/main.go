@@ -64,12 +64,14 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
+	p := &tools.HeicThumbParameter{Commit: storeData, ChkSum: chksum,
+		CreateThumbnail: createThumbnail, FromDate: fromDate, ToDate: toDate}
 	if scale {
-		tools.HeicScale(&tools.HeicThumbParameter{Commit: storeData, ChkSum: chksum, Title: album,
-			CreateThumbnail: createThumbnail, FromDate: fromDate, ToDate: toDate})
+		p.Title = album
+		p.HeicScale()
 	} else {
-		tools.HeicThumb(&tools.HeicThumbParameter{Commit: storeData, ChkSum: chksum, Title: title,
-			CreateThumbnail: createThumbnail, FromDate: fromDate, ToDate: toDate})
+		p.Title = title
+		p.HeicThumb()
 	}
 
 }

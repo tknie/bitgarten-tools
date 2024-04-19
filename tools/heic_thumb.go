@@ -46,7 +46,7 @@ type HeicThumbParameter struct {
 	ToDate          string
 }
 
-func HeicThumb(parameter *HeicThumbParameter) {
+func (parameter *HeicThumbParameter) HeicThumb() {
 	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error opening connection:", err)
@@ -220,7 +220,7 @@ func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
 	log.Log.Debugf("End query similar")
 }
 
-func HeicScale(parameter *HeicThumbParameter) {
+func (parameter *HeicThumbParameter) HeicScale() {
 	if parameter.Title == "" {
 		fmt.Println("Album not set")
 		return
