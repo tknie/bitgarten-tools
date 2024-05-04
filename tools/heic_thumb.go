@@ -44,6 +44,7 @@ type HeicThumbParameter struct {
 	ChkSum          string
 	FromDate        string
 	ToDate          string
+	ScaleRange      int
 }
 
 func (parameter *HeicThumbParameter) HeicThumb() {
@@ -225,17 +226,12 @@ func (parameter *HeicThumbParameter) HeicScale() {
 		fmt.Println("Album not set")
 		return
 	}
+	log.Log.Debugf("Scale Albums %s", parameter.Title)
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		return
 	}
 
-	albums, err := connSource.GetAlbums()
-	if err != nil {
-		fmt.Println("Error reading albums:", err)
-		return
-	}
-	log.Log.Debugf("Received Albums count = %d", len(albums))
 	a, err := connSource.ReadAlbum(parameter.Title)
 	if err != nil {
 		fmt.Println("Error reading album:", err)
@@ -247,7 +243,7 @@ func (parameter *HeicThumbParameter) HeicScale() {
 		fmt.Println("Error opening:", err)
 		return
 	}
-	id.FreeHandler()
+	defer id.FreeHandler()
 	if parameter.Commit {
 		err = id.BeginTransaction()
 		if err != nil {
@@ -273,28 +269,23 @@ func (parameter *HeicThumbParameter) HeicScale() {
 		fmt.Printf("Resize picture %s->%s to %d,%d\n", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
 		if parameter.Commit {
 			// Store picture
-			list := [][]any{{
-				pic,
-			}}
-			input := &common.Entries{
-				Fields:     []string{"*"},
-				DataStruct: pic,
-				Values:     list}
-			_, err = id.Insert("picturetags", input)
-			if err != nil {
-				fmt.Println("Error inserting:", err)
-				id.Rollback()
-				return
-			}
+			connSource.WritePictureTransaction(id, pic)
+
 			albumPicture.ChecksumPicture = pic.ChecksumPicture
+			albumPicture.Width = pic.Width
+			albumPicture.Height = pic.Height
 			// Store AlbumPicture
-			list = [][]any{{albumPicture}}
-			input = &common.Entries{
+			list := [][]any{{albumPicture}}
+			input := &common.Entries{
 				Fields: []string{
-					"checksumpicture",
+					"checksumpicture", "width", "height",
 				},
 				DataStruct: albumPicture,
-				Values:     list}
+				Update: []string{fmt.Sprintf("index = %d AND albumid = %d",
+					albumPicture.Index, albumPicture.AlbumId)},
+				Criteria: fmt.Sprintf("index = %d and albumid = %d",
+					albumPicture.Index, albumPicture.AlbumId),
+				Values: list}
 			_, _, err = id.Update("AlbumPictures", input)
 			if err != nil {
 				fmt.Println("Error inserting:", err)
@@ -318,6 +309,11 @@ func (parameter *HeicThumbParameter) HeicScale() {
 				return
 			}
 		}
+	}
+	err = id.Commit()
+	if err != nil {
+		fmt.Println("Error commiting album:", err)
+		return
 	}
 	a.Display()
 }

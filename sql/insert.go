@@ -220,6 +220,11 @@ func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 		return err
 	}
 	defer id.FreeHandler()
+	return di.WritePictureTransaction(id, pic)
+}
+
+func (di *DatabaseInfo) WritePictureTransaction(id common.RegDbID, pic *Picture) error {
+
 	list := [][]any{{
 		pic.ChecksumPicture,
 		pic.Sha256checksum,
@@ -261,7 +266,7 @@ func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 			"Created",
 			"Updated_at"},
 		Values: list}
-	_, err = id.Insert("Pictures", input)
+	_, err := id.Insert("Pictures", input)
 	if err != nil {
 		return err
 	}

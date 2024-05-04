@@ -41,12 +41,14 @@ func main() {
 	var createThumbnail bool
 	var album string
 	var scale bool
+	var scaleRange int
 
 	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
 	flag.StringVar(&title, "t", "", "Search for picture title")
 	flag.StringVar(&album, "a", "", "Search for album title")
 	flag.StringVar(&fromDate, "F", "", "Search for picture created from this date (format 2001-12-30)")
 	flag.StringVar(&toDate, "T", "", "Search for picture created before this date including (format 2001-12-30)")
+	flag.IntVar(&scaleRange, "m", 1280, "Max width or height image size")
 	flag.BoolVar(&storeData, "S", false, "Store data to database")
 	flag.BoolVar(&createThumbnail, "C", false, "Create thumbnails instead of search for similarity")
 	flag.BoolVar(&scale, "s", false, "Scale for album")
@@ -68,6 +70,7 @@ func main() {
 		CreateThumbnail: createThumbnail, FromDate: fromDate, ToDate: toDate}
 	if scale {
 		p.Title = album
+		p.ScaleRange = scaleRange
 		p.HeicScale()
 	} else {
 		p.Title = title

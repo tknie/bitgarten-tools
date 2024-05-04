@@ -29,9 +29,12 @@ import (
 	"time"
 	"tux-lobload/store"
 
+	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"
+	"github.com/rwcarlsen/goexif/exif"
 	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
+	"github.com/tknie/goheif"
 	"github.com/tknie/log"
 )
 
@@ -135,6 +138,7 @@ func (di *DatabaseInfo) GetAlbums() ([]*Albums, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer id.FreeHandler()
 	fmt.Println("List Album titles:")
 	albums := make([]*Albums, 0)
 	q := &common.Query{TableName: "Albums",
@@ -321,13 +325,56 @@ func (di *DatabaseInfo) CheckMedia(f common.ResultFunction) error {
 	return err
 }
 
-func (pic *Picture) Resize(max int) error {
-	var buffer bytes.Buffer
-	buffer.Write(pic.Media)
-	srcImage, _, err := image.Decode(&buffer)
-	if err != nil {
-		log.Log.Debugf("Decode image for thumbnail error %v", err)
-		return err
+func (pic *Picture) Resize(max int) (err error) {
+	var srcImage image.Image
+	if strings.ToLower(pic.Mimetype) == "image/heic" {
+		ra := bytes.NewReader(pic.Media)
+		exifData, err := goheif.ExtractExif(ra)
+		if err != nil {
+			fmt.Println("Error extrating exif:", err)
+			return err
+		}
+		e, err := exif.Decode(bytes.NewBuffer(exifData))
+		if err != nil {
+			fmt.Println("Error extrating exif:", err)
+			return err
+		}
+		t, err := e.Get(exif.Orientation)
+		if err != nil {
+			return fmt.Errorf("HEIC orientation not correctly set")
+		}
+		orientation := t.String()
+
+		r := bytes.NewBuffer(pic.Media)
+		srcImage, err = goheif.Decode(r)
+		if err != nil {
+			log.Log.Debugf("Decode image for thumbnail error %v", err)
+			return err
+		}
+		switch orientation {
+		case "1":
+		case "2":
+			srcImage = imaging.FlipV(srcImage)
+		case "3":
+			srcImage = imaging.Rotate180(srcImage)
+		case "4":
+			srcImage = imaging.Rotate180(imaging.FlipV(srcImage))
+		case "5":
+			srcImage = imaging.Rotate270(imaging.FlipV(srcImage))
+		case "6":
+			srcImage = imaging.Rotate270(srcImage)
+		case "7":
+			srcImage = imaging.Rotate90(imaging.FlipV(srcImage))
+		case "8":
+			srcImage = imaging.Rotate90(srcImage)
+		}
+	} else {
+		r := bytes.NewBuffer(pic.Media)
+		srcImage, _, err = image.Decode(r)
+		if err != nil {
+			log.Log.Debugf("Decode image for thumbnail error %v", err)
+			return err
+		}
 	}
 	m, x, y, err := resizeImage(srcImage, max)
 	if err != nil {
@@ -338,6 +385,7 @@ func (pic *Picture) Resize(max int) error {
 	pic.Height = uint64(y)
 	pic.ChecksumPicture = store.CreateMd5(pic.Media)
 	pic.Sha256checksum = store.CreateSHA(pic.Media)
+	pic.Mimetype = "image/jpeg"
 	return nil
 }
 
