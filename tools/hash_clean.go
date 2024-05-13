@@ -21,9 +21,10 @@ package tools
 import (
 	"bytes"
 	"fmt"
-	"html/template"
+	"path/filepath"
 	"sort"
 	"strings"
+	"text/template"
 	"tux-lobload/sql"
 
 	"github.com/tknie/flynn/common"
@@ -57,7 +58,7 @@ perceptionhash
   GROUP BY perceptionhash
  HAVING count(perceptionhash) > {{.Count}}
   ORDER BY (count(perceptionhash)) DESC
-  LIMIT {{.Limit}}
+  {{if gt .Limit 0 -}} LIMIT {{.Limit}} {{end}}
 `
 
 const readPictureByHashs = `
@@ -70,10 +71,20 @@ from pictures p where markdelete = false and EXISTS ( SELECT 1
    WHERE pp.perceptionhash = {{.}} AND pp.checksumpicture::text = p.checksumpicture::text );
 `
 
+const readHEIC = `
+SELECT checksumpicture, title from pictures where markdelete = false AND LOWER(mimetype) = 'image/heic'
+  {{if gt .Limit 0 -}} LIMIT {{.Limit}} {{end}}
+`
+
 type HashCleanParameter struct {
 	Limit    int
 	MinCount int
 	Commit   bool
+}
+
+type heicCheck struct {
+	title           string
+	checksumpicture string
 }
 
 func HashClean(parameter *HashCleanParameter) {
@@ -205,6 +216,7 @@ func queryPictureByHash(hash string, commit bool) error {
 	tagMap := make(map[string]bool)
 	for _, pbh := range picturesByHash {
 		if strings.HasSuffix(strings.ToLower(pbh.Title), ".heic") {
+			fmt.Println("HEIC found :", pbh.Title)
 			if firstFound == nil {
 				firstFound = pbh
 			} else {
@@ -324,12 +336,7 @@ func cleanUpPictures(commit bool, tagMap map[string]bool, firstFound *PictureByH
 
 			}
 			fmt.Println("Need to mark delete -> ", pbh.Checksumpicture)
-			input := &common.Entries{
-				Fields: []string{"markdelete"},
-				Update: []string{"checksumpicture='" + pbh.Checksumpicture + "'"},
-				Values: [][]any{{true}},
-			}
-			_, ra, err := id.Update("pictures", input)
+			ra, err := markPictureDelete(id, pbh.Checksumpicture)
 			if err != nil {
 				return nil
 			}
@@ -370,4 +377,201 @@ func KeysString(m map[string]bool) string {
 		keys = append(keys, k)
 	}
 	return strings.Join(keys, ",")
+}
+
+func HeicClean(parameter *HashCleanParameter) {
+	fmt.Println("Query database entries for one week not hashed commit=", parameter.Commit)
+	err := parameter.queryHEIC()
+	if err != nil {
+		fmt.Println("Error query max hash:", err)
+		return
+	}
+
+}
+
+func markPictureDelete(id common.RegDbID, checksumpicture string) (int64, error) {
+	fmt.Println("Need to mark delete -> ", checksumpicture)
+	input := &common.Entries{
+		Fields: []string{"markdelete"},
+		Update: []string{"checksumpicture='" + checksumpicture + "'"},
+		Values: [][]any{{true}},
+	}
+	_, ra, err := id.Update("pictures", input)
+	if err != nil {
+		return 0, err
+	}
+	return ra, nil
+}
+
+func (parameter *HashCleanParameter) queryHEIC() error {
+	id, err := sql.DatabaseHandler()
+	if err != nil {
+		fmt.Println("POSTGRES error", err)
+		return err
+	}
+	defer id.FreeHandler()
+
+	err = id.BeginTransaction()
+	if err != nil {
+		fmt.Println("Error beginning transaction:", err)
+		return err
+	}
+
+	sqlCmd, err := templateSql(readHEIC, struct {
+		Limit int
+		Count int
+	}{parameter.Limit, parameter.MinCount})
+	if err != nil {
+		return err
+	}
+	query := &common.Query{
+		TableName:  "pictures",
+		Fields:     []string{"checksumpicture", "title"},
+		DataStruct: &sql.Picture{},
+		Limit:      uint32(parameter.Limit),
+		Search:     sqlCmd,
+	}
+	counter := uint64(0)
+	foundList := make([]*heicCheck, 0)
+	err = id.BatchSelectFct(query, func(search *common.Query, result *common.Result) error {
+		pic := result.Data.(*sql.Picture)
+		log.Log.Debugf("HEIC found: %s", pic.Title)
+		// fmt.Println("HEIC found:", pic.Title)
+		if !strings.HasPrefix(pic.Title, "IMG_") {
+			title := strings.TrimSuffix(filepath.Base(pic.Title), filepath.Ext(pic.Title))
+			foundList = append(foundList, &heicCheck{title: title, checksumpicture: pic.ChecksumPicture})
+		}
+		counter++
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Error query ...:", err)
+		return err
+	}
+	sort.Slice(foundList, func(i, j int) bool { return foundList[i].title < foundList[j].title })
+	lastFound := -1
+	childs := 0
+	for i, l := range foundList {
+		if i > 0 && strings.HasPrefix(l.title, foundList[i-1].title) {
+			if lastFound != -1 {
+				fmt.Println(foundList[lastFound].title)
+			} else {
+				lastFound = i - 1
+			}
+			fmt.Println(foundList[i-1].title, foundList[i-1].checksumpicture)
+			tags, err := searchTags(l.checksumpicture)
+			if err != nil {
+				fmt.Println("Error reading tags:", err)
+				return err
+			}
+			fmt.Println(l.title, l.checksumpicture, "child", tags)
+			if tags == 0 && parameter.Commit {
+				ra, err := markPictureDelete(id, l.checksumpicture)
+				if err != nil || ra != 1 {
+					fmt.Println(ra, " pictures marked deleted: %v", err)
+					return err
+				}
+			}
+			childs++
+		} else {
+			lastFound = -1
+		}
+		countTitle := checkMorePicture(id, l.title)
+		if countTitle != 1 {
+			fmt.Println(l.title, "->", countTitle)
+			reducePictures(id, l.title)
+		}
+	}
+	if parameter.Commit {
+		err = id.Commit()
+		if err != nil {
+			fmt.Println("Error commiting to database:", err)
+			return err
+		}
+	}
+	fmt.Printf("Query HEIC end: found=%d length=%d childs=%d\n", counter, len(foundList), childs)
+	return nil
+}
+
+func reducePictures(id common.RegDbID, title string) error {
+	heicCheckList := make([]*heicCheck, 0)
+	query := &common.Query{
+		TableName: "pictures",
+		Fields:    []string{"title", "checksumpicture"},
+		Limit:     0,
+		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND title like '" + title + "%'",
+	}
+	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {
+		foundTitle := result.Rows[0].(string)
+		chksum := result.Rows[1].(string)
+		if title+".heic" != foundTitle {
+			heicCheckList = append(heicCheckList, &heicCheck{title: foundTitle, checksumpicture: chksum})
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Error query count: ", err)
+		return err
+	}
+	for _, c := range heicCheckList {
+		t, err := searchTags(c.checksumpicture)
+		if err != nil {
+			fmt.Println("Error counting tags:", err)
+			return err
+		}
+		fmt.Println(c.title, c.checksumpicture, t)
+		if t == 0 {
+			ra, err := markPictureDelete(id, c.checksumpicture)
+			if err != nil || ra != 1 {
+				fmt.Println(ra, " pictures marked deleted: %v", err)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func checkMorePicture(id common.RegDbID, title string) int64 {
+	query := &common.Query{
+		TableName: "pictures",
+		Fields:    []string{"COUNT(*)"},
+		Limit:     0,
+		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND title like '" + title + "%'",
+	}
+	l := int64(0)
+	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {
+		l = result.Rows[0].(int64)
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Error query count: ", err)
+		return -1
+	}
+	return l
+}
+
+func searchTags(checksumpicture string) (int64, error) {
+	id, err := sql.DatabaseHandler()
+	if err != nil {
+		fmt.Println("POSTGRES error", err)
+		return -1, err
+	}
+	defer id.FreeHandler()
+	tagNr := int64(0)
+
+	query := &common.Query{
+		TableName: "picturetags",
+		Fields:    []string{"COUNT(*)"},
+		Limit:     0,
+		Search:    "checksumpicture = '" + checksumpicture + "'",
+	}
+	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
+		tagNr = result.Rows[0].(int64)
+		return nil
+	})
+	if err != nil {
+		return -1, err
+	}
+
+	return tagNr, nil
 }

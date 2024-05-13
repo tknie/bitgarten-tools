@@ -21,7 +21,6 @@ package tools
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"image"
 	"image/gif"
 	"image/jpeg"
@@ -29,6 +28,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"text/template"
 	"tux-lobload/sql"
 	"tux-lobload/store"
 
@@ -89,7 +89,7 @@ func ImageHash(parameter *ImageHashParameter) {
 		return
 	}
 	fmt.Println("Query database entries for one week not hashed")
-	fmt.Printf("Execute query:\n%s\n", sqlCmd.String())
+	log.Log.Debugf("Execute query:\n%s\n", sqlCmd.String())
 	query := &common.Query{
 		TableName:  "pictures",
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},

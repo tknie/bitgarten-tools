@@ -29,6 +29,7 @@ func main() {
 	tools.InitLogLevelWithFile("hashclean.log")
 	var limit int
 	var minCount int
+	var heicclean bool
 	var commit bool
 
 	flag.IntVar(&limit, "l", tools.DefaultLimit, "Maximum number of records loaded")
@@ -36,7 +37,12 @@ func main() {
 	//	flag.StringVar(&hashType, "h", "", "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
 	flag.BoolVar(&commit, "c", false, "Enable commit to database")
 	flag.BoolVar(&sql.ExitOnError, "E", false, "Exit if an error happens")
+	flag.BoolVar(&heicclean, "H", false, "Cleanup heic images")
 	flag.Parse()
 
-	tools.HashClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit})
+	if heicclean {
+		tools.HeicClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit})
+	} else {
+		tools.HashClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit})
+	}
 }
