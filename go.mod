@@ -8,14 +8,14 @@ require (
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
-	github.com/tknie/flynn v0.0.0-20240503155845-c813852a0747
+	github.com/tknie/flynn v0.0.0-20240520181422-cbc69a60ba70
 	github.com/tknie/log v0.0.0-20231006083545-fabe25f4fb0e
 	go.uber.org/zap v1.27.0
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	golang.org/x/image v0.15.0 // indirect
+	golang.org/x/image v0.16.0 // indirect
 )
 
 require (
@@ -26,7 +26,7 @@ require (
 require (
 	github.com/corona10/goimagehash v1.1.0
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
-	github.com/godror/godror v0.42.2 // indirect
+	github.com/godror/godror v0.44.0 // indirect
 	github.com/godror/knownpb v0.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
@@ -35,10 +35,10 @@ require (
 	github.com/tknie/errorrepo v0.0.0-20240427174202-a8626661af5b // indirect
 	github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.22.0 // indirect
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
+	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/protobuf v1.34.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
+	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
