@@ -21,7 +21,8 @@ package main
 
 import (
 	"flag"
-	"tux-lobload/tools"
+
+	"github.com/tknie/bitgarten-tools/tools"
 
 	"github.com/tknie/log"
 )

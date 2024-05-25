@@ -25,7 +25,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"tux-lobload/sql"
+
+	"github.com/tknie/bitgarten-tools/sql"
 
 	"github.com/docker/go-units"
 	"github.com/tknie/log"

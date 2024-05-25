@@ -30,7 +30,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"tux-lobload/store"
+
+	"github.com/tknie/bitgarten-tools/store"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"

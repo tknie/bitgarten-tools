@@ -27,7 +27,8 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"tux-lobload/store"
+
+	"github.com/tknie/bitgarten-tools/store"
 
 	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"

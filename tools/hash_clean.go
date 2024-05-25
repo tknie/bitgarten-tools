@@ -25,7 +25,8 @@ import (
 	"sort"
 	"strings"
 	"text/template"
-	"tux-lobload/sql"
+
+	"github.com/tknie/bitgarten-tools/sql"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"

@@ -23,7 +23,8 @@ import (
 	"crypto/md5"
 	"fmt"
 	"os"
-	"tux-lobload/sql"
+
+	"github.com/tknie/bitgarten-tools/sql"
 )
 
 type SyncAlbumParameter struct {

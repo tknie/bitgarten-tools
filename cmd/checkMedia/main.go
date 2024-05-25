@@ -25,8 +25,9 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"tux-lobload/sql"
-	"tux-lobload/tools"
+
+	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgarten-tools/tools"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"

@@ -21,7 +21,8 @@ package tools
 import (
 	"fmt"
 	"strings"
-	"tux-lobload/sql"
+
+	"github.com/tknie/bitgarten-tools/sql"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"

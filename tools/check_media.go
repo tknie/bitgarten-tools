@@ -21,8 +21,9 @@ package tools
 import (
 	"fmt"
 	"sync"
-	"tux-lobload/sql"
-	"tux-lobload/store"
+
+	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgarten-tools/store"
 
 	"github.com/tknie/log"
 )

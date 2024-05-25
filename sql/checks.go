@@ -21,7 +21,8 @@ package sql
 
 import (
 	"fmt"
-	"tux-lobload/store"
+
+	"github.com/tknie/bitgarten-tools/store"
 
 	"github.com/tknie/log"
 

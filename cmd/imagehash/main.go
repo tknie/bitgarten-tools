@@ -22,7 +22,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"tux-lobload/tools"
+
+	"github.com/tknie/bitgarten-tools/tools"
 )
 
 func main() {

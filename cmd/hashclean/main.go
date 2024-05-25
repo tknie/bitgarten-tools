@@ -21,8 +21,9 @@ package main
 
 import (
 	"flag"
-	"tux-lobload/sql"
-	"tux-lobload/tools"
+
+	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgarten-tools/tools"
 )
 
 func main() {

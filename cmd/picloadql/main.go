@@ -26,8 +26,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strings"
-	"tux-lobload/sql"
-	"tux-lobload/tools"
+
+	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgarten-tools/tools"
 
 	"github.com/docker/go-units"
 )

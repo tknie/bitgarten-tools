@@ -25,7 +25,8 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"tux-lobload/tools"
+
+	"github.com/tknie/bitgarten-tools/tools"
 )
 
 func main() {
