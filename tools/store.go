@@ -58,6 +58,7 @@ var stopStore = make(chan bool)
 
 func queueStoreFileInAlbumID(fileName string, albumid int) {
 	wgStore.Add(1)
+	log.Log.Debugf("Add wgstore")
 	storeChannel <- &StoreFile{fileName: fileName, albumid: albumid}
 }
 
@@ -87,6 +88,8 @@ func storeWorkerThread(currentIndex int) {
 			}
 			sql.SetReaderState(currentIndex, sql.DoneStoreWorker)
 			wgStore.Done()
+			log.Log.Debugf("Done wgstore")
+			sql.SetReaderState(currentIndex, sql.Done2StoreWorker)
 		case <-stopStore:
 			sql.SetReaderState(currentIndex, sql.StopStoreWorker)
 			return

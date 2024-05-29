@@ -80,6 +80,7 @@ func PicLoad(parameter *PicLoadParameter) {
 			parameter.storeDirectory(pictureDirectory, regs)
 		}
 	}
+	log.Log.Debugf("Wait wgstore")
 	wgStore.Wait()
 
 	sql.EndStats()
