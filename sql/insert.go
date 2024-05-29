@@ -464,7 +464,15 @@ func WaitStored() {
 		sqlSendCounter, sqlInsertCounter, sqlSkipCounter)
 }
 
-func InsertWorker() {
+func InsertWorker(nrThreadStorer int) {
+	InitStoreWorkerStatistics(nrThreadStorer)
+	for i := 0; i < nrThreadStorer; i++ {
+		SetState(i, InitStoreWorker)
+		go insertWorkerThread(i)
+	}
+}
+
+func insertWorkerThread(currentIndex int) {
 	di, err := CreateConnection()
 	if err != nil {
 		fmt.Println("Connection error:", err)
@@ -476,19 +484,23 @@ func InsertWorker() {
 	defer di.Close()
 	defer log.Log.Debugf("Leaving worker...")
 	for {
+		SetState(currentIndex, WaitingStoreWorker)
 		select {
 		case pic := <-picChannel:
 			log.Log.Debugf("Inserting pic in worker %d", workerNr)
+			SetStateWithFile(currentIndex, DoneStoreWorker, pic.Title)
 			err = di.InsertPictures(pic)
 			if err != nil {
 				fmt.Printf("worker (%d) error inserting picture: %v\n", workerNr, err)
 			}
 			log.Log.Debugf("Inserting pic worker %d done", workerNr)
+			SetState(currentIndex, DoneStoreWorker)
 			wg.Done()
 			counter++
 		case <-stop:
 			fmt.Printf("Stored data in %v count=%d\n", di.duraction, counter)
 			log.Log.Debugf("Stored data in %v count=%d", di.duraction, counter)
+			SetState(currentIndex, StopStoreWorker)
 			return
 		}
 	}
@@ -549,7 +561,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	}
 	// fmt.Printf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
 	// 	pic.ChecksumPictureSHA, pic.PictureName)
-	log.Log.Errorf("Store file MD5=%s SHA=%s -> %s (worker %d)\n", pic.ChecksumPicture,
+	log.Log.Infof("Store file MD5=%s SHA=%s -> %s (worker %d)\n", pic.ChecksumPicture,
 		pic.ChecksumPictureSHA, pic.PictureName, di.workerNr)
 	if pic.Available == store.NoAvailable {
 		err = insertPictureData(ti, pic)
@@ -587,7 +599,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return err
 		}
 		ti.IncCommit()
-		log.Log.Debugf("Commited pic", "Commited pic: md5=%s %s CP=%s worker=%d", pic.Md5, pic.PictureName,
+		log.Log.Debugf("Commited pic: md5=%s %s CP=%s worker=%d", pic.Md5, pic.PictureName,
 			pic.ChecksumPicture, di.workerNr)
 		atomic.AddUint32(&sqlInsertCounter, 1)
 	} else {

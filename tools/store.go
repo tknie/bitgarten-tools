@@ -61,22 +61,34 @@ func queueStoreFileInAlbumID(fileName string, albumid int) {
 	storeChannel <- &StoreFile{fileName: fileName, albumid: albumid}
 }
 
-func StoreWorker() {
+func StoreWorker(nrThreadReader int) {
+	sql.InitReaderWorkerStatistics(nrThreadReader)
+	for i := 0; i < nrThreadReader; i++ {
+		sql.SetReaderState(i, sql.InitStoreWorker)
+		go storeWorkerThread(i)
+	}
+}
+
+func storeWorkerThread(currentIndex int) {
 	checker, err := sql.CreateConnection()
 	if err != nil {
 		log.Log.Fatalf("Database connection not established: %v", err)
 	}
 	for {
+		sql.SetReaderState(currentIndex, sql.WaitingStoreWorker)
 		select {
 		case file := <-storeChannel:
+			sql.SetReaderStateWithFile(currentIndex, sql.LoadingStoreWorker, file.fileName)
 			err := storeFileInAlbumID(checker, file, file.albumid)
 			if err != nil {
 				if !strings.HasPrefix(err.Error(), "file empty") {
 					fmt.Println("Error inserting SQL picture:", err)
 				}
 			}
+			sql.SetReaderState(currentIndex, sql.DoneStoreWorker)
 			wgStore.Done()
 		case <-stopStore:
+			sql.SetReaderState(currentIndex, sql.StopStoreWorker)
 			return
 		}
 	}

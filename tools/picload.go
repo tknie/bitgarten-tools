@@ -50,12 +50,9 @@ type PicLoadParameter struct {
 }
 
 func PicLoad(parameter *PicLoadParameter) {
-	for i := 0; i < parameter.NrThreadReader; i++ {
-		go StoreWorker()
-	}
-	for i := 0; i < parameter.NrThreadStorer; i++ {
-		go sql.InsertWorker()
-	}
+
+	StoreWorker(parameter.NrThreadReader)
+	sql.InsertWorker(parameter.NrThreadStorer)
 	MaxBlobSize = parameter.MaxBlobSize
 	fmt.Println("Max lob size:", units.HumanSize(float64(MaxBlobSize)))
 	ShortPath = parameter.ShortenPath

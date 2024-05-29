@@ -70,6 +70,52 @@ type timeInfo struct {
 	startTime time.Time
 }
 
+type workerState byte
+
+const (
+	InitStoreWorker workerState = iota
+	LoadingStoreWorker
+	WaitingStoreWorker
+	DoneStoreWorker
+	StopStoreWorker
+)
+
+type storeWorkerStatistic struct {
+	state       workerState
+	currentFile string
+}
+
+var storeWorkerStatistics []storeWorkerStatistic
+var readerWorkerStatistics []storeWorkerStatistic
+
+func InitStoreWorkerStatistics(nrThreadReader int) {
+	storeWorkerStatistics = make([]storeWorkerStatistic, nrThreadReader)
+}
+
+func InitReaderWorkerStatistics(nrThreadReader int) {
+	readerWorkerStatistics = make([]storeWorkerStatistic, nrThreadReader)
+}
+
+func SetState(index int, state workerState) {
+	storeWorkerStatistics[index].state = state
+	storeWorkerStatistics[index].currentFile = ""
+}
+
+func SetStateWithFile(index int, state workerState, filename string) {
+	SetState(index, state)
+	storeWorkerStatistics[index].currentFile = filename
+}
+
+func SetReaderState(index int, state workerState) {
+	readerWorkerStatistics[index].state = state
+	readerWorkerStatistics[index].currentFile = ""
+}
+
+func SetReaderStateWithFile(index int, state workerState, filename string) {
+	SetReaderState(index, state)
+	readerWorkerStatistics[index].currentFile = filename
+}
+
 var ps = &PictureConnection{}
 
 const timeFormat = "2006-01-02 15:04:05"
@@ -78,7 +124,26 @@ var stopSchedule chan bool
 var statLock sync.Mutex
 var wgStat sync.WaitGroup
 
+const maxNrCount = 4
+
+var similarCount = maxNrCount
+var lastChecked uint64
+
 var output = func() {
+	if ps.checked == lastChecked {
+		similarCount--
+		if similarCount < 0 {
+			for i, sws := range storeWorkerStatistics {
+				fmt.Printf("%d. store worker thread works in state %d: %s\n", i, sws.state, sws.currentFile)
+			}
+			for i, sws := range readerWorkerStatistics {
+				fmt.Printf("%d. reader worker thread works in state %d: %s\n", i, sws.state, sws.currentFile)
+			}
+			log.Log.Fatal("similarity count triggered, not processing images!!!")
+		}
+	} else {
+		similarCount = maxNrCount
+	}
 	tn := time.Now().Format(timeFormat)
 	fmt.Printf("%s statistics started=%05d checked=%05d skipped=%02d too big=%02d errors=%02d\n",
 		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
