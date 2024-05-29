@@ -144,6 +144,7 @@ var output = func() {
 	} else {
 		similarCount = maxNrCount
 	}
+	lastChecked = ps.checked
 	tn := time.Now().Format(timeFormat)
 	fmt.Printf("%s statistics started=%05d checked=%05d skipped=%02d too big=%02d errors=%02d\n",
 		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
