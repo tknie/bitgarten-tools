@@ -80,6 +80,12 @@ const (
 	StopStoreWorker
 )
 
+var workerStates = []string{"init", "loading", "waiting", "done", "stop"}
+
+func (ws workerState) String() string {
+	return workerStates[ws]
+}
+
 type storeWorkerStatistic struct {
 	state       workerState
 	currentFile string
@@ -131,14 +137,14 @@ var lastChecked uint64
 
 var output = func() {
 	if ps.checked == lastChecked {
+		for i, sws := range storeWorkerStatistics {
+			fmt.Printf("%d. store worker thread works in state '%s': %s\n", i, sws.state, sws.currentFile)
+		}
+		for i, sws := range readerWorkerStatistics {
+			fmt.Printf("%d. reader worker thread works in state '%s': %s\n", i, sws.state, sws.currentFile)
+		}
 		similarCount--
 		if similarCount < 0 {
-			for i, sws := range storeWorkerStatistics {
-				fmt.Printf("%d. store worker thread works in state %d: %s\n", i, sws.state, sws.currentFile)
-			}
-			for i, sws := range readerWorkerStatistics {
-				fmt.Printf("%d. reader worker thread works in state %d: %s\n", i, sws.state, sws.currentFile)
-			}
 			log.Log.Fatal("similarity count triggered, not processing images!!!")
 		}
 	} else {
