@@ -138,6 +138,7 @@ var lastChecked uint64
 
 var output = func() {
 	if ps.checked != 0 && ps.checked == lastChecked {
+		fmt.Printf("Waiting counter = %04d\n", similarCount)
 		for i, sws := range storeWorkerStatistics {
 			fmt.Printf("%d. store worker thread works in state '%s': %s\n", i, sws.state, sws.currentFile)
 		}
