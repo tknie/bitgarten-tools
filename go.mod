@@ -8,7 +8,7 @@ require (
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
-	github.com/tknie/flynn v0.0.0-20240520181422-cbc69a60ba70
+	github.com/tknie/flynn v0.0.0-20240525194417-3e7f799d71f3
 	github.com/tknie/log v0.0.0-20231006083545-fabe25f4fb0e
 	go.uber.org/zap v1.27.0
 )
@@ -38,7 +38,7 @@ require (
 	github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d // indirect
+	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect

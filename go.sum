@@ -92,6 +92,8 @@ github.com/tknie/errorrepo v0.0.0-20240427174202-a8626661af5b h1:QwO+m5Mpa+f8CSD
 github.com/tknie/errorrepo v0.0.0-20240427174202-a8626661af5b/go.mod h1:lI2i/ZvgnOsoeJnzKbme2Cpa8lIs5ORgKILrtBwZyqk=
 github.com/tknie/flynn v0.0.0-20240520181422-cbc69a60ba70 h1:lYaVAOHeKMxoKgOjctBwe+Xbs7zSF59fAjhBR7Y9a1s=
 github.com/tknie/flynn v0.0.0-20240520181422-cbc69a60ba70/go.mod h1:5kk2CMwbVkCAA/XpGPRrX6bWorZTq6zgXVSYbEhXMOg=
+github.com/tknie/flynn v0.0.0-20240525194417-3e7f799d71f3 h1:9HRkVAEBiTthSg0JhTwbUGul41iVX6MJN8gJBGG+ehE=
+github.com/tknie/flynn v0.0.0-20240525194417-3e7f799d71f3/go.mod h1:EvMTKLmx+/lHlNLIgosXrTEdFbPvdeI9DjFrmzF8pdc=
 github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae h1:EY2CEji+jwHG16tP0kOfuw2V8M5naCyWp7VqADAEO/E=
 github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae/go.mod h1:dVvJAEmU8sloNLQh1wq2+GPwxa/9gg3VXuK/FO8eGX4=
 github.com/tknie/log v0.0.0-20231006083545-fabe25f4fb0e h1:aNgWs7XTC4vcIcmzQT496neJexEvjx0Kv2/ho2xUlgo=
@@ -115,6 +117,8 @@ golang.org/x/crypto v0.23.0 h1:dIJU/v2J8Mdglj/8rJ6UUOM3Zc9zLZxVZwwxMooUSAI=
 golang.org/x/crypto v0.23.0/go.mod h1:CKFgDieR+mRhux2Lsu27y0fO304Db0wZe70UKqHu0v8=
 golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d h1:N0hmiNbwsSNwHBAvR3QB5w25pUwH4tK0Y/RltD1j1h4=
 golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d/go.mod h1:XtvwrStGgqGPLc4cjQfWqZHG1YFdYs6swckp8vpsjnc=
+golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc h1:O9NuF4s+E/PvMIy+9IUZB9znFwUIXEWSstNjek6VpVg=
+golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc/go.mod h1:XtvwrStGgqGPLc4cjQfWqZHG1YFdYs6swckp8vpsjnc=
 golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/image v0.16.0 h1:9kloLAKhUufZhA12l5fwnx2NZW39/we1UhBesW433jw=
 golang.org/x/image v0.16.0/go.mod h1:ugSZItdV4nOxyqp56HmXwH0Ry0nBCpjnZdpDaIHdoPs=

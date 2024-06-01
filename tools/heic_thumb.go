@@ -96,6 +96,7 @@ func (parameter *HeicThumbParameter) HeicThumb() {
 	_, err = id.Query(q, generateQueryImageThumbnail)
 	if err != nil {
 		fmt.Println("Error query ...:", err)
+		log.Log.Errorf("Error query thumbnail image: %v", err)
 		return
 	}
 	if parameter.Commit {
@@ -142,14 +143,15 @@ func (parameter *HeicThumbParameter) storeThumb(pic *store.Pictures) error {
 		Values:     [][]any{{pic}},
 		Update:     []string{"checksumpicture='" + pic.ChecksumPicture + "'"},
 	}
-	_, n, err := parameter.WriteHandler.Update("pictures", update)
-	if err != nil {
-		fmt.Println("Error updating", n, ":", err)
-		fmt.Println("Pic:", pic.ChecksumPicture)
-		fmt.Println(pic.Exif)
-		return err
+	if parameter.Commit {
+		_, n, err := parameter.WriteHandler.Update("pictures", update)
+		if err != nil {
+			fmt.Println("Error updating", n, ":", err)
+			fmt.Println("Pic:", pic.ChecksumPicture)
+			fmt.Println(pic.Exif)
+			return err
+		}
 	}
-
 	return nil
 }
 
