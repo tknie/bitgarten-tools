@@ -174,12 +174,12 @@ func resizeHeif(media []byte, max int) ([]byte, *exif.Exif, uint32, uint32, erro
 	ra := bytes.NewReader(media)
 	exifData, err := goheif.ExtractExif(ra)
 	if err != nil {
-		fmt.Println("Error extrating exif:", err)
+		fmt.Println("Error extracting exif:", err)
 		return nil, nil, 0, 0, err
 	}
 	e, err := exif.Decode(bytes.NewBuffer(exifData))
 	if err != nil {
-		fmt.Println("Error extrating exif:", err)
+		fmt.Println("Error extracting exif:", err)
 		return nil, nil, 0, 0, err
 	}
 	r := bytes.NewBuffer(media)

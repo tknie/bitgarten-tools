@@ -75,9 +75,9 @@ func (parameter *HeicThumbParameter) HeicThumb() {
 
 	prefix := "markdelete=false"
 	if parameter.CreateThumbnail {
-		prefix += " AND title LIKE '%heic'"
+		prefix += " AND LOWER(title) LIKE '%heic'"
 	} else {
-		prefix += " AND (title LIKE '%heic' OR title LIKE '%mov')"
+		prefix += " AND (LOWER(title) LIKE '%heic' OR LOWER(title) LIKE '%mov')"
 	}
 	if parameter.ChkSum != "" {
 		prefix += fmt.Sprintf(" AND checksumpicture = '%s'", parameter.ChkSum)
@@ -122,8 +122,8 @@ func (parameter *HeicThumbParameter) generateImageThumbnail(pic *store.Pictures)
 		fmt.Println("Found and generate", pic.ChecksumPicture, pic.Title, pic.ExifOrigTime)
 		err := pic.CreateThumbnail()
 		if err != nil {
-			fmt.Println("Error creating thumbnail:", err)
-			return err
+			fmt.Printf("Error creating thumbnail %s(%s): %v\n", pic.ChecksumPicture, pic.Title, err)
+			return nil
 		}
 		fmt.Printf("%s -> %v\n", pic.Title, pic.ExifOrigTime)
 		return parameter.storeThumb(pic)
@@ -185,7 +185,7 @@ func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
 		DataStruct: &store.Pictures{},
 		Fields:     []string{"MIMEType", "checksumpicture", "title", "exiforigtime"},
 	}
-	q.Search = "title LIKE '" + xTitle + "%' and markdelete=false"
+	q.Search = "LOWER(title) LIKE '" + xTitle + "%' and markdelete=false"
 	first := true
 	_, err = sid.Query(q, func(search *common.Query, result *common.Result) error {
 		pic := result.Data.(*store.Pictures)

@@ -67,7 +67,7 @@ type ImageHashParameter struct {
 func ImageHash(parameter *ImageHashParameter) {
 
 	if parameter.PreFilter != "" {
-		parameter.PreFilter = fmt.Sprintf(" AND title LIKE '%s%%'", parameter.PreFilter)
+		parameter.PreFilter = fmt.Sprintf(" AND LOWER(title) LIKE '%s%%'", parameter.PreFilter)
 	}
 
 	if !slices.Contains(Hashes, parameter.HashType) {

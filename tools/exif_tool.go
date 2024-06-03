@@ -46,7 +46,7 @@ func ExifTool(parameter *ExifToolParameter) {
 		return
 	}
 	if parameter.PreFilter != "" {
-		parameter.PreFilter = fmt.Sprintf(" AND title LIKE '%s%%'", parameter.PreFilter)
+		parameter.PreFilter = fmt.Sprintf(" AND LOWER(title) LIKE '%s%%'", parameter.PreFilter)
 	}
 	count := uint64(0)
 	skipped := uint64(0)

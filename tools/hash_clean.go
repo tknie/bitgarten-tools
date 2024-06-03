@@ -500,7 +500,7 @@ func reducePictures(id common.RegDbID, title string) error {
 		TableName: "pictures",
 		Fields:    []string{"title", "checksumpicture"},
 		Limit:     0,
-		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND title like '" + title + "%'",
+		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND LOWER(title) like '" + title + "%'",
 	}
 	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {
 		foundTitle := result.Rows[0].(string)
@@ -537,7 +537,7 @@ func checkMorePicture(id common.RegDbID, title string) int64 {
 		TableName: "pictures",
 		Fields:    []string{"COUNT(*)"},
 		Limit:     0,
-		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND title like '" + title + "%'",
+		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND LOWER(title) like '" + title + "%'",
 	}
 	l := int64(0)
 	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {

@@ -332,12 +332,12 @@ func (pic *Picture) Resize(max int) (err error) {
 		ra := bytes.NewReader(pic.Media)
 		exifData, err := goheif.ExtractExif(ra)
 		if err != nil {
-			fmt.Println("Error extrating exif:", err)
+			fmt.Println("Error extracting exif for resize:", err)
 			return err
 		}
 		e, err := exif.Decode(bytes.NewBuffer(exifData))
 		if err != nil {
-			fmt.Println("Error extrating exif:", err)
+			fmt.Println("Error decoding exif for resize:", err)
 			return err
 		}
 		t, err := e.Get(exif.Orientation)
