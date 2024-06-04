@@ -19,7 +19,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	golang.org/x/image v0.16.0 // indirect
+	golang.org/x/image v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 )
 
@@ -37,10 +37,10 @@ require (
 	github.com/tknie/errorrepo v0.0.0-20240427174202-a8626661af5b // indirect
 	github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
