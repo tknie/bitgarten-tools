@@ -99,7 +99,9 @@ func (parameter *HeicThumbParameter) HeicThumb() {
 		log.Log.Errorf("Error query thumbnail image: %v", err)
 		return
 	}
+	log.Log.Debugf("Generate of thumbnails done")
 	if parameter.Commit {
+		log.Log.Debugf("Commiting changes...")
 		fmt.Println("Commiting changes ...")
 		err = parameter.WriteHandler.Commit()
 		if err != nil {
@@ -107,7 +109,7 @@ func (parameter *HeicThumbParameter) HeicThumb() {
 			return
 		}
 	}
-	fmt.Println("Finished heic thumbnails generated")
+	fmt.Println("Finished HEIC thumbnails generated")
 }
 
 func generateQueryImageThumbnail(search *common.Query, result *common.Result) error {
@@ -149,6 +151,12 @@ func (parameter *HeicThumbParameter) storeThumb(pic *store.Pictures) error {
 			fmt.Println("Error updating", n, ":", err)
 			fmt.Println("Pic:", pic.ChecksumPicture)
 			fmt.Println(pic.Exif)
+			return err
+		}
+		log.Log.Debugf("Update done, commiting now....")
+		err = parameter.WriteHandler.Commit()
+		if err != nil {
+			fmt.Println("Error commiting", n, ":", err)
 			return err
 		}
 	}

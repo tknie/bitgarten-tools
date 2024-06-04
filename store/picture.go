@@ -171,6 +171,7 @@ func CreateSHA(input []byte) string {
 }
 
 func resizeHeif(media []byte, max int) ([]byte, *exif.Exif, uint32, uint32, error) {
+	log.Log.Debugf("Resize HEIF to %d", max)
 	ra := bytes.NewReader(media)
 	exifData, err := goheif.ExtractExif(ra)
 	if err != nil {
@@ -191,6 +192,7 @@ func resizeHeif(media []byte, max int) ([]byte, *exif.Exif, uint32, uint32, erro
 
 	t, err := e.Get(exif.Orientation)
 	if err == nil {
+		log.Log.Debugf("Exif HEIF orientation is %s", t.String())
 		switch t.String() {
 		case "1":
 		case "2":
@@ -213,6 +215,7 @@ func resizeHeif(media []byte, max int) ([]byte, *exif.Exif, uint32, uint32, erro
 	return thumb, e, w, h, err
 }
 func resizePicture(media []byte, max int) ([]byte, uint32, uint32, error) {
+	log.Log.Debugf("Resize image to %d", max)
 	var buffer bytes.Buffer
 	buffer.Write(media)
 	srcImage, _, err := image.Decode(&buffer)
@@ -340,7 +343,7 @@ func NewPictures(fileName string) *Pictures {
 
 // CreateThumbnail create thumbnail
 func (pic *Pictures) CreateThumbnail() error {
-	if strings.HasPrefix(pic.MIMEType, "image/h") {
+	if strings.HasPrefix(strings.ToLower(pic.MIMEType), "image/h") {
 		thmb, e, w, h, err := resizeHeif(pic.Media, 200)
 		if err != nil {
 			fmt.Println("Error generating thumbnail of", pic.PictureName, ":", err)
