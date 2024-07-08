@@ -81,7 +81,7 @@ func CleanExif(tableName string) {
 			}
 			err = wid.Commit()
 			if err != nil {
-				fmt.Println("Erro commiting record:", err)
+				fmt.Println("Error commiting record:", err)
 				return err
 			}
 			count += n

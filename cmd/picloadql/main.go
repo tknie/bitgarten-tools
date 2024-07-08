@@ -33,6 +33,11 @@ import (
 	"github.com/docker/go-units"
 )
 
+const description = `Load picture into SQL database. The given directory parameter
+defines the location to be loaded.
+
+`
+
 func main() {
 	tools.InitLogLevelWithFile("picloadql.log")
 	var filter string
@@ -55,6 +60,11 @@ func main() {
 	flag.StringVar(&fileName, "i", "", "File name for single picture store")
 	flag.StringVar(&binarySize, "b", "500MB", "Maximum binary blob size")
 	flag.BoolVar(&sql.ExitOnError, "E", false, "Exit if an error happens")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if *cpuprofile != "" {

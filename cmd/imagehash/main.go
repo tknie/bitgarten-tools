@@ -26,6 +26,10 @@ import (
 	"github.com/tknie/bitgarten-tools/tools"
 )
 
+const description = `This tool generates image hashs.
+
+`
+
 func main() {
 	tools.InitLogLevelWithFile("imagehash.log")
 
@@ -38,6 +42,11 @@ func main() {
 	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
 	flag.BoolVar(&deleted, "D", false, "Scan deleted pictures as well")
 	flag.StringVar(&hashType, "h", tools.Hashes[tools.DefaultHash], "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	fmt.Println("Start Bitgarten hash generator to find doublikates of pictures")

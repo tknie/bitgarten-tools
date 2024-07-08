@@ -19,7 +19,6 @@
 package tools
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/tknie/bitgarten-tools/sql"
@@ -31,8 +30,10 @@ import (
 var checkPictureChannel = make(chan *sql.Picture, 10)
 var stopCheck = make(chan bool)
 var wgCheck sync.WaitGroup
+var output func(pic *sql.Picture, output string)
 
-func InitCheck() {
+func InitCheck(outFct func(pic *sql.Picture, output string)) {
+	output = outFct
 	for i := 0; i < 4; i++ {
 		go pictureChecker()
 	}
@@ -55,13 +56,13 @@ func pictureChecker() {
 
 			switch {
 			case len(pic.Media) == 0:
-				fmt.Println(pic.ChecksumPicture + " Media empty")
+				output(pic, pic.ChecksumPicture+" Media empty")
 				log.Log.Debugf("Error record len %s %s", pic.ChecksumPicture, pic.Sha256checksum)
 			case store.CreateMd5(pic.Media) != pic.ChecksumPicture:
-				fmt.Println(pic.ChecksumPicture + " md5 error")
+				output(pic, pic.ChecksumPicture+" md5 error")
 				log.Log.Debugf("Error md5  %s", store.CreateMd5(pic.Media))
 			case store.CreateSHA(pic.Media) != pic.Sha256checksum:
-				fmt.Println(pic.ChecksumPicture + " sha error")
+				output(pic, pic.ChecksumPicture+" sha error")
 				log.Log.Debugf("Error sha  %s", store.CreateSHA(pic.Media))
 			}
 			wgCheck.Done()

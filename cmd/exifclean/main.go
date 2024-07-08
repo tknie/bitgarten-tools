@@ -21,11 +21,17 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/tknie/bitgarten-tools/tools"
 
 	"github.com/tknie/log"
 )
+
+const description = `This tool checks additional characters like '<','>' or " are
+included in the exif nameing.
+
+`
 
 func main() {
 
@@ -33,6 +39,11 @@ func main() {
 
 	tableName := ""
 	flag.StringVar(&tableName, "t", "pictures", "Table name to search in")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	log.Log.Debugf("Start exifclean")

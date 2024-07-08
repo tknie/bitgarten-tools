@@ -310,7 +310,7 @@ func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error
 	return found, nil
 }
 
-func (di *DatabaseInfo) CheckMedia(f common.ResultFunction) error {
+func (di *DatabaseInfo) CheckMedia(limit uint32, f common.ResultFunction) error {
 
 	id, err := di.Open()
 	if err != nil {
@@ -319,6 +319,7 @@ func (di *DatabaseInfo) CheckMedia(f common.ResultFunction) error {
 	defer id.FreeHandler()
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &Picture{},
+		Limit:      limit,
 		Fields:     []string{"ChecksumPicture", "Sha256checksum", "Media"},
 	}
 

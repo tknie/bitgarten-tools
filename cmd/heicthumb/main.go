@@ -29,6 +29,10 @@ import (
 	"github.com/tknie/bitgarten-tools/tools"
 )
 
+const description = `This tool creates HEIC scaled and creates
+the HEIC thumbnail.
+`
+
 func main() {
 
 	tools.InitLogLevelWithFile("heicthumb.log")
@@ -53,6 +57,11 @@ func main() {
 	flag.BoolVar(&storeData, "S", false, "Store data to database")
 	flag.BoolVar(&createThumbnail, "C", false, "Create thumbnails instead of search for similarity")
 	flag.BoolVar(&scale, "s", false, "Scale for album")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if *cpuprofile != "" {

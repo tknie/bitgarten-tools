@@ -40,7 +40,6 @@ it with the database checksumpicture data content.
 
 func main() {
 	var limit int
-	var delete bool
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
@@ -55,7 +54,6 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
-	flag.BoolVar(&delete, "D", false, "Delete duplicate entries")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -69,15 +67,18 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-
-	tools.InitCheck()
+	errCount := uint32(0)
+	tools.InitCheck(func(pic *sql.Picture, status string) {
+		fmt.Println(status)
+		errCount++
+	})
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		fmt.Printf("Error connecting URL: %v", err)
 		return
 	}
 	counter := uint64(0)
-	err = connSource.CheckMedia(func(search *common.Query, result *common.Result) error {
+	err = connSource.CheckMedia(uint32(limit), func(search *common.Query, result *common.Result) error {
 		p := &sql.Picture{}
 		pic := result.Data.(*sql.Picture)
 		*p = *pic
@@ -85,7 +86,7 @@ func main() {
 		log.Log.Debugf("Received record %s %s", pic.ChecksumPicture, pic.Sha256checksum)
 		tools.CheckPicture(p)
 		if counter%1000 == 0 {
-			fmt.Printf("Working, checked %d\n", counter)
+			fmt.Printf("Mediacheck working, checked %10d entries\n", counter)
 		}
 		// fmt.Println(pic.ChecksumPicture)
 		return nil
@@ -94,7 +95,11 @@ func main() {
 		fmt.Println("Got return check media", err)
 	}
 	tools.CheckMediaWait()
-	fmt.Printf("Working ended successfully, checked %d\n", counter)
+	if errCount > 0 {
+		fmt.Printf("Working ended with errors/warnings, checked %d\n", counter)
+	} else {
+		fmt.Printf("Working ended successfully, checked %d\n", counter)
+	}
 }
 
 func writeMemProfile(file string) {

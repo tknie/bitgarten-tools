@@ -21,10 +21,17 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/tknie/bitgarten-tools/sql"
 	"github.com/tknie/bitgarten-tools/tools"
 )
+
+const description = `This tool checks creates similar hash for all types
+and all entries not updated.
+In addition the tool does cleanup HEIC scaled photos.
+
+`
 
 func main() {
 	tools.InitLogLevelWithFile("hashclean.log")
@@ -39,6 +46,11 @@ func main() {
 	flag.BoolVar(&commit, "c", false, "Enable commit to database")
 	flag.BoolVar(&sql.ExitOnError, "E", false, "Exit if an error happens")
 	flag.BoolVar(&heicclean, "H", false, "Cleanup heic images")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if heicclean {

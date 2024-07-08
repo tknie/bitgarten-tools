@@ -38,12 +38,6 @@ func init() {
 	case "2":
 		level = zapcore.InfoLevel
 	}
-
-	// err := InitLogLevelWithFile("checkMedia.log", level)
-	// if err != nil {
-	// 	fmt.Println("Error initialize logging")
-	// 	os.Exit(255)
-	// }
 }
 
 func InitLogLevelWithFile(fileName string) (err error) {

@@ -21,9 +21,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/tknie/bitgarten-tools/tools"
 )
+
+const description = `This tool checks extract all EXIF data out of pictures
+and stores it in data field.
+
+`
 
 func main() {
 	tools.InitLogLevelWithFile("exiftool.log")
@@ -32,6 +38,11 @@ func main() {
 
 	flag.IntVar(&limit, "l", 50, "Maximum number of records loaded")
 	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	tools.ExifTool(&tools.ExifToolParameter{PreFilter: preFilter, Limit: limit})
