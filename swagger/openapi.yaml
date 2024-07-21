@@ -1,0 +1,915 @@
+openapi: 3.0.1
+info:
+  title: SQL API server
+  description: SQL API REST server
+  contact:
+    name: Thorsten A. Knieling
+    url: https://github.com/tknie/api
+    email: thorsten.knieling@googlemail.com
+  version: 1.0.0.0.15072023
+servers:
+  - url: http://localhost:8030/
+  - url: https://localhost:8033/
+tags:
+  - name: Environment
+    description: Administration information
+  - name: Query
+    description: Read only queries
+  - name: Administrator
+    description: Administration tasks
+  - name: Modifier
+    description: Changer
+  - name: Scheduler
+    description: Scheduler managing jobs running in the RESTful server
+  - name: Browser
+    description: Browse File for logs or data at services
+  - name: Upload
+    description: Upload File transfer for logs or data
+paths:
+  /login:
+    get:
+      tags:
+        - Environment
+      description: Login receiving JWT
+      operationId: getLoginSession
+      responses:
+        '200':
+          description: Successful login
+          headers:
+            X-Token:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationToken'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: Error login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+    put:
+      tags:
+        - Environment
+      description: Login receiving JWT
+      operationId: loginSession
+      responses:
+        '200':
+          description: Successful login
+          headers:
+            X-Token:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationToken'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: Error login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+    post:
+      tags:
+        - Environment
+      description: Login receiving JWT
+      operationId: pushLoginSession
+      responses:
+        '200':
+          description: Successful login
+          headers:
+            X-Token:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationToken'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: Error login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+  /logoff:
+    get:
+      tags:
+        - Environment
+      description: Remove the session
+      operationId: removeSessionCompat
+      responses:
+        '200':
+          description: Successful response, session is invalidated
+          content: {}
+        '400':
+          description: Environment evaluation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error logoff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+        - BearerAuth:
+            - user
+  /logout:
+    put:
+      tags:
+        - Environment
+      description: Logout the session
+      operationId: logoutSessionCompat
+      responses:
+        '200':
+          description: Successful response, session is invalidated
+          content: {}
+        '400':
+          description: Environment evaluation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Error logoff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+        - BearerAuth:
+            - user
+  /rest/file/{path}:
+    get:
+      tags:
+        - Browser
+      description: Download a file out of file location
+      operationId: downloadFile
+      parameters:
+        - name: path
+          in: path
+          description: Identifier of the file location
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response, with download binary file.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Environment evaluation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: Location not available/unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+        - BearerAuth:
+            - admin
+    put:
+      tags:
+        - Upload
+      description: Create a new directory
+      operationId: createDirectory
+      parameters:
+        - name: path
+          in: path
+          description: Identifier of the file location
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response, if the directory is created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          description: Environment evaluation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: Location not available/unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+        - BearerAuth:
+            - admin
+    post:
+      tags:
+        - Upload
+      description: Upload a new file to the given location
+      operationId: uploadFile
+      parameters:
+        - name: path
+          in: path
+          description: Identifier of the file location
+          required: true
+          schema:
+            type: string
+        - name: file
+          in: query
+          description: Identifier of the file location
+          required: false
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - uploadFile
+              properties:
+                uploadFile:
+                  type: string
+                  description: Upload file
+                  format: binary
+        required: true
+      responses:
+        '200':
+          description: Successful response, with download binary file.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: Environment evaluation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: Location not available/unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+        - BearerAuth:
+            - admin
+    delete:
+      tags:
+        - Upload
+      description: Delete the file on the given location
+      operationId: deleteFileLocation
+      parameters:
+        - name: path
+          in: path
+          description: Identifier of the file location
+          required: true
+          schema:
+            type: string
+        - name: file
+          in: query
+          description: Identifier of the file location
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response, if delete of file done.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          description: Environment evaluation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: Location not available/unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+        - BearerAuth:
+            - admin
+  /rest/file/browse:
+    get:
+      tags:
+        - Browser
+      description: Retrieves a list of Browseable locations
+      operationId: browseList
+      responses:
+        '200':
+          description: Successful response, with list of known databases.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Directories'
+        '400':
+          description: Environment evaluation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: Database not available/unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Error authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+        - BearerAuth:
+            - admin
+  /rest/file/browse/{path}:
+    get:
+      tags:
+        - Browser
+      description: Retrieves a list of files in the defined location.
+      operationId: browseLocation
+      parameters:
+        - name: path
+          in: path
+          description: Identifier of the file location
+          required: true
+          schema:
+            type: string
+        - name: filter
+          in: query
+          description: Filter the result set
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response, with list of known databases.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DirectoryFiles'
+                  - $ref: '#/components/schemas/File'
+        '400':
+          description: Environment evaluation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authorization error
+          content: {}
+        '403':
+          description: Role access denied
+          content: {}
+        '404':
+          description: File/Directory not available/unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        default:
+          description: Generic error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BasicAuth: []
+        - tokenCheck: []
+        - BearerAuth:
+            - admin
+components:
+  schemas:
+    SQLQuery:
+      type: object
+      properties:
+        Batch:
+          type: object
+          properties:
+            SQL:
+              type: string
+    Database:
+      type: object
+    Server:
+      type: object
+      properties:
+        LogLocation:
+          type: object
+          properties:
+            directory:
+              type: string
+            level:
+              type: string
+        Content:
+          type: object
+          properties:
+            directory:
+              type: string
+        Service:
+          type: array
+          items:
+            type: object
+            properties:
+              port:
+                type: integer
+              type:
+                type: string
+    ClassicAccess:
+      type: object
+      properties:
+        Mapping:
+          type: object
+          properties:
+            Directory:
+              type: object
+              properties:
+                url:
+                  type: string
+            ClassicGlobal:
+              type: boolean
+              x-omitempty: false
+            ClassicAccess:
+              type: array
+              items:
+                type: object
+                properties:
+                  Database:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        Picture:
+          type: string
+        LongName:
+          type: string
+        UUID:
+          type: string
+          format: uuid            
+        LastLogin:
+          type: string
+          format: date-time
+        Created:
+          type: string
+          format: date-time
+        Permission:
+          type: string
+    Users:
+      type: object
+      properties:
+        Users:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              readPermission:
+                type: string
+                x-omitempty: false
+              writePermission:
+                type: string
+                x-omitempty: false
+              administrator:
+                type: boolean
+                x-omitempty: false
+        readPermission:
+          type: string
+          x-omitempty: false
+        writePermission:
+          type: string
+          x-omitempty: false
+    AuthorizationToken:
+      type: object
+      properties:
+        token:
+          type: string
+        AdminRole:
+          type: boolean
+          x-omitempty: false
+        User:
+          $ref: '#/components/schemas/User'
+    principal:
+      type: object
+      properties:
+        UUID:
+          type: string
+        name:
+          type: string
+        remote:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        session:
+          type: object
+          properties: {}
+    DirectoryFiles:
+      type: object
+      properties:
+        Location:
+          type: string
+        Path:
+          type: string
+        Files:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+        system:
+          type: string
+    File:
+      type: object
+      properties:
+        Name:
+          type: string
+        Type:
+          type: string
+        Modified:
+          type: string
+          format: date-time
+        Size:
+          type: integer
+          format: int64
+          minimum: 0
+    Directories:
+      type: object
+      properties:
+        Directories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Directory'
+        system:
+          type: string
+    Directory:
+      type: object
+      properties:
+        Location:
+          type: string
+        Name:
+          type: string
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        target:
+          type: string
+        Error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            target:
+              type: string
+    ResponseRaw:
+      type: object
+      additionalProperties: true
+    Response:
+      type: object
+      properties:
+        MapName:
+          type: string
+        FileRecords:
+          type: integer
+          x-omitempty: false
+        NrRecords:
+          type: integer
+          x-omitempty: false
+        FieldNames:
+          type: array
+          items:
+            type: string
+        Records:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    StoreResponse:
+      type: object
+      properties:
+        NrStored:
+          type: integer
+        NrDeleted:
+          type: integer
+        Stored:
+          type: array
+          items:
+            type: integer
+    Status:
+      type: object
+      properties:
+        Message:
+          type: string
+    StatusResponse:
+      type: object
+      properties:
+        Status:
+          type: object
+          properties:
+            Action:
+              type: string
+            Code:
+              type: string
+            Dbid:
+              type: number
+            Target:
+              type: string
+            Message:
+              type: string
+    UserInformation:
+      type: object
+      properties:
+        Id:
+          type: integer
+        Node:
+          type: string
+        Terminal:
+          type: string
+        Timestamp:
+          type: string
+          format: date-time
+    Sessions:
+      type: object
+      properties:
+        Session:
+          type: object
+          properties:
+            UserQueueEntry:
+              type: array
+              items:
+                type: object
+                properties: {}
+  parameters:
+    databaseSQLParam:
+      name: database
+      in: path
+      description: SQL database
+      required: true
+      schema:
+        type: string
+    tableParam:
+      name: table
+      in: path
+      description: SQL table
+      required: true
+      schema:
+        type: string
+    searchQueryParam:
+      name: search
+      in: path
+      description: search criterium
+      required: true
+      schema:
+        type: string
+    orderbyParam:
+      name: orderby
+      in: query
+      description: order by criterias
+      schema:
+        type: string
+    fileReferenceParam:
+      name: file
+      in: query
+      description: Identifier of the file location
+      required: true
+      schema:
+        type: string
+    fieldsParam:
+      name: fields
+      in: path
+      description: A comma separated list of fields which should be in the result
+      required: true
+      schema:
+        type: string
+        default: '*'
+    searchParam:
+      name: sqlsearch
+      in: query
+      description: search criterium
+      schema:
+        type: string
+    startParam:
+      name: start
+      in: query
+      description: Start offset where the read will start from
+      schema:
+        type: number
+        default: 0
+    limitParam:
+      name: limit
+      in: query
+      description: Maximal number of records retrieved
+      schema:
+        type: number
+        default: 15
+    sortParam:
+      name: sorted_by
+      in: query
+      description: sort criterium
+      schema:
+        type: string
+    compactParam:
+      name: compact
+      in: query
+      description: return result in compact structure
+      schema:
+        type: boolean
+        default: false
+    flattenParam:
+      name: flatten
+      in: query
+      description: remove database group tree entries in result records
+      schema:
+        type: boolean
+        default: false
+    descriptorParam:
+      name: descriptor
+      in: query
+      description: Read a descriptor read with the given field entry
+      schema:
+        type: boolean
+    exchangeParam:
+      name: exchange
+      in: query
+      description: Exchange current imput data with record
+      schema:
+        type: boolean
+    locationParam:
+      name: location
+      in: path
+      description: Identifier of the file location
+      required: true
+      schema:
+        type: string
+  securitySchemes:
+    BasicAuth:
+      type: http
+      description: HTTP Basic Authentication. Works over `HTTP` and `HTTPS`
+      scheme: basic
+    BearerAuth:
+      type: http
+      description: HTTP Bearer Authentication. Works over `HTTP` and `HTTPS`
+      scheme: bearer
+    tokenCheck:
+      type: apiKey
+      name: X-Tokencheck
+      description: HTTP Basic Authentication. Works over `HTTP` and `HTTPS`
+      in: header

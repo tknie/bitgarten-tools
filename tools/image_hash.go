@@ -64,15 +64,23 @@ type ImageHashParameter struct {
 	HashType  string
 }
 
-func ImageHash(parameter *ImageHashParameter) {
+var hashOutput func(pic *store.Pictures, output string)
+var infoMap map[string]any
+
+func InitHash(outFct func(pic *store.Pictures, output string),
+	resultMap map[string]any) {
+	hashOutput = outFct
+	infoMap = resultMap
+}
+
+func ImageHash(parameter *ImageHashParameter) error {
 
 	if parameter.PreFilter != "" {
 		parameter.PreFilter = fmt.Sprintf(" AND LOWER(title) LIKE '%s%%'", parameter.PreFilter)
 	}
 
 	if !slices.Contains(Hashes, parameter.HashType) {
-		fmt.Println("Incorrect hash parameter given:", parameter.HashType, "not in", Hashes)
-		return
+		return fmt.Errorf("incorrect hash parameter given: %s not in %v", parameter.HashType, Hashes)
 	}
 
 	// Prepare template
@@ -86,10 +94,8 @@ func ImageHash(parameter *ImageHashParameter) {
 
 	id, err := sql.DatabaseHandler()
 	if err != nil {
-		fmt.Println("POSTGRES error", err)
-		return
+		return fmt.Errorf("POSTGRES error: %v", err)
 	}
-	fmt.Println("Query database entries for one week not hashed")
 	log.Log.Debugf("Execute query:\n%s\n", sqlCmd.String())
 	query := &common.Query{
 		TableName:  "pictures",
@@ -109,33 +115,33 @@ func ImageHash(parameter *ImageHashParameter) {
 		case "image/heic":
 			hd, err = hashHeic(buffer)
 			if err != nil {
-				fmt.Printf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err)
+				hashOutput(p, fmt.Sprintf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err))
 				log.Log.Errorf("Error generating hash for %s/%s: %v", p.Title, p.ChecksumPicture, err)
 				return nil
 			}
 		case "image/jpeg", "image/jpg":
 			hd, err = hashJpeg(buffer)
 			if err != nil {
-				fmt.Printf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err)
+				hashOutput(p, fmt.Sprintf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err))
 				log.Log.Errorf("Error generating hash for %s/%s: %v", p.Title, p.ChecksumPicture, err)
 				return nil
 			}
 		case "image/png":
 			hd, err = hashPng(buffer)
 			if err != nil {
-				fmt.Printf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err)
+				hashOutput(p, fmt.Sprintf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err))
 				log.Log.Errorf("Error generating hash for %s/%s: %v", p.Title, p.ChecksumPicture, err)
 				return nil
 			}
 		case "image/gif":
 			hd, err = hashGif(buffer)
 			if err != nil {
-				fmt.Printf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err)
+				hashOutput(p, fmt.Sprintf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err))
 				log.Log.Errorf("Error generating hash for %s/%s: %v", p.Title, p.ChecksumPicture, err)
 				return nil
 			}
 		default:
-			fmt.Printf("Error unknown image format for %s/%s: %s\n", p.Title, p.ChecksumPicture, p.MIMEType)
+			hashOutput(p, fmt.Sprintf("Error unknown image format for %s/%s: %s\n", p.Title, p.ChecksumPicture, p.MIMEType))
 			log.Log.Errorf("Error unknown image format for %s/%s: %s\n", p.Title, p.ChecksumPicture, p.MIMEType)
 			return nil
 		}
@@ -149,10 +155,11 @@ func ImageHash(parameter *ImageHashParameter) {
 		return nil
 	})
 	if err != nil {
-		fmt.Println("Query error:", err)
+		return fmt.Errorf("query error: %v", err)
 	}
-	fmt.Printf("Found %d pictures where %d pictures are hashed", counter, processed)
-	fmt.Println()
+	hashOutput(nil, fmt.Sprintf("Found %d pictures where %d pictures are hashed", counter, processed))
+
+	return nil
 }
 
 func insertHash(p *store.Pictures, ph *hashData) error {

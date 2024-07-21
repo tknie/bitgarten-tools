@@ -30,7 +30,6 @@ import (
 	"github.com/tknie/bitgarten-tools/sql"
 	"github.com/tknie/bitgarten-tools/store"
 
-	"github.com/docker/go-units"
 	"github.com/tknie/log"
 )
 
@@ -142,15 +141,15 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	if fi.Size() == 0 {
 		return nil, fmt.Errorf("file empty %s", fileName)
 	}
-	if fi.Size() > MaxBlobSize {
-		sql.IncToBig()
-		sql.DeferredBlobSize(fi.Size())
-		fileSize := units.HumanSize(float64(fi.Size()))
-		maxSize := units.HumanSize(float64(MaxBlobSize))
-		err := fmt.Errorf("file %s tooo big %s > %s", fileName, fileSize, maxSize)
-		sql.IncError("File too big "+fileName, err)
-		return nil, err
-	}
+	// if fi.Size() > MaxBlobSize {
+	// 	sql.IncToBig()
+	// 	sql.DeferredBlobSize(fi.Size())
+	// 	fileSize := units.HumanSize(float64(fi.Size()))
+	// 	maxSize := units.HumanSize(float64(MaxBlobSize))
+	// 	err := fmt.Errorf("file size %s tooo big %s > %s", fileName, fileSize, maxSize)
+	// 	sql.IncError("File too big "+fileName, err)
+	// 	return nil, err
+	// }
 	pic := store.NewPictures(fileName)
 	if ShortPath {
 		pic.Directory = path.Base(pic.Directory)

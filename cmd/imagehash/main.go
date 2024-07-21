@@ -20,15 +20,22 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 
+	"github.com/tknie/bitgarten-tools/store"
 	"github.com/tknie/bitgarten-tools/tools"
 )
 
 const description = `This tool generates image hashs.
 
 `
+
+type jsonInfo struct {
+	Checksum string
+	Status   string
+}
 
 func main() {
 	tools.InitLogLevelWithFile("imagehash.log")
@@ -37,10 +44,12 @@ func main() {
 	preFilter := ""
 	deleted := false
 	hashType := tools.Hashes[tools.DefaultHash]
+	jsonResult := false
 
 	flag.IntVar(&limit, "l", 50, "Maximum number of records loaded")
 	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
 	flag.BoolVar(&deleted, "D", false, "Scan deleted pictures as well")
+	flag.BoolVar(&jsonResult, "j", false, "return output in JSON format")
 	flag.StringVar(&hashType, "h", tools.Hashes[tools.DefaultHash], "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
 	flag.Usage = func() {
 		fmt.Print(description)
@@ -49,9 +58,40 @@ func main() {
 	}
 	flag.Parse()
 
-	fmt.Println("Start Bitgarten hash generator to find doublikates of pictures")
+	infoMap := make(map[string]any)
+	list := make([]*jsonInfo, 0)
+	if jsonResult {
+		tools.InitHash(func(pic *store.Pictures, status string) {
+			if pic != nil {
+				list = append(list, &jsonInfo{Checksum: pic.ChecksumPicture, Status: status})
+				infoMap["picture"] = list
+			} else {
+				infoMap["status"] = status
+			}
+		}, infoMap)
+	} else {
+		fmt.Println("Start Bitgarten hash generator to find doublikates of pictures")
+		tools.InitHash(func(pic *store.Pictures, status string) {
+			fmt.Println(status)
+			if pic == nil {
+				fmt.Println()
+			}
+		}, infoMap)
+		fmt.Println("Query database entries not hashed for one last week")
+	}
 
-	tools.ImageHash(&tools.ImageHashParameter{Limit: limit, HashType: hashType,
+	err := tools.ImageHash(&tools.ImageHashParameter{Limit: limit, HashType: hashType,
 		Deleted: deleted, PreFilter: preFilter})
-
+	if err != nil {
+		fmt.Printf("Error generating image hash: %v\n", err)
+	}
+	if jsonResult {
+		x := struct{ Result map[string]any }{infoMap}
+		out, err := json.Marshal(x)
+		if err != nil {
+			fmt.Printf("Marhsall JSON error: %v\n", err)
+			return
+		}
+		fmt.Println(string(out))
+	}
 }

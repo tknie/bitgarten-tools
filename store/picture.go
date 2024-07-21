@@ -87,8 +87,21 @@ const (
 	NoAvailable Available = iota
 	PicAvailable
 	PicLocationAvailable
+	ToBigNoAvailable
+	ToBigMediaNotFound
 	BothAvailable
 )
+
+var availableString = []string{"NoAvailable",
+	"PicAvailable",
+	"PicLocationAvailable",
+	"ToBigNoAvailable",
+	"ToBigMediaNotFound",
+	"BothAvailable"}
+
+func (a Available) String() string {
+	return availableString[a]
+}
 
 // Pictures definition
 type Pictures struct {
@@ -145,9 +158,9 @@ func (pic *PictureBinary) LoadFile() error {
 		return err
 	}
 	pic.Data = &PictureData{}
-	if fi.Size() > pic.MaxBlobSize {
-		return fmt.Errorf("file tooo big %d>%d", fi.Size(), pic.MaxBlobSize)
-	}
+	// if fi.Size() > pic.MaxBlobSize {
+	// 	return fmt.Errorf("file tooo big %d>%d", fi.Size(), pic.MaxBlobSize)
+	// }
 	pic.Data.Media = make([]byte, fi.Size())
 	var n int
 	n, err = f.Read(pic.Data.Media)
@@ -343,7 +356,8 @@ func NewPictures(fileName string) *Pictures {
 
 // CreateThumbnail create thumbnail
 func (pic *Pictures) CreateThumbnail() error {
-	if strings.HasPrefix(strings.ToLower(pic.MIMEType), "image/h") {
+	switch {
+	case strings.HasPrefix(strings.ToLower(pic.MIMEType), "image/h"):
 		thmb, e, w, h, err := resizeHeif(pic.Media, 200)
 		if err != nil {
 			fmt.Println("Error generating thumbnail of", pic.PictureName, ":", err)
@@ -357,8 +371,8 @@ func (pic *Pictures) CreateThumbnail() error {
 		log.Log.Debugf("Thumbnail checksum %s", pic.ChecksumThumbnail)
 
 		return pic.analyseExif(e)
-	}
-	if strings.HasPrefix(pic.MIMEType, "image") {
+
+	case strings.HasPrefix(pic.MIMEType, "image"):
 		thmb, w, h, err := resizePicture(pic.Media, 200)
 		if err != nil {
 			fmt.Println("Error generating thumbnail of", pic.PictureName, ":", err)
@@ -375,6 +389,9 @@ func (pic *Pictures) CreateThumbnail() error {
 		if err != nil && err != io.EOF {
 			return err
 		}
+	default:
+		pic.Md5 = CreateMd5(pic.Media)
+		pic.ChecksumPicture = pic.Md5
 
 	}
 	return nil

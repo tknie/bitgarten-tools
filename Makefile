@@ -31,10 +31,20 @@ CGO_EXT_LDFLAGS = $(if $(ACLDIR),-lsagsmp2 -lsagxts3 -ladazbuf,)
 GO_TAGS         = $(if $(ACLDIR),"release adalnk","release")
 GO_FLAGS        = $(if $(debug),"-x",) -tags $(GO_TAGS)
 PLUGINS         = $(BIN)/plugins/bittools
+SWAGGER_SPEC    = $(CURDIR)/swagger/openapi.yaml
 
 all: $(EXECS)
 
 plugins: $(PLUGINS)
+
+generatemodels: cleanAPI $(CURDIR)/api
+
+cleanAPI: ; $(info $(M) cleaning models…)    @ ## Cleanup models
+		@rm -rf $(CURDIR)/api
+
+$(CURDIR)/api: $(SWAGGER_SPEC) ; $(info $(M) generating code...) @ ## Generate rest go code
+		$Q go generate ./generate/...
+
 
 $(EXECS): $(OBJECTS) ; $(info $(M) building executable $(@:$(BIN)/%=%)…) @ ## Build program binary
 	$Q cd $(CURDIR) &&  \

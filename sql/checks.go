@@ -29,16 +29,16 @@ import (
 	"github.com/tknie/flynn/common"
 )
 
-const query = `with p(checksumpicture,sha256checksum) as (
+const query = `with p(checksumpicture,sha256checksum,picopt,medialen) as (
 	select
-		checksumpicture,sha256checksum
+		checksumpicture,sha256checksum,picopt,length(media)
 	from
 		pictures
 	where
 		checksumpicture = $1)
 	select
 		l.picturedirectory,
-		l.picturename
+		l.picturename, picopt,medialen
 	from
 		picturelocations l,
 		p
@@ -50,10 +50,12 @@ const query = `with p(checksumpicture,sha256checksum) as (
 	union
 	select
 		p.sha256checksum,
-		''
+		'','',medialen
 	from
 		p
 	`
+
+var MaxBlobSize = int64(30000000)
 
 func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 	pic.Available = store.NoAvailable
@@ -64,7 +66,13 @@ func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 		pic.Available = store.PicAvailable
 		dir := result.Rows[0].(string)
 		name := result.Rows[1].(string)
-		log.Log.Debugf("dir=%s,name=%s", dir, name)
+		picopt := ""
+		if result.Rows[2] != nil {
+			picopt = result.Rows[2].(string)
+		}
+		mediaLength := result.Rows[3].(int32)
+		log.Log.Debugf("%s dir=%s,name=%s,picopt=%s mediaLen=%d",
+			pic.ChecksumPicture, dir, name, picopt, mediaLength)
 
 		switch {
 		case name == "" && dir != pic.ChecksumPictureSHA:
@@ -73,14 +81,34 @@ func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 			IncError("SHA differs "+pic.PictureName, err)
 			pic.Available = store.NoAvailable
 		case name != "" && dir == pic.Directory && name == pic.PictureName:
-			pic.Available = store.BothAvailable
+			log.Log.Debugf("Media %s -> %d", picopt, mediaLength)
+			if picopt != "webstore" {
+				pic.Available = store.BothAvailable
+			}
 		default:
+			log.Log.Debugf("%s small size default check name=%s dir=%s sha=%s", pic.ChecksumPicture, name, dir, pic.ChecksumPictureSHA)
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Println("Query error:", err)
+		fmt.Println("Check exists query error:", err)
 		log.Log.Fatalf("Query error database call...%v", err)
 		return
 	}
+	log.Log.Debugf("%s: Current available %s", pic.ChecksumPicture, pic.Available)
+	if int64(len(pic.Media)) > MaxBlobSize && pic.Available != store.BothAvailable {
+		log.Log.Debugf("Check REST client ... size bigger than %d", MaxBlobSize)
+		found, err := CheckRestClient(pic.ChecksumPicture)
+		if err != nil {
+			log.Log.Fatalf("REST client check failed")
+		}
+		if !found {
+			log.Log.Debugf("Maximal blob size...no available for %s", pic.ChecksumPicture)
+			pic.Available = store.ToBigNoAvailable
+		} else {
+			log.Log.Debugf("Maximal blob size...both available for %s", pic.ChecksumPicture)
+			pic.Available = store.BothAvailable
+		}
+	}
+	log.Log.Debugf("%s: Final available %s", pic.ChecksumPicture, pic.Available)
 }
