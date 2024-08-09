@@ -83,7 +83,7 @@ func VideoThumb(parameter *VideoThumbParameter) {
 	} else {
 		prefix := "MIMEType LIKE 'video%'"
 		if parameter.ChkSum != "" {
-			cprefix := fmt.Sprintf("title = %s AND ", parameter.Title)
+			cprefix := fmt.Sprintf("checksumpicture = '%s' AND ", parameter.ChkSum)
 			prefix = cprefix + prefix
 		}
 		q.Search = prefix
@@ -187,49 +187,53 @@ func searchTitle(title string, id common.RegDbID) string {
 
 func storeThumb(chksum string, pic *store.Pictures) error {
 
-	// c := exec.Command(
-	// 	"ffmpeg", "-i", "file.mp4",
-	// 	"-vf", "select='eq(pict_type, I)'", "-vsync", "vfr", "%d.jpg",
-	// )
-	c := exec.Command(
-		"ffmpeg", "-ss", "4", "-i", "file.mp4", "-vf", "scale=iw*sar:ih",
-		"-frames:v", "1", chksum+"%03d.jpg",
-	)
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	err := c.Run()
-	if err != nil {
-		return err
-	}
-	imgb, err := os.Open(chksum + "001.jpg")
-	if err != nil {
-		fmt.Println("Chksum error:", err)
-		return io.EOF
-	}
-	img, _ := jpeg.Decode(imgb)
-	defer imgb.Close()
+	for _, sec := range []string{"4", "2", "1"} {
+		// c := exec.Command(
+		// 	"ffmpeg", "-i", "file.mp4",
+		// 	"-vf", "select='eq(pict_type, I)'", "-vsync", "vfr", "%d.jpg",
+		// )
+		c := exec.Command(
+			"ffmpeg", "-ss", sec, "-i", "file.mp4", "-vf", "scale=iw*sar:ih",
+			"-frames:v", "1", chksum+"%03d.jpg",
+		)
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		err := c.Run()
+		if err != nil {
+			return err
+		}
+		imgb, err := os.Open(chksum + "001.jpg")
+		if err != nil {
+			fmt.Println("Chksum error:", err)
+			log.Log.Fatalf("Chksum error %s: %v", chksum, err)
+			continue
+		}
+		img, _ := jpeg.Decode(imgb)
+		defer imgb.Close()
 
-	wmb, err := os.Open("watermark.png")
-	if err != nil {
-		log.Log.Fatalf("Error opening watermark")
-	}
-	watermark, err := png.Decode(wmb)
-	defer wmb.Close()
-	if err != nil {
-		log.Log.Fatalf("Error decoding watermark")
-	}
+		wmb, err := os.Open("watermark.png")
+		if err != nil {
+			log.Log.Fatalf("Error opening watermark")
+		}
+		watermark, err := png.Decode(wmb)
+		defer wmb.Close()
+		if err != nil {
+			log.Log.Fatalf("Error decoding watermark")
+		}
 
-	offset := image.Pt(1, 1)
-	b := img.Bounds()
-	m := image.NewRGBA(b)
-	draw.Draw(m, b, img, image.ZP, draw.Src)
-	draw.Draw(m, watermark.Bounds().Add(offset), watermark, image.ZP, draw.Over)
+		offset := image.Pt(1, 1)
+		b := img.Bounds()
+		m := image.NewRGBA(b)
+		draw.Draw(m, b, img, image.ZP, draw.Src)
+		draw.Draw(m, watermark.Bounds().Add(offset), watermark, image.ZP, draw.Over)
 
-	var buffer bytes.Buffer
-	err = jpeg.Encode(&buffer, m, &jpeg.Options{jpeg.DefaultQuality})
-	if err != nil {
-		log.Log.Fatalf("Error encoding with watermark")
+		var buffer bytes.Buffer
+		err = jpeg.Encode(&buffer, m, &jpeg.Options{jpeg.DefaultQuality})
+		if err != nil {
+			log.Log.Fatalf("Error encoding with watermark")
+		}
+		pic.Thumbnail = buffer.Bytes()
+		break
 	}
-	pic.Thumbnail = buffer.Bytes()
 	return nil
 }
