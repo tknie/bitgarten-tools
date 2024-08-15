@@ -159,9 +159,9 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	switch strings.ToLower(fileType[1:]) {
 	case "heic", "heif":
 		pic.MIMEType = "image/" + fileType[1:]
-	case "jpeg", "jpg", "gif":
+	case "jpeg", "jpg", "gif", "png", "tif":
 		pic.MIMEType = "image/" + fileType[1:]
-	case "mp4", "mov", "m4v", "webm":
+	case "mp4", "mov", "m4v", "mpg", "webm", "avi":
 		pic.MIMEType = "video/" + fileType[1:]
 	default:
 		fmt.Println("Unknown format found:", fileType[1:])

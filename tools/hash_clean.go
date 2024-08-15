@@ -437,7 +437,6 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	err = id.BatchSelectFct(query, func(search *common.Query, result *common.Result) error {
 		pic := result.Data.(*sql.Picture)
 		log.Log.Debugf("HEIC found: %s", pic.Title)
-		// fmt.Println("HEIC found:", pic.Title)
 		if !strings.HasPrefix(pic.Title, "IMG_") {
 			title := strings.TrimSuffix(filepath.Base(pic.Title), filepath.Ext(pic.Title))
 			foundList = append(foundList, &heicCheck{title: title, checksumpicture: pic.ChecksumPicture})
@@ -500,7 +499,7 @@ func reducePictures(id common.RegDbID, title string) error {
 		TableName: "pictures",
 		Fields:    []string{"title", "checksumpicture"},
 		Limit:     0,
-		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND LOWER(title) like '" + title + "%'",
+		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND title like '" + title + "%'",
 	}
 	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {
 		foundTitle := result.Rows[0].(string)
@@ -537,7 +536,7 @@ func checkMorePicture(id common.RegDbID, title string) int64 {
 		TableName: "pictures",
 		Fields:    []string{"COUNT(*)"},
 		Limit:     0,
-		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND LOWER(title) like '" + title + "%'",
+		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND title like '" + title + "%'",
 	}
 	l := int64(0)
 	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {

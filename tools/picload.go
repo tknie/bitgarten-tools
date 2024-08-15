@@ -126,7 +126,7 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 				sql.IncErrorFile(err, path)
 			}
 			switch suffix {
-			case "jpg", "jpeg", "heic", "gif", "m4v", "mov", "mp4", "webm":
+			case "jpg", "jpeg", "tif", "png", "heic", "gif", "m4v", "mov", "avi", "mp4", "webm":
 				queueStoreFileInAlbumID(path, parameter.AlbumId)
 				if err != nil {
 					// return fmt.Errorf("error storing file: %v", err)
@@ -134,7 +134,7 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 				}
 				ti.IncDone()
 			default:
-				log.Log.Debugf("Suffix unknown: %s", suffix)
+				log.Log.Infof("Suffix not supported: %s\n", suffix)
 				sql.IncSkipped()
 			}
 			return nil
@@ -150,11 +150,11 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 func (parameter *PicLoadParameter) storeFile(path, suffix string) error {
 	ti := sql.IncChecked()
 	switch suffix {
-	case "jpg", "jpeg", "gif", "m4v", "mov", "mp4", "webm":
+	case "jpg", "jpeg", "tif", "png", "heic", "gif", "m4v", "mov", "mpg", "avi", "mp4", "webm":
 		queueStoreFileInAlbumID(path, parameter.AlbumId)
 		ti.IncDone()
 	default:
-		log.Log.Debugf("Suffix unknown: %s", suffix)
+		log.Log.Infof("Suffix not supported: %s\n", suffix)
 		sql.IncSkipped()
 	}
 	return nil

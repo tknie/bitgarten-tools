@@ -62,11 +62,16 @@ func VideoThumb(parameter *VideoThumbParameter) {
 		fmt.Println("Error connect ...:", err)
 		return
 	}
+	wid, err := sql.DatabaseHandler()
+	if err != nil {
+		fmt.Println("Error connect ...:", err)
+		return
+	}
 	gid = id
 	q := &common.Query{TableName: "Pictures",
 		DataStruct:   &store.Pictures{},
 		Fields:       []string{"MIMEType", "checksumpicture", "Media"},
-		FctParameter: id,
+		FctParameter: wid,
 	}
 	if parameter.Title != "" {
 		// prefix = searchTitle(title, id)
@@ -77,7 +82,8 @@ func VideoThumb(parameter *VideoThumbParameter) {
 		q.Search = prefix
 		err = id.BatchSelectFct(q, generateQueryVideoThumbnail)
 		if err != nil {
-			fmt.Println("Error query ...:", err)
+			log.Log.Errorf("Error video title query: %v", err)
+			fmt.Println("Error video title query ...:", err)
 			return
 		}
 	} else {
@@ -89,7 +95,8 @@ func VideoThumb(parameter *VideoThumbParameter) {
 		q.Search = prefix
 		_, err = id.Query(q, generateQueryVideoThumbnail)
 		if err != nil {
-			fmt.Println("Error query ...:", err)
+			log.Log.Errorf("Error video query: %v", err)
+			fmt.Println("Error video query ...:", err)
 			return
 		}
 	}
@@ -102,7 +109,7 @@ func generateQueryVideoThumbnail(search *common.Query, result *common.Result) er
 	return generateVideoThumbnail(id, pic)
 }
 
-func generateVideoThumbnail(id common.RegDbID, pic *store.Pictures) error {
+func generateVideoThumbnail(wid common.RegDbID, pic *store.Pictures) error {
 	fmt.Println("MIMEtype", pic.MIMEType, pic.ChecksumPicture)
 	err := os.Remove("input.mp4")
 	if err != nil && !os.IsNotExist(err) {
@@ -119,6 +126,7 @@ func generateVideoThumbnail(id common.RegDbID, pic *store.Pictures) error {
 		if err == io.EOF {
 			return nil
 		}
+		log.Log.Errorf("Error preparing storage: %v", err)
 		fmt.Println("Error preparing storage:", err)
 		return err
 	}
@@ -126,7 +134,7 @@ func generateVideoThumbnail(id common.RegDbID, pic *store.Pictures) error {
 	if pic.Thumbnail == nil && len(pic.Thumbnail) == 0 {
 		log.Log.Fatalf("Thumbnail empty")
 	}
-	fmt.Println("TLEN:", len(pic.Thumbnail))
+	log.Log.Debugf("TLEN: %d", len(pic.Thumbnail))
 	list := [][]any{{pic.Thumbnail}}
 	input := &common.Entries{
 		Fields: []string{"Thumbnail"},
@@ -135,13 +143,13 @@ func generateVideoThumbnail(id common.RegDbID, pic *store.Pictures) error {
 	}
 	input.Update = []string{fmt.Sprintf("checksumpicture = '%s'",
 		pic.ChecksumPicture)}
-	_, n, err := id.Update("Pictures", input)
+	_, n, err := wid.Update("Pictures", input)
 	if err != nil {
+		log.Log.Errorf("Update problem: %v", err)
 		return err
 	}
 	fmt.Println("Update n=", n)
-
-	return nil
+	return wid.Commit()
 }
 
 func searchTitle(title string, id common.RegDbID) string {
@@ -186,8 +194,9 @@ func searchTitle(title string, id common.RegDbID) string {
 }
 
 func storeThumb(chksum string, pic *store.Pictures) error {
-
+	log.Log.Infof("Store " + pic.Title)
 	for _, sec := range []string{"4", "2", "1"} {
+		log.Log.Debugf("Thumbnail generated with second " + sec)
 		// c := exec.Command(
 		// 	"ffmpeg", "-i", "file.mp4",
 		// 	"-vf", "select='eq(pict_type, I)'", "-vsync", "vfr", "%d.jpg",
@@ -196,16 +205,19 @@ func storeThumb(chksum string, pic *store.Pictures) error {
 			"ffmpeg", "-ss", sec, "-i", "file.mp4", "-vf", "scale=iw*sar:ih",
 			"-frames:v", "1", chksum+"%03d.jpg",
 		)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
+		var cBuffer bytes.Buffer
+		// c.Stdout = os.Stdout
+		// c.Stderr = os.Stderr
+		c.Stdout = &cBuffer
+		c.Stderr = &cBuffer
 		err := c.Run()
 		if err != nil {
+			fmt.Println(cBuffer.String())
 			return err
 		}
 		imgb, err := os.Open(chksum + "001.jpg")
 		if err != nil {
 			fmt.Println("Chksum error:", err)
-			log.Log.Fatalf("Chksum error %s: %v", chksum, err)
 			continue
 		}
 		img, _ := jpeg.Decode(imgb)
@@ -235,5 +247,6 @@ func storeThumb(chksum string, pic *store.Pictures) error {
 		pic.Thumbnail = buffer.Bytes()
 		break
 	}
+	log.Log.Debugf("Thumbnail generated...")
 	return nil
 }
