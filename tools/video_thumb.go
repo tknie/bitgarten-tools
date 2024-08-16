@@ -127,8 +127,8 @@ func generateVideoThumbnail(wid common.RegDbID, pic *store.Pictures) error {
 			return nil
 		}
 		log.Log.Errorf("Error preparing storage: %v", err)
-		fmt.Println("Error preparing storage:", err)
-		return err
+		fmt.Printf("Error preparing storage %s: %v\n", pic.ChecksumPicture, err)
+		return nil
 	}
 
 	if pic.Thumbnail == nil && len(pic.Thumbnail) == 0 {
@@ -149,7 +149,11 @@ func generateVideoThumbnail(wid common.RegDbID, pic *store.Pictures) error {
 		return err
 	}
 	fmt.Println("Update n=", n)
-	return wid.Commit()
+	err = wid.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func searchTitle(title string, id common.RegDbID) string {
@@ -195,6 +199,10 @@ func searchTitle(title string, id common.RegDbID) string {
 
 func storeThumb(chksum string, pic *store.Pictures) error {
 	log.Log.Infof("Store " + pic.Title)
+	logpath := os.Getenv("LOGPATH")
+	if logpath == "" {
+		logpath = "."
+	}
 	for _, sec := range []string{"4", "2", "1"} {
 		log.Log.Debugf("Thumbnail generated with second " + sec)
 		// c := exec.Command(
@@ -203,7 +211,7 @@ func storeThumb(chksum string, pic *store.Pictures) error {
 		// )
 		c := exec.Command(
 			"ffmpeg", "-ss", sec, "-i", "file.mp4", "-vf", "scale=iw*sar:ih",
-			"-frames:v", "1", chksum+"%03d.jpg",
+			"-frames:v", "1", logpath+"/"+chksum+"-%03d.jpg",
 		)
 		var cBuffer bytes.Buffer
 		// c.Stdout = os.Stdout
@@ -213,11 +221,15 @@ func storeThumb(chksum string, pic *store.Pictures) error {
 		err := c.Run()
 		if err != nil {
 			fmt.Println(cBuffer.String())
-			return err
+			log.Log.Errorf("Error starting ffmpeg")
+			log.Log.Debugf("Output: %s", cBuffer.String())
+			continue
 		}
-		imgb, err := os.Open(chksum + "001.jpg")
+		log.Log.Debugf("Thumbnail finally generated with second " + sec)
+		imgb, err := os.Open(logpath + "/" + chksum + "-001.jpg")
 		if err != nil {
-			fmt.Println("Chksum error:", err)
+			log.Log.Errorf("Error opening ffmpeg image")
+			log.Log.Debugf("Output: %s", cBuffer.String())
 			continue
 		}
 		img, _ := jpeg.Decode(imgb)
@@ -245,8 +257,12 @@ func storeThumb(chksum string, pic *store.Pictures) error {
 			log.Log.Fatalf("Error encoding with watermark")
 		}
 		pic.Thumbnail = buffer.Bytes()
-		break
+		err = os.Remove(logpath + "/" + chksum + "-001.jpg")
+		log.Log.Errorf("Remove state: %v", err)
+		log.Log.Debugf("Thumbnail generated...")
+		return nil
 	}
-	log.Log.Debugf("Thumbnail generated...")
-	return nil
+	fmt.Println("Error Thumbnail generated...")
+	log.Log.Debugf("Error Thumbnail generated...")
+	return fmt.Errorf("no Thumbnail generated")
 }
