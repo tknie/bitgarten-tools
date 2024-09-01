@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/tknie/bitgarten-tools/sql"
 	"github.com/tknie/bitgarten-tools/store"
@@ -35,13 +36,47 @@ var countAll = uint64(0)
 var countErrors = uint64(0)
 var countEmpty = uint64(0)
 
+var stopSchedule chan bool
+var syncSchedule chan bool
+
+var currentDirectory = "<not defined>"
+
+func schedule(what func(start time.Time), delay time.Duration) {
+	stopSchedule = make(chan bool)
+	syncSchedule = make(chan bool)
+	startTime := time.Now()
+	go func() {
+		for {
+			select {
+			case <-time.After(delay):
+			case <-stopSchedule:
+				what(startTime)
+				syncSchedule <- true
+				return
+			}
+			what(startTime)
+		}
+	}()
+
+}
+
+func analyzeOutput(s time.Time) {
+	fmt.Printf("Analyze files in %s started at %v started at %v\n", currentDirectory,
+		time.Now().Format(timeFormat), s.Format(timeFormat))
+	fmt.Printf("%-22s: %5d / %5d\n", "New pictures", noAvailable, countAll)
+	fmt.Printf("%-22s: %5d / %5d\n", "Pictures registered", available, countAll)
+	fmt.Printf("%-22s: %5d / %5d\n\n", "Pictures errors/empty", countErrors, countEmpty)
+}
+
 func AnalyzeDirectories(directories []string) {
+	schedule(analyzeOutput, 30*time.Second)
 	checker, err := sql.CreateConnection()
 	if err != nil {
 		log.Log.Fatalf("Database connection not established: %v", err)
 	}
 	defer checker.Close()
 	for _, pictureDirectory := range directories {
+		currentDirectory = pictureDirectory
 		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
 				log.Log.Infof("Info empty or dir: %s", path)
@@ -66,12 +101,9 @@ func AnalyzeDirectories(directories []string) {
 			return
 		}
 	}
-
-	fmt.Printf("%-20s: %d\n", "New pictures", noAvailable)
-	fmt.Printf("%-20s: %d\n", "Pictures registered", available)
-	fmt.Printf("%-20s: %d\n", "Pictures found", countAll)
-	fmt.Printf("%-20s: %d\n", "Pictures errors", countErrors)
-	fmt.Printf("%-20s: %d\n", "Pictures empty", countEmpty)
+	stopSchedule <- true
+	<-syncSchedule
+	fmt.Printf("Finished Analyze files ended at %v\n", time.Now().Format(timeFormat))
 }
 
 func loadFile(db *sql.DatabaseInfo, fileName string) error {
