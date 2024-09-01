@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -25,43 +25,32 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 
 	"github.com/tknie/bitgarten-tools/tools"
 )
 
-const description = `This tool creates HEIC scaled and creates
-the HEIC thumbnail.
+const description = `This tool checks found files in directory and analyze number of new or registered
+media in the databases using the checksum.
+
 `
 
 func main() {
+	var limit int
 
-	tools.InitLogLevelWithFile("heicthumb.log")
-	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
-	var chksum string
-	var storeData bool
-	var title string
-	var fromDate string
-	var toDate string
-	var createThumbnail bool
-	var album string
-	var scale bool
-	var scaleRange int
-
-	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
-	flag.StringVar(&title, "t", "", "Search for picture title")
-	flag.StringVar(&album, "a", "", "Search for album title")
-	flag.StringVar(&fromDate, "F", "", "Search for picture created from this date (format 2001-12-30)")
-	flag.StringVar(&toDate, "T", "", "Search for picture created before this date including (format 2001-12-30)")
-	flag.IntVar(&scaleRange, "m", 1280, "Max width or height image size")
-	flag.BoolVar(&storeData, "S", false, "Store data to database")
-	flag.BoolVar(&createThumbnail, "y", false, "Create thumbnails instead of search for similarity")
-	flag.BoolVar(&scale, "s", false, "Scale for album")
+	err := tools.InitLogLevelWithFile("analyzeDirectory.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
 		flag.PrintDefaults()
 	}
+	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -76,16 +65,22 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	p := &tools.HeicThumbParameter{Commit: storeData, ChkSum: chksum,
-		CreateThumbnail: createThumbnail, FromDate: fromDate, ToDate: toDate}
-	if scale {
-		p.Title = album
-		p.ScaleRange = scaleRange
-		p.HeicScale()
-	} else {
-		p.Title = title
-		p.HeicThumb()
+	directories := flag.Args()
+	if len(directories) == 0 {
+		e := os.Getenv("BITGARTEN_DIRECTORIES")
+		if e != "" {
+			directories = strings.Split(e, ",")
+		}
 	}
+
+	if len(directories) == 0 {
+		fmt.Println("Picture directory option is required")
+		flag.Usage()
+		return
+	}
+	fmt.Println("Directories:", directories)
+
+	tools.AnalyzeDirectories(directories)
 
 }
 

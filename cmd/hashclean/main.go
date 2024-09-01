@@ -39,13 +39,15 @@ func main() {
 	var minCount int
 	var heicclean bool
 	var commit bool
+	var title string
 
 	flag.IntVar(&limit, "l", tools.DefaultLimit, "Maximum number of records loaded")
 	flag.IntVar(&minCount, "m", tools.DefaultMinCount, "Minimum number of count per hash")
 	//	flag.StringVar(&hashType, "h", "", "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
-	flag.BoolVar(&commit, "c", false, "Enable commit to database")
+	flag.BoolVar(&commit, "C", false, "Enable commit to database")
 	flag.BoolVar(&sql.ExitOnError, "E", false, "Exit if an error happens")
 	flag.BoolVar(&heicclean, "H", false, "Cleanup heic images")
+	flag.StringVar(&title, "t", "", "Specific title to be searched for")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -54,7 +56,8 @@ func main() {
 	flag.Parse()
 
 	if heicclean {
-		tools.HeicClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit})
+		tools.HeicClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Title: title,
+			Commit: commit})
 	} else {
 		tools.HashClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit})
 	}

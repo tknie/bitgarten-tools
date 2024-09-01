@@ -310,7 +310,7 @@ func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error
 	return found, nil
 }
 
-func (di *DatabaseInfo) CheckMedia(limit uint32, f common.ResultFunction) error {
+func (di *DatabaseInfo) ReadMedia(limit uint32, f common.ResultFunction) error {
 
 	id, err := di.Open()
 	if err != nil {

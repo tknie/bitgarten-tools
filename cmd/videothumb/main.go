@@ -36,8 +36,10 @@ func main() {
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	var chksum string
 	var title string
+	var commit bool
 	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
 	flag.StringVar(&title, "a", "", "Search for album title")
+	flag.BoolVar(&commit, "C", false, "Commit updates")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -52,7 +54,7 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	tools.VideoThumb(&tools.VideoThumbParameter{Title: title, ChkSum: chksum})
+	tools.VideoThumb(&tools.VideoThumbParameter{Title: title, ChkSum: chksum, Commit: commit})
 }
 
 func writeMemProfile(file string) {

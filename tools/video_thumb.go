@@ -54,6 +54,12 @@ const SELECT_ALBUM = `with albumIdSelect(Id) as ( SELECT Id FROM Albums WHERE Ti
 type VideoThumbParameter struct {
 	Title  string
 	ChkSum string
+	Commit bool
+}
+
+type VideoGenerateParameter struct {
+	id     common.RegDbID
+	commit bool
 }
 
 func VideoThumb(parameter *VideoThumbParameter) {
@@ -69,9 +75,10 @@ func VideoThumb(parameter *VideoThumbParameter) {
 	}
 	gid = id
 	q := &common.Query{TableName: "Pictures",
-		DataStruct:   &store.Pictures{},
-		Fields:       []string{"MIMEType", "checksumpicture", "Media"},
-		FctParameter: wid,
+		DataStruct: &store.Pictures{},
+		Fields:     []string{"MIMEType", "title", "checksumpicture", "Media"},
+		FctParameter: &VideoGenerateParameter{id: wid,
+			commit: parameter.Commit},
 	}
 	if parameter.Title != "" {
 		// prefix = searchTitle(title, id)
@@ -87,7 +94,7 @@ func VideoThumb(parameter *VideoThumbParameter) {
 			return
 		}
 	} else {
-		prefix := "MIMEType LIKE 'video%'"
+		prefix := "MIMEType LIKE 'video%' AND thumbnail is NULL AND markdelete = false AND picopt='sqlstore'"
 		if parameter.ChkSum != "" {
 			cprefix := fmt.Sprintf("checksumpicture = '%s' AND ", parameter.ChkSum)
 			prefix = cprefix + prefix
@@ -104,24 +111,24 @@ func VideoThumb(parameter *VideoThumbParameter) {
 }
 
 func generateQueryVideoThumbnail(search *common.Query, result *common.Result) error {
-	id := search.FctParameter.(common.RegDbID)
+	para := search.FctParameter.(*VideoGenerateParameter)
 	pic := result.Data.(*store.Pictures)
-	return generateVideoThumbnail(id, pic)
+	return generateVideoThumbnail(para, pic)
 }
 
-func generateVideoThumbnail(wid common.RegDbID, pic *store.Pictures) error {
+func generateVideoThumbnail(para *VideoGenerateParameter, pic *store.Pictures) error {
 	fmt.Println("MIMEtype", pic.MIMEType, pic.ChecksumPicture)
-	err := os.Remove("input.mp4")
-	if err != nil && !os.IsNotExist(err) {
-		fmt.Println("Error removing:", err)
-		return err
+	title := os.Getenv("LOGPATH")
+	if title == "" {
+		title = "."
 	}
-	err = os.WriteFile("file.mp4", pic.Media, 0644)
+	title += "/" + pic.ChecksumPicture + "-" + pic.Title
+	err := os.WriteFile(title, pic.Media, 0644)
 	if err != nil {
 		fmt.Println("Error removing:", err)
 		return err
 	}
-	err = storeThumb(pic.ChecksumPicture, pic)
+	err = storeThumb(title, pic.ChecksumPicture, pic)
 	if err != nil {
 		if err == io.EOF {
 			return nil
@@ -134,7 +141,7 @@ func generateVideoThumbnail(wid common.RegDbID, pic *store.Pictures) error {
 	if pic.Thumbnail == nil && len(pic.Thumbnail) == 0 {
 		log.Log.Fatalf("Thumbnail empty")
 	}
-	log.Log.Debugf("TLEN: %d", len(pic.Thumbnail))
+	log.Log.Debugf("Thumbnail length: %d", len(pic.Thumbnail))
 	list := [][]any{{pic.Thumbnail}}
 	input := &common.Entries{
 		Fields: []string{"Thumbnail"},
@@ -143,14 +150,21 @@ func generateVideoThumbnail(wid common.RegDbID, pic *store.Pictures) error {
 	}
 	input.Update = []string{fmt.Sprintf("checksumpicture = '%s'",
 		pic.ChecksumPicture)}
-	_, n, err := wid.Update("Pictures", input)
+	_, n, err := para.id.Update("Pictures", input)
 	if err != nil {
 		log.Log.Errorf("Update problem: %v", err)
 		return err
 	}
-	fmt.Println("Update n=", n)
-	err = wid.Commit()
-	if err != nil {
+	if para.commit {
+		log.Log.Debugf("Update n=%d", n)
+		err = para.id.Commit()
+		if err != nil {
+			return err
+		}
+	}
+	err = os.Remove(title)
+	if err != nil && !os.IsNotExist(err) {
+		fmt.Println("Error removing:", err)
 		return err
 	}
 	return nil
@@ -197,39 +211,32 @@ func searchTitle(title string, id common.RegDbID) string {
 	return result
 }
 
-func storeThumb(chksum string, pic *store.Pictures) error {
-	log.Log.Infof("Store " + pic.Title)
+func storeThumb(filename, chksum string, pic *store.Pictures) error {
 	logpath := os.Getenv("LOGPATH")
 	if logpath == "" {
 		logpath = "."
 	}
-	for _, sec := range []string{"4", "2", "1"} {
+	var cBuffer bytes.Buffer
+	cBuffer.WriteString("Generate thumbnail: <" + pic.Title + "> <" + pic.ChecksumPicture + ">\n")
+	for _, sec := range []string{"4", "2", "1", "0"} {
 		log.Log.Debugf("Thumbnail generated with second " + sec)
-		// c := exec.Command(
-		// 	"ffmpeg", "-i", "file.mp4",
-		// 	"-vf", "select='eq(pict_type, I)'", "-vsync", "vfr", "%d.jpg",
-		// )
+
+		// Call ffmpeg to create thumbnail
 		c := exec.Command(
-			"ffmpeg", "-ss", sec, "-i", "file.mp4", "-vf", "scale=iw*sar:ih",
+			"ffmpeg", "-ss", sec, "-i", filename, "-vf", "scale=iw*sar:ih",
 			"-frames:v", "1", logpath+"/"+chksum+"-%03d.jpg",
 		)
-		var cBuffer bytes.Buffer
-		// c.Stdout = os.Stdout
-		// c.Stderr = os.Stderr
 		c.Stdout = &cBuffer
 		c.Stderr = &cBuffer
 		err := c.Run()
 		if err != nil {
-			fmt.Println(cBuffer.String())
-			log.Log.Errorf("Error starting ffmpeg")
-			log.Log.Debugf("Output: %s", cBuffer.String())
+			log.Log.Errorf("Error starting ffmpeg with second " + sec)
 			continue
 		}
 		log.Log.Debugf("Thumbnail finally generated with second " + sec)
 		imgb, err := os.Open(logpath + "/" + chksum + "-001.jpg")
 		if err != nil {
 			log.Log.Errorf("Error opening ffmpeg image")
-			log.Log.Debugf("Output: %s", cBuffer.String())
 			continue
 		}
 		img, _ := jpeg.Decode(imgb)
@@ -248,21 +255,23 @@ func storeThumb(chksum string, pic *store.Pictures) error {
 		offset := image.Pt(1, 1)
 		b := img.Bounds()
 		m := image.NewRGBA(b)
-		draw.Draw(m, b, img, image.ZP, draw.Src)
-		draw.Draw(m, watermark.Bounds().Add(offset), watermark, image.ZP, draw.Over)
+		draw.Draw(m, b, img, image.Point{}, draw.Src)
+		draw.Draw(m, watermark.Bounds().Add(offset), watermark, image.Point{}, draw.Over)
 
 		var buffer bytes.Buffer
-		err = jpeg.Encode(&buffer, m, &jpeg.Options{jpeg.DefaultQuality})
+		err = jpeg.Encode(&buffer, m, &jpeg.Options{Quality: jpeg.DefaultQuality})
 		if err != nil {
 			log.Log.Fatalf("Error encoding with watermark")
 		}
 		pic.Thumbnail = buffer.Bytes()
 		err = os.Remove(logpath + "/" + chksum + "-001.jpg")
-		log.Log.Errorf("Remove state: %v", err)
+		if err != nil {
+			log.Log.Errorf("Remove state: %v", err)
+		}
 		log.Log.Debugf("Thumbnail generated...")
 		return nil
 	}
 	fmt.Println("Error Thumbnail generated...")
-	log.Log.Debugf("Error Thumbnail generated...")
-	return fmt.Errorf("no Thumbnail generated")
+	log.Log.Errorf("Error Thumbnail generated...\nOutput: %s", cBuffer.String())
+	return fmt.Errorf("one second thumbnail not being generated")
 }

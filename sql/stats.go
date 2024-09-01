@@ -21,6 +21,8 @@ package sql
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -131,10 +133,23 @@ var stopSchedule chan bool
 var statLock sync.Mutex
 var wgStat sync.WaitGroup
 
-const maxNrCount = 4
+var maxNrCount = 4
 
 var similarCount = maxNrCount
 var lastChecked uint64
+
+func init() {
+	maxNrCount = 4
+	waitingCountString := os.Getenv("BITGARTEN_WAIT_COUNT")
+	if waitingCountString != "" {
+		v, err := strconv.Atoi(waitingCountString)
+		if err != nil {
+			fmt.Println("Error wrong value in WAIT counter (BITGARTEN_WAIT_COUNT): " + waitingCountString)
+		} else {
+			maxNrCount = v
+		}
+	}
+}
 
 var output = func() {
 	if ps.checked != 0 && ps.checked == lastChecked {
@@ -147,6 +162,7 @@ var output = func() {
 		}
 		similarCount--
 		if similarCount < 0 {
+			fmt.Println("similarity count triggered, not processing images!!!")
 			log.Log.Fatal("similarity count triggered, not processing images!!!")
 		}
 	} else {
@@ -216,13 +232,13 @@ func schedule(what func(), delay time.Duration) {
 	ps.start = time.Now()
 	go func() {
 		for {
-			what()
 			select {
 			case <-time.After(delay):
 			case <-stopSchedule:
 				wgStat.Done()
 				return
 			}
+			what()
 		}
 	}()
 

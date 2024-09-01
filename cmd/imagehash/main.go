@@ -43,12 +43,14 @@ func main() {
 	limit := 10
 	preFilter := ""
 	deleted := false
+	all := false
 	hashType := tools.Hashes[tools.DefaultHash]
 	jsonResult := false
 
 	flag.IntVar(&limit, "l", 50, "Maximum number of records loaded")
 	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
 	flag.BoolVar(&deleted, "D", false, "Scan deleted pictures as well")
+	flag.BoolVar(&all, "A", false, "Scan all pictures (no limit to one week)")
 	flag.BoolVar(&jsonResult, "j", false, "return output in JSON format")
 	flag.StringVar(&hashType, "h", tools.Hashes[tools.DefaultHash], "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
 	flag.Usage = func() {
@@ -81,7 +83,7 @@ func main() {
 	}
 
 	err := tools.ImageHash(&tools.ImageHashParameter{Limit: limit, HashType: hashType,
-		Deleted: deleted, PreFilter: preFilter})
+		Deleted: deleted, All: all, PreFilter: preFilter})
 	if err != nil {
 		fmt.Printf("Error generating image hash: %v\n", err)
 	}

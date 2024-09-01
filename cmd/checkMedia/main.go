@@ -78,13 +78,13 @@ func main() {
 		return
 	}
 	counter := uint64(0)
-	err = connSource.CheckMedia(uint32(limit), func(search *common.Query, result *common.Result) error {
+	err = connSource.ReadMedia(uint32(limit), func(search *common.Query, result *common.Result) error {
 		p := &sql.Picture{}
 		pic := result.Data.(*sql.Picture)
 		*p = *pic
 		counter++
 		log.Log.Debugf("Received record %s %s", pic.ChecksumPicture, pic.Sha256checksum)
-		tools.CheckPicture(p)
+		tools.CheckMedia(p)
 		if counter%1000 == 0 {
 			fmt.Printf("Mediacheck working, checked %10d entries\n", counter)
 		}

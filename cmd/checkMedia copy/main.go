@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
@@ -26,42 +26,34 @@ import (
 	"runtime"
 	"runtime/pprof"
 
+	"github.com/tknie/bitgarten-tools/sql"
 	"github.com/tknie/bitgarten-tools/tools"
+
+	"github.com/tknie/flynn/common"
+	"github.com/tknie/log"
 )
 
-const description = `This tool creates HEIC scaled and creates
-the HEIC thumbnail.
+const description = `This tool checks checksum of all picture entries and compares 
+it with the database checksumpicture data content.
+
 `
 
 func main() {
-
-	tools.InitLogLevelWithFile("heicthumb.log")
+	var limit int
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
-	var chksum string
-	var storeData bool
-	var title string
-	var fromDate string
-	var toDate string
-	var createThumbnail bool
-	var album string
-	var scale bool
-	var scaleRange int
 
-	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
-	flag.StringVar(&title, "t", "", "Search for picture title")
-	flag.StringVar(&album, "a", "", "Search for album title")
-	flag.StringVar(&fromDate, "F", "", "Search for picture created from this date (format 2001-12-30)")
-	flag.StringVar(&toDate, "T", "", "Search for picture created before this date including (format 2001-12-30)")
-	flag.IntVar(&scaleRange, "m", 1280, "Max width or height image size")
-	flag.BoolVar(&storeData, "S", false, "Store data to database")
-	flag.BoolVar(&createThumbnail, "y", false, "Create thumbnails instead of search for similarity")
-	flag.BoolVar(&scale, "s", false, "Scale for album")
+	err := tools.InitLogLevelWithFile("checkMedia.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
 		flag.PrintDefaults()
 	}
+	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -75,18 +67,39 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-
-	p := &tools.HeicThumbParameter{Commit: storeData, ChkSum: chksum,
-		CreateThumbnail: createThumbnail, FromDate: fromDate, ToDate: toDate}
-	if scale {
-		p.Title = album
-		p.ScaleRange = scaleRange
-		p.HeicScale()
-	} else {
-		p.Title = title
-		p.HeicThumb()
+	errCount := uint32(0)
+	tools.InitCheck(func(pic *sql.Picture, status string) {
+		fmt.Println(status)
+		errCount++
+	})
+	connSource, err := sql.DatabaseConnect()
+	if err != nil {
+		fmt.Printf("Error connecting URL: %v", err)
+		return
 	}
-
+	counter := uint64(0)
+	err = connSource.ReadMedia(uint32(limit), func(search *common.Query, result *common.Result) error {
+		p := &sql.Picture{}
+		pic := result.Data.(*sql.Picture)
+		*p = *pic
+		counter++
+		log.Log.Debugf("Received record %s %s", pic.ChecksumPicture, pic.Sha256checksum)
+		tools.CheckPicture(p)
+		if counter%1000 == 0 {
+			fmt.Printf("Mediacheck working, checked %10d entries\n", counter)
+		}
+		// fmt.Println(pic.ChecksumPicture)
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Got return check media", err)
+	}
+	tools.CheckMediaWait()
+	if errCount > 0 {
+		fmt.Printf("Working ended with errors/warnings, checked %d\n", counter)
+	} else {
+		fmt.Printf("Working ended successfully, checked %d\n", counter)
+	}
 }
 
 func writeMemProfile(file string) {

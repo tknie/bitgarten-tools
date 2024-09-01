@@ -45,8 +45,8 @@ var Hashes = []string{"averageHash", "perceptHash", "diffHash", "waveletHash"}
 const searchHash = `{{if not .Deleted -}} markdelete = false AND {{end}}
 mimetype LIKE 'image/%' {{.Filter}}
 AND NOT EXISTS(SELECT 1 FROM picturehash ph 
-	WHERE ph.checksumpicture = tn.checksumpicture and 
-		ph.updated_at < current_date + interval '1 week')`
+	WHERE ph.checksumpicture = tn.checksumpicture 
+	{{if not .All -}}AND ph.updated_at < current_date + interval '1 week'{{end}})`
 
 type hashData struct {
 	Checksumpicture string
@@ -61,6 +61,7 @@ type ImageHashParameter struct {
 	Limit     int
 	PreFilter string
 	Deleted   bool
+	All       bool
 	HashType  string
 }
 
@@ -89,8 +90,9 @@ func ImageHash(parameter *ImageHashParameter) error {
 	var sqlCmd bytes.Buffer
 	t1.Execute(&sqlCmd, struct {
 		Deleted bool
+		All     bool
 		Filter  string
-	}{parameter.Deleted, parameter.PreFilter})
+	}{parameter.Deleted, parameter.All, parameter.PreFilter})
 
 	id, err := sql.DatabaseHandler()
 	if err != nil {

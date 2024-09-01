@@ -1,6 +1,8 @@
 module github.com/tknie/bitgarten-tools
 
-go 1.21.5
+go 1.22.4
+
+toolchain go1.23.0
 
 require (
 	github.com/disintegration/imaging v1.6.2
@@ -23,6 +25,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/planetscale/vtprotobuf v0.6.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	golang.org/x/image v0.19.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
@@ -36,16 +39,16 @@ require (
 	github.com/go-faster/jx v1.1.0
 	github.com/google/uuid v1.6.0
 	github.com/ogen-go/ogen v1.3.0
-	go.opentelemetry.io/otel v1.28.0
-	go.opentelemetry.io/otel/metric v1.28.0
-	go.opentelemetry.io/otel/trace v1.28.0
+	go.opentelemetry.io/otel v1.29.0
+	go.opentelemetry.io/otel/metric v1.29.0
+	go.opentelemetry.io/otel/trace v1.29.0
 )
 
 require (
 	github.com/corona10/goimagehash v1.1.0
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/godror/godror v0.44.2 // indirect
-	github.com/godror/knownpb v0.1.2 // indirect
+	github.com/godror/knownpb v0.2.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
@@ -54,7 +57,7 @@ require (
 	github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.26.0 // indirect
-	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
+	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect

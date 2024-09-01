@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"text/template"
@@ -73,13 +74,17 @@ from pictures p where markdelete = false and EXISTS ( SELECT 1
 `
 
 const readHEIC = `
-SELECT checksumpicture, title from pictures where markdelete = false AND LOWER(mimetype) = 'image/heic'
+SELECT checksumpicture, title from pictures where markdelete = false 
+  AND (LOWER(mimetype) = 'image/heic' OR LOWER(mimetype) like 'video/%')
+  AND not title like 'IMG_%'
+  {{if ne .Title "" -}} AND title like '{{.Title}}.%' {{end}}
   {{if gt .Limit 0 -}} LIMIT {{.Limit}} {{end}}
 `
 
 type HashCleanParameter struct {
 	Limit    int
 	MinCount int
+	Title    string
 	Commit   bool
 }
 
@@ -421,7 +426,8 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	sqlCmd, err := templateSql(readHEIC, struct {
 		Limit int
 		Count int
-	}{parameter.Limit, parameter.MinCount})
+		Title string
+	}{parameter.Limit, parameter.MinCount, parameter.Title})
 	if err != nil {
 		return err
 	}
@@ -436,10 +442,13 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	foundList := make([]*heicCheck, 0)
 	err = id.BatchSelectFct(query, func(search *common.Query, result *common.Result) error {
 		pic := result.Data.(*sql.Picture)
-		log.Log.Debugf("HEIC found: %s", pic.Title)
+		log.Log.Debugf("HEIC found: %s -> %s", pic.Title, pic.ChecksumPicture)
 		if !strings.HasPrefix(pic.Title, "IMG_") {
 			title := strings.TrimSuffix(filepath.Base(pic.Title), filepath.Ext(pic.Title))
-			foundList = append(foundList, &heicCheck{title: title, checksumpicture: pic.ChecksumPicture})
+			log.Log.Debugf("add found list: <%s>", title)
+			if strings.Trim(title, " ") != "" {
+				foundList = append(foundList, &heicCheck{title: title, checksumpicture: pic.ChecksumPicture})
+			}
 		}
 		counter++
 		return nil
@@ -458,14 +467,15 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 			} else {
 				lastFound = i - 1
 			}
-			fmt.Println(foundList[i-1].title, foundList[i-1].checksumpicture)
+			fmt.Println("Check tags", foundList[i-1].title, foundList[i-1].checksumpicture)
 			tags, err := searchTags(l.checksumpicture)
 			if err != nil {
 				fmt.Println("Error reading tags:", err)
 				return err
 			}
-			fmt.Println(l.title, l.checksumpicture, "child", tags)
+			fmt.Println("Found tags", l.title, l.checksumpicture, "child", tags)
 			if tags == 0 && parameter.Commit {
+				fmt.Println("Mark deleted:", l.title)
 				ra, err := markPictureDelete(id, l.checksumpicture)
 				if err != nil || ra != 1 {
 					fmt.Println(ra, " pictures marked deleted: %v", err)
@@ -477,12 +487,15 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 			lastFound = -1
 		}
 		countTitle := checkMorePicture(id, l.title)
-		if countTitle != 1 {
-			fmt.Println(l.title, "->", countTitle)
+		log.Log.Infof("Check more pictures for %s -> %s count=%d",
+			l.title, l.checksumpicture, countTitle)
+		if countTitle > 0 {
+			fmt.Println("More available, reducing:", l.title, "->", countTitle)
 			reducePictures(id, l.title)
 		}
 	}
 	if parameter.Commit {
+		fmt.Println("Do final commit...")
 		err = id.Commit()
 		if err != nil {
 			fmt.Println("Error commiting to database:", err)
@@ -519,24 +532,31 @@ func reducePictures(id common.RegDbID, title string) error {
 			fmt.Println("Error counting tags:", err)
 			return err
 		}
-		fmt.Println(c.title, c.checksumpicture, t)
+		log.Log.Debugf("check %s <%s> tags=%d", c.title, c.checksumpicture, t)
 		if t == 0 {
 			ra, err := markPictureDelete(id, c.checksumpicture)
 			if err != nil || ra != 1 {
 				fmt.Println(ra, " pictures marked deleted: %v", err)
 				return err
 			}
+		} else {
+			fmt.Println(c.title + " is tagged")
 		}
 	}
 	return nil
 }
 
 func checkMorePicture(id common.RegDbID, title string) int64 {
+	log.Log.Debugf("Search for title <%s>", strings.Trim(title, " "))
+	if strings.Trim(title, " ") == "" {
+		debug.PrintStack()
+		log.Log.Fatal("Title checked is empty")
+	}
 	query := &common.Query{
 		TableName: "pictures",
 		Fields:    []string{"COUNT(*)"},
 		Limit:     0,
-		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND title like '" + title + "%'",
+		Search:    "markdelete=false AND title ~ '" + title + "[^.].*'",
 	}
 	l := int64(0)
 	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {

@@ -301,7 +301,7 @@ func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
 		query := &common.Query{Fields: []string{"id"}, TableName: "Albums",
 			Search: "title = '" + DefaultAlbum + "'"}
 		_, err := di.id.Query(query, func(search *common.Query, result *common.Result) error {
-			fmt.Println(result.Rows)
+			// fmt.Println(result.Rows)
 			newID = int(result.Rows[0].(int32))
 			return nil
 		})
@@ -311,7 +311,7 @@ func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
 		}
 		return -1, err
 	}
-	fmt.Println(r[0][0])
+	// fmt.Println(r[0][0])
 	newID, _ = strconv.Atoi(r[0][0].(string))
 	fmt.Println("Album created", newID)
 	log.Log.Debugf("Album created: %d", newID)
@@ -473,7 +473,7 @@ func InsertWorker(nrThreadStorer int) {
 }
 
 func insertWorkerThread(currentIndex int) {
-	fmt.Println("Start inser-worker-thread:", currentIndex)
+	log.Log.Debugf("Start inser-worker-thread:", currentIndex)
 	di, err := CreateConnection()
 	if err != nil {
 		fmt.Println("Connection error:", err)

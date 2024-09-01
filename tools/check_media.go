@@ -39,7 +39,7 @@ func InitCheck(outFct func(pic *sql.Picture, output string)) {
 	}
 }
 
-func CheckPicture(pic *sql.Picture) {
+func CheckMedia(pic *sql.Picture) {
 	wgCheck.Add(1)
 	checkPictureChannel <- pic
 }
