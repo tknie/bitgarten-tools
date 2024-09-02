@@ -32,6 +32,8 @@ import (
 
 type scanStat struct {
 	directory   string
+	start       time.Time
+	end         time.Time
 	noAvailable uint64
 	available   uint64
 	countAll    uint64
@@ -78,8 +80,9 @@ func AnalyzeDirectories(directories []string) {
 		log.Log.Fatalf("Database connection not established: %v", err)
 	}
 	defer checker.Close()
+	scans := make([]*scanStat, 0)
 	for _, pictureDirectory := range directories {
-		scan := &scanStat{directory: pictureDirectory}
+		scan := &scanStat{directory: pictureDirectory, start: time.Now()}
 		schedule(analyzeOutput, scan, 30*time.Second)
 		currentDirectory = pictureDirectory
 		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
@@ -107,9 +110,15 @@ func AnalyzeDirectories(directories []string) {
 		}
 		stopSchedule <- true
 		<-syncSchedule
+		scan.end = time.Now()
 		fmt.Printf("Finished Analyze files ended at %v\n", time.Now().Format(timeFormat))
+		scans = append(scans, scan)
 	}
-
+	fmt.Printf("\nSummary:\n")
+	for _, s := range scans {
+		analyzeOutput(s.start, s)
+		fmt.Printf("Finished Analyze files ended at %v\n", s.end.Format(timeFormat))
+	}
 }
 
 func loadFile(db *sql.DatabaseInfo, scan *scanStat, fileName string) error {

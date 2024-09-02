@@ -25,7 +25,6 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"strings"
 
 	"github.com/tknie/bitgarten-tools/sql"
 	"github.com/tknie/bitgarten-tools/tools"
@@ -79,7 +78,6 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	directories := flag.Args()
 	sz, err := units.FromHumanSize(binarySize)
 	if err != nil {
 		fmt.Printf("Picture size option is not valid: %s\n", binarySize)
@@ -87,19 +85,17 @@ func main() {
 		return
 	}
 
+	directories := flag.Args()
 	if len(directories) == 0 {
-		e := os.Getenv("BITGARTEN_DIRECTORIES")
-		if e != "" {
-			directories = strings.Split(e, ",")
+		directories, err = tools.EvaluatePictureDirectories()
+		if err != nil {
+			fmt.Println("Picture directory option is required")
+			flag.Usage()
+			return
 		}
 	}
 
-	if len(directories) == 0 && fileName == "" {
-		fmt.Println("Picture directory option is required")
-		flag.Usage()
-		return
-	}
-	fmt.Println("Directories:", directories)
+	fmt.Println("Scan Directories:", directories)
 	tools.PicLoad(&tools.PicLoadParameter{NrThreadReader: nrThreadReader,
 		NrThreadStorer: nrThreadStorer, MaxBlobSize: sz, Filter: filter,
 		AlbumId: albumid, InsertAlbum: insertAlbum,

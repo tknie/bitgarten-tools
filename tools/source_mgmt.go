@@ -30,7 +30,7 @@ import (
 )
 
 type scan struct {
-	Directories []string `yaml: "directories"`
+	Directories []string `yaml:"directories"`
 }
 
 // ReadConfig read config file
