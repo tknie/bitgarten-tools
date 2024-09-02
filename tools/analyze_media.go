@@ -30,18 +30,21 @@ import (
 	"github.com/tknie/log"
 )
 
-var noAvailable = uint64(0)
-var available = uint64(0)
-var countAll = uint64(0)
-var countErrors = uint64(0)
-var countEmpty = uint64(0)
+type scanStat struct {
+	directory   string
+	noAvailable uint64
+	available   uint64
+	countAll    uint64
+	countErrors uint64
+	countEmpty  uint64
+}
 
 var stopSchedule chan bool
 var syncSchedule chan bool
 
 var currentDirectory = "<not defined>"
 
-func schedule(what func(start time.Time), delay time.Duration) {
+func schedule(what func(start time.Time, parameter interface{}), parameter interface{}, delay time.Duration) {
 	stopSchedule = make(chan bool)
 	syncSchedule = make(chan bool)
 	startTime := time.Now()
@@ -50,32 +53,34 @@ func schedule(what func(start time.Time), delay time.Duration) {
 			select {
 			case <-time.After(delay):
 			case <-stopSchedule:
-				what(startTime)
+				what(startTime, parameter)
 				syncSchedule <- true
 				return
 			}
-			what(startTime)
+			what(startTime, parameter)
 		}
 	}()
 
 }
 
-func analyzeOutput(s time.Time) {
+func analyzeOutput(s time.Time, parameter interface{}) {
+	scan := parameter.(*scanStat)
 	fmt.Printf("Analyze files in %s started at %v started at %v\n", currentDirectory,
 		time.Now().Format(timeFormat), s.Format(timeFormat))
-	fmt.Printf("%-22s: %5d / %5d\n", "New pictures", noAvailable, countAll)
-	fmt.Printf("%-22s: %5d / %5d\n", "Pictures registered", available, countAll)
-	fmt.Printf("%-22s: %5d / %5d\n\n", "Pictures errors/empty", countErrors, countEmpty)
+	fmt.Printf("%-22s: %5d / %5d\n", "New pictures", scan.noAvailable, scan.countAll)
+	fmt.Printf("%-22s: %5d / %5d\n", "Pictures registered", scan.available, scan.countAll)
+	fmt.Printf("%-22s: %5d / %5d\n\n", "Pictures errors/empty", scan.countErrors, scan.countEmpty)
 }
 
 func AnalyzeDirectories(directories []string) {
-	schedule(analyzeOutput, 30*time.Second)
 	checker, err := sql.CreateConnection()
 	if err != nil {
 		log.Log.Fatalf("Database connection not established: %v", err)
 	}
 	defer checker.Close()
 	for _, pictureDirectory := range directories {
+		scan := &scanStat{directory: pictureDirectory}
+		schedule(analyzeOutput, scan, 30*time.Second)
 		currentDirectory = pictureDirectory
 		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
@@ -90,7 +95,7 @@ func AnalyzeDirectories(directories []string) {
 			}
 			switch suffix {
 			case "jpg", "jpeg", "tif", "png", "heic", "gif", "m4v", "mov", "avi", "mp4", "webm":
-				loadFile(checker, path)
+				loadFile(checker, scan, path)
 			default:
 			}
 
@@ -100,29 +105,30 @@ func AnalyzeDirectories(directories []string) {
 			fmt.Println("Error working in directories:", err)
 			return
 		}
+		stopSchedule <- true
+		<-syncSchedule
+		fmt.Printf("Finished Analyze files ended at %v\n", time.Now().Format(timeFormat))
 	}
-	stopSchedule <- true
-	<-syncSchedule
-	fmt.Printf("Finished Analyze files ended at %v\n", time.Now().Format(timeFormat))
+
 }
 
-func loadFile(db *sql.DatabaseInfo, fileName string) error {
-	countAll++
+func loadFile(db *sql.DatabaseInfo, scan *scanStat, fileName string) error {
+	scan.countAll++
 	pic := &store.Pictures{}
 	f, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println("Open file error", fileName, ":", err)
-		countErrors++
+		scan.countErrors++
 		return err
 	}
 	defer f.Close()
 	fi, err := f.Stat()
 	if err != nil {
-		countErrors++
+		scan.countErrors++
 		return err
 	}
 	if fi.Size() == 0 {
-		countEmpty++
+		scan.countEmpty++
 		return fmt.Errorf("file empty %s", fileName)
 	}
 	pic.Media = make([]byte, fi.Size())
@@ -130,7 +136,7 @@ func loadFile(db *sql.DatabaseInfo, fileName string) error {
 	n, err = f.Read(pic.Media)
 	log.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Media), err)
 	if err != nil {
-		countErrors++
+		scan.countErrors++
 		return err
 	}
 	pic.ChecksumPicture = store.CreateMd5(pic.Media)
@@ -138,9 +144,9 @@ func loadFile(db *sql.DatabaseInfo, fileName string) error {
 
 	db.CheckExists(pic)
 	if pic.Available == store.NoAvailable {
-		noAvailable++
+		scan.noAvailable++
 		return nil
 	}
-	available++
+	scan.available++
 	return nil
 }

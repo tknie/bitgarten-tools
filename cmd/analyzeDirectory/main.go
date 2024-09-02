@@ -25,7 +25,6 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
-	"strings"
 
 	"github.com/tknie/bitgarten-tools/tools"
 )
@@ -67,21 +66,16 @@ func main() {
 
 	directories := flag.Args()
 	if len(directories) == 0 {
-		e := os.Getenv("BITGARTEN_DIRECTORIES")
-		if e != "" {
-			directories = strings.Split(e, ",")
+		directories, err = tools.EvaluatePictureDirectories()
+		if err != nil {
+			fmt.Println("Picture directory option is required")
+			flag.Usage()
+			return
 		}
 	}
 
-	if len(directories) == 0 {
-		fmt.Println("Picture directory option is required")
-		flag.Usage()
-		return
-	}
-	fmt.Println("Directories:", directories)
-
+	fmt.Println("Analyze directories:", directories)
 	tools.AnalyzeDirectories(directories)
-
 }
 
 func writeMemProfile(file string) {
