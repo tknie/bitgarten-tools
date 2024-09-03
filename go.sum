@@ -46,8 +46,6 @@ github.com/go-sql-driver/mysql v1.8.1/go.mod h1:wEBSXgmK//2ZFJyE+qWnIsVGmvmEKlqw
 github.com/gobwas/httphead v0.1.0/go.mod h1:O/RXo79gxV8G+RqlR/otEwx4Q36zl9rqC5u12GKvMCM=
 github.com/gobwas/pool v0.2.1/go.mod h1:q8bcK0KcYlCgd9e7WYLm9LpyS+YeLd8JVDW6WezmKEw=
 github.com/gobwas/ws v1.2.1/go.mod h1:hRKAFb8wOxFROYNsT1bqfWnhX+b5MFeJM9r2ZSwg/KY=
-github.com/godror/godror v0.44.2 h1:uacQ3BFwbqPisMNBcltqysXSbg6ZUGWkz15lcUBOahE=
-github.com/godror/godror v0.44.2/go.mod h1:nlshc6+MRQqNP5tp9l5du20PXR62qo4SRO1cBYyedTM=
 github.com/godror/godror v0.44.6 h1:3Aw45jpKkPsss80DVy4/XiqXUPCsHmW0efSHBQFi0h4=
 github.com/godror/godror v0.44.6/go.mod h1:KJwMtQpK9o3WdEiNw7qvgSk827YDLj9MV/bXSzvUzlo=
 github.com/godror/knownpb v0.2.0 h1:RJLntksFiKUHoUz3wCCJ8+DBjxSLYHYDNl1xRz0/gXI=
