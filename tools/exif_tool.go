@@ -20,6 +20,7 @@ package tools
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/tknie/bitgarten-tools/sql"
@@ -54,7 +55,7 @@ func ExifTool(parameter *ExifToolParameter) {
 		TableName:  "pictures",
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
-		Limit:      uint32(parameter.Limit),
+		Limit:      strconv.Itoa(parameter.Limit),
 		Search:     "mimetype LIKE 'image/%' AND GPScoordinates IS NULL" + parameter.PreFilter,
 	}
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {

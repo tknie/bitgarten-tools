@@ -27,6 +27,7 @@ import (
 	"image/png"
 	"io"
 	"slices"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -103,7 +104,7 @@ func ImageHash(parameter *ImageHashParameter) error {
 		TableName:  "pictures",
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
-		Limit:      uint32(parameter.Limit),
+		Limit:      strconv.Itoa(parameter.Limit),
 		Search:     sqlCmd.String(),
 	}
 	counter := uint64(0)

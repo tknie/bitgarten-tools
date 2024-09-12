@@ -25,6 +25,7 @@ import (
 	"image"
 	"image/jpeg"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -319,7 +320,7 @@ func (di *DatabaseInfo) ReadMedia(limit uint32, f common.ResultFunction) error {
 	defer id.FreeHandler()
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &Picture{},
-		Limit:      limit,
+		Limit:      strconv.Itoa(int(limit)),
 		Fields:     []string{"ChecksumPicture", "Sha256checksum", "Media"},
 	}
 

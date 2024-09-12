@@ -264,60 +264,62 @@ func (parameter *HeicThumbParameter) HeicScale() {
 	}
 	for _, albumPicture := range a.Pictures {
 		fmt.Println("Scale", albumPicture.Name+" "+albumPicture.Description+" "+albumPicture.ChecksumPicture)
-		pic, err := connSource.ReadPicture(albumPicture.ChecksumPicture)
-		if err != nil {
-			fmt.Println("Error reading picture")
-			id.Rollback()
-			return
-		}
-		err = pic.Resize(1280)
-		if err != nil {
-			fmt.Println("Resize of picture fails:", err)
-			id.Rollback()
-			return
-		}
-		log.Log.Debugf("Resize picture %s->%s to %d,%d", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
-		fmt.Printf("Resize picture %s->%s to %d,%d\n", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
-		if parameter.Commit {
-			// Store picture
-			connSource.WritePictureTransaction(id, pic)
-
-			albumPicture.ChecksumPicture = pic.ChecksumPicture
-			albumPicture.Width = pic.Width
-			albumPicture.Height = pic.Height
-			// Store AlbumPicture
-			list := [][]any{{albumPicture}}
-			input := &common.Entries{
-				Fields: []string{
-					"checksumpicture", "width", "height",
-				},
-				DataStruct: albumPicture,
-				Update: []string{fmt.Sprintf("index = %d AND albumid = %d",
-					albumPicture.Index, albumPicture.AlbumId)},
-				Criteria: fmt.Sprintf("index = %d and albumid = %d",
-					albumPicture.Index, albumPicture.AlbumId),
-				Values: list}
-			_, _, err = id.Update("AlbumPictures", input)
+		if !strings.HasSuffix(albumPicture.Name, ".mp4") {
+			pic, err := connSource.ReadPicture(albumPicture.ChecksumPicture)
 			if err != nil {
-				fmt.Println("Error inserting:", err)
+				fmt.Println("Error reading picture")
 				id.Rollback()
 				return
 			}
-			list = [][]any{{
-				pic.ChecksumPicture,
-				"bitgarten",
-			}}
-			input = &common.Entries{
-				Fields: []string{
-					"checksumpicture",
-					"tagname",
-				},
-				Values: list}
-			_, err = id.Insert("picturetags", input)
+			err = pic.Resize(1280)
 			if err != nil {
-				fmt.Println("Error inserting:", err)
+				fmt.Println("Resize of picture fails:", err)
 				id.Rollback()
 				return
+			}
+			log.Log.Debugf("Resize picture %s->%s to %d,%d", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
+			fmt.Printf("Resize picture %s->%s to %d,%d\n", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
+			if parameter.Commit {
+				// Store picture
+				connSource.WritePictureTransaction(id, pic)
+
+				albumPicture.ChecksumPicture = pic.ChecksumPicture
+				albumPicture.Width = pic.Width
+				albumPicture.Height = pic.Height
+				// Store AlbumPicture
+				list := [][]any{{albumPicture}}
+				input := &common.Entries{
+					Fields: []string{
+						"checksumpicture", "width", "height",
+					},
+					DataStruct: albumPicture,
+					Update: []string{fmt.Sprintf("index = %d AND albumid = %d",
+						albumPicture.Index, albumPicture.AlbumId)},
+					Criteria: fmt.Sprintf("index = %d and albumid = %d",
+						albumPicture.Index, albumPicture.AlbumId),
+					Values: list}
+				_, _, err = id.Update("AlbumPictures", input)
+				if err != nil {
+					fmt.Println("Error inserting:", err)
+					id.Rollback()
+					return
+				}
+				list = [][]any{{
+					pic.ChecksumPicture,
+					"bitgarten",
+				}}
+				input = &common.Entries{
+					Fields: []string{
+						"checksumpicture",
+						"tagname",
+					},
+					Values: list}
+				_, err = id.Insert("picturetags", input)
+				if err != nil {
+					fmt.Println("Error inserting:", err)
+					id.Rollback()
+					return
+				}
 			}
 		}
 	}

@@ -635,7 +635,7 @@ func insertPictureData(ti *timeInfo, pic *store.Pictures) error {
 	}
 	media := pic.Media
 	picopt := "sqlstore"
-	log.Log.Debugf("Store picture....%s", pic.ChecksumPicture)
+	log.Log.Debugf("Store picture....%s (%d>%d)", pic.ChecksumPicture, len(pic.Media), int(MaxBlobSize))
 	if len(pic.Media) > int(MaxBlobSize) {
 		log.Log.Debugf("Big BLOBs size stored in REST....%s", pic.ChecksumPicture)
 		picopt = "webstore"

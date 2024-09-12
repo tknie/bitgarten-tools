@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -134,7 +135,7 @@ func (parameter *HashCleanParameter) queryHash() ([]string, error) {
 		TableName: "picturehash",
 		//Fields:     []string{"count(perceptionhash) as count", "perceptionhash"},
 		DataStruct: &PictureHashCount{},
-		Limit:      uint32(parameter.Limit),
+		Limit:      strconv.Itoa(parameter.Limit),
 		Search:     sql,
 	}
 	counter := uint64(0)
@@ -435,7 +436,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 		TableName:  "pictures",
 		Fields:     []string{"checksumpicture", "title"},
 		DataStruct: &sql.Picture{},
-		Limit:      uint32(parameter.Limit),
+		Limit:      strconv.Itoa(parameter.Limit),
 		Search:     sqlCmd,
 	}
 	counter := uint64(0)
@@ -511,7 +512,7 @@ func reducePictures(id common.RegDbID, title string) error {
 	query := &common.Query{
 		TableName: "pictures",
 		Fields:    []string{"title", "checksumpicture"},
-		Limit:     0,
+		Limit:     "ALL",
 		Search:    "markdelete=false AND LOWER(mimetype) LIKE 'image/%' AND title like '" + title + "%'",
 	}
 	_, err := id.Query(query, func(search *common.Query, result *common.Result) error {
@@ -555,7 +556,7 @@ func checkMorePicture(id common.RegDbID, title string) int64 {
 	query := &common.Query{
 		TableName: "pictures",
 		Fields:    []string{"COUNT(*)"},
-		Limit:     0,
+		Limit:     "ALL",
 		Search:    "markdelete=false AND title ~ '" + title + "[^.].*'",
 	}
 	l := int64(0)
@@ -582,7 +583,7 @@ func searchTags(checksumpicture string) (int64, error) {
 	query := &common.Query{
 		TableName: "picturetags",
 		Fields:    []string{"COUNT(*)"},
-		Limit:     0,
+		Limit:     "ALL",
 		Search:    "checksumpicture = '" + checksumpicture + "'",
 	}
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {

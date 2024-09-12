@@ -22,6 +22,7 @@ package sql
 import (
 	"fmt"
 
+	"github.com/docker/go-units"
 	"github.com/tknie/bitgarten-tools/store"
 
 	"github.com/tknie/log"
@@ -55,7 +56,11 @@ const query = `with p(checksumpicture,sha256checksum,picopt,medialen) as (
 		p
 	`
 
-var MaxBlobSize = int64(30000000)
+var MaxBlobSize int64
+
+func init() {
+	MaxBlobSize, _ = units.FromHumanSize("1GB")
+}
 
 func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 	pic.Available = store.NoAvailable
