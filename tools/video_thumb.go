@@ -94,7 +94,7 @@ func VideoThumb(parameter *VideoThumbParameter) {
 			return
 		}
 	} else {
-		prefix := "MIMEType LIKE 'video%' AND thumbnail is NULL AND markdelete = false AND picopt='sqlstore'"
+		prefix := "lower(MIMEType) LIKE 'video%' AND thumbnail is NULL AND markdelete = false AND picopt='sqlstore'"
 		if parameter.ChkSum != "" {
 			cprefix := fmt.Sprintf("checksumpicture = '%s' AND ", parameter.ChkSum)
 			prefix = cprefix + prefix

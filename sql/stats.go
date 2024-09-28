@@ -77,13 +77,14 @@ type workerState byte
 const (
 	InitStoreWorker workerState = iota
 	LoadingStoreWorker
+	InsertingStoreWorker
 	WaitingStoreWorker
 	DoneStoreWorker
 	StopStoreWorker
 	Done2StoreWorker
 )
 
-var workerStates = []string{"init", "loading", "waiting", "done", "stop", "done2"}
+var workerStates = []string{"init", "loading", "inserting", "waiting", "done", "stop", "done2"}
 
 func (ws workerState) String() string {
 	return workerStates[ws]

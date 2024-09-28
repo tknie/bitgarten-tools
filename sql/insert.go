@@ -489,7 +489,7 @@ func insertWorkerThread(currentIndex int) {
 		select {
 		case pic := <-picChannel:
 			log.Log.Debugf("Inserting pic in worker %d", workerNr)
-			SetStateWithFile(currentIndex, LoadingStoreWorker, pic.Title)
+			SetStateWithFile(currentIndex, InsertingStoreWorker, pic.Title)
 			err = di.InsertPictures(pic)
 			if err != nil {
 				fmt.Printf("worker (%d) error inserting picture: %v\n", workerNr, err)

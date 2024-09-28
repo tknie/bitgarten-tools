@@ -39,7 +39,7 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
-		fmt.Println("Set POSTGRES_SOURCE_URL and/or POSTGRES_SOURCE_PASSWORD to define remote database")
+		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
 		return
 	}
 	destUrl := os.Getenv("POSTGRES_DESTINATION_URL")
