@@ -461,22 +461,26 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	sort.Slice(foundList, func(i, j int) bool { return foundList[i].title < foundList[j].title })
 	lastFound := -1
 	childs := 0
+	fmt.Printf("Working found list of %4d\n", len(foundList))
 	for i, l := range foundList {
+		if i%1000 == 0 {
+			fmt.Printf("Work through %06d/%06d\n", i, len(foundList))
+		}
 		if i > 0 && strings.HasPrefix(l.title, foundList[i-1].title) {
 			if lastFound != -1 {
-				fmt.Println(foundList[lastFound].title)
+				// fmt.Println(foundList[lastFound].title)
 			} else {
 				lastFound = i - 1
 			}
-			fmt.Println("Check tags", foundList[i-1].title, foundList[i-1].checksumpicture)
+			log.Log.Debugf("Check tags %s ck %s", foundList[i-1].title, foundList[i-1].checksumpicture)
 			tags, err := searchTags(l.checksumpicture)
 			if err != nil {
 				fmt.Println("Error reading tags:", err)
 				return err
 			}
-			fmt.Println("Found tags", l.title, l.checksumpicture, "child", tags)
+			log.Log.Debugf("Found tags %s %s child %d", l.title, l.checksumpicture, tags)
 			if tags == 0 && parameter.Commit {
-				fmt.Println("Mark deleted:", l.title)
+				fmt.Printf("Mark deleted: %s sub of %s\n", l.title, foundList[i-1].title)
 				ra, err := markPictureDelete(id, l.checksumpicture)
 				if err != nil || ra != 1 {
 					fmt.Println(ra, " pictures marked deleted: %v", err)
@@ -491,7 +495,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 		log.Log.Infof("Check more pictures for %s -> %s count=%d",
 			l.title, l.checksumpicture, countTitle)
 		if countTitle > 0 {
-			fmt.Println("More available, reducing:", l.title, "->", countTitle)
+			log.Log.Debugf("More available, reducing: %s -> %d", l.title, countTitle)
 			reducePictures(id, l.title)
 		}
 	}
@@ -535,13 +539,14 @@ func reducePictures(id common.RegDbID, title string) error {
 		}
 		log.Log.Debugf("check %s <%s> tags=%d", c.title, c.checksumpicture, t)
 		if t == 0 {
+			fmt.Printf("Mark deleted: %s\n", c.title)
 			ra, err := markPictureDelete(id, c.checksumpicture)
 			if err != nil || ra != 1 {
 				fmt.Println(ra, " pictures marked deleted: %v", err)
 				return err
 			}
 		} else {
-			fmt.Println(c.title + " is tagged")
+			log.Log.Debugf(c.title + " is tagged")
 		}
 	}
 	return nil

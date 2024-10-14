@@ -560,12 +560,12 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return err
 		}
 	}
-	fmt.Printf("Store file MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
-		pic.ChecksumPictureSHA, pic.PictureName)
 	log.Log.Infof("Store file MD5=%s SHA=%s -> %s (worker %d/%s)", pic.ChecksumPicture,
 		pic.ChecksumPictureSHA, pic.PictureName, di.workerNr, pic.Available)
 	if pic.Available == store.NoAvailable || pic.Available == store.ToBigNoAvailable ||
 		pic.Available == store.ToBigMediaNotFound {
+		fmt.Printf("Store file data MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
+			pic.ChecksumPictureSHA, pic.PictureName)
 		log.Log.Infof("Insert picture data %s", pic.Available)
 		err = insertPictureData(ti, pic)
 		if err != nil {
