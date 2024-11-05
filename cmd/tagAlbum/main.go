@@ -29,6 +29,9 @@ import (
 	"github.com/tknie/bitgarten-tools/tools"
 )
 
+const description = `Tag the album of list.
+`
+
 func main() {
 	tools.InitLogLevelWithFile("tagAlbum.log")
 
@@ -36,6 +39,11 @@ func main() {
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	listSource := false
 	flag.BoolVar(&listSource, "l", false, "List source Albums")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if *cpuprofile != "" {

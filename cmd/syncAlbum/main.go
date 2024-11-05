@@ -29,6 +29,9 @@ import (
 	"github.com/tknie/bitgarten-tools/tools"
 )
 
+const description = `This tool synchronize an album between two bitgarten instances.
+`
+
 func main() {
 	tools.InitLogLevelWithFile("syncAlbum.log")
 	var insertAlbum = false
@@ -42,6 +45,11 @@ func main() {
 	flag.BoolVar(&listSource, "l", false, "List source Albums")
 	flag.BoolVar(&listDest, "L", false, "List destination Albums")
 	flag.StringVar(&title, "a", "", "Search Albums title")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if *cpuprofile != "" {

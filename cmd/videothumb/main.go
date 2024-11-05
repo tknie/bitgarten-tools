@@ -29,6 +29,9 @@ import (
 	"github.com/tknie/bitgarten-tools/tools"
 )
 
+const description = `This tool create thumbnails for videos.
+`
+
 func main() {
 	tools.InitLogLevelWithFile("videothumb.log")
 
@@ -40,6 +43,11 @@ func main() {
 	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
 	flag.StringVar(&title, "a", "", "Search for album title")
 	flag.BoolVar(&commit, "C", false, "Commit updates")
+	flag.Usage = func() {
+		fmt.Print(description)
+		fmt.Println("Default flags:")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if *cpuprofile != "" {

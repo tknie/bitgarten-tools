@@ -25,6 +25,8 @@ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/fatih/color v1.17.0 h1:GlRw1BRJxkpqUCBKzKOw098ed57fEsKeNjpTe3cSjK4=
 github.com/fatih/color v1.17.0/go.mod h1:YZ7TlrGPkiz6ku9fK3TLD/pl3CpsiFyu8N92HLgmosI=
+github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
+github.com/fatih/color v1.18.0/go.mod h1:4FelSpRwEGDpQ12mAdzqdOukCy4u8WUtOY6lkT/6HfU=
 github.com/felixge/fgprof v0.9.3/go.mod h1:RdbpDgzqYVh/T9fPELJyV7EYJuHB55UTEULNun8eiPw=
 github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
@@ -88,6 +90,10 @@ github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/ogen-go/ogen v1.4.1 h1:uVZWKw80eZaMQu7LpTJxpHqwu6oMqYuh8ElqP1Mf2bI=
 github.com/ogen-go/ogen v1.4.1/go.mod h1:YeliH7gAS6QToqDqIM5BrnEUOiXiqCnNqNwzEpebDsY=
+github.com/ogen-go/ogen v1.5.0 h1:BhwhiEGNum18dLzhkKl0+aqy/0C1gRhqy0dPkI7NAvk=
+github.com/ogen-go/ogen v1.5.0/go.mod h1:fZ5xl1T3NJOCvHfqszizSYSz+iuI1jW1wVoRENSKR8A=
+github.com/ogen-go/ogen v1.6.0 h1:5pwTvLdJHVz7MhTHvrcoaQePROXyJnuY5ECcC+GZDrA=
+github.com/ogen-go/ogen v1.6.0/go.mod h1:Y+ZYfR1bKmEQBSdxblRtMRsf8Fk/ExskKc4dZNW+hZ0=
 github.com/oklog/ulid/v2 v2.0.2 h1:r4fFzBm+bv0wNKNh5eXTwU7i85y5x+uwkxCUTNVQqLc=
 github.com/oklog/ulid/v2 v2.0.2/go.mod h1:mtBL0Qe/0HAx6/a4Z30qxVIAL1eQDweXq5lxOEiwQ68=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
@@ -122,8 +128,14 @@ github.com/tknie/flynn v0.0.0-20240908081949-fef0eb9a2c3b h1:YTanBFyalsf30HcKvvX
 github.com/tknie/flynn v0.0.0-20240908081949-fef0eb9a2c3b/go.mod h1:dfmxLlqPyTrOrYwsww7BlaQ0DdQXy8i/Pv9D56GLr2o=
 github.com/tknie/flynn v0.0.0-20241012080150-14eaf0a66048 h1:dEG16Gb4vFQocfwLYURotHNOcplCkNGF6khWUB5vL0o=
 github.com/tknie/flynn v0.0.0-20241012080150-14eaf0a66048/go.mod h1:PT0KLQe23svgmu9JcuBqVCpY2Gq77vL/nGztgmyT7/Y=
+github.com/tknie/flynn v0.0.0-20241016123620-19d5a8aba2ca h1:oFhuQg5gyCU4GNa+wewZCfpoxZp8odawKCCecUzoA1M=
+github.com/tknie/flynn v0.0.0-20241016123620-19d5a8aba2ca/go.mod h1:PT0KLQe23svgmu9JcuBqVCpY2Gq77vL/nGztgmyT7/Y=
+github.com/tknie/flynn v0.0.0-20241025124258-482e7b21f511 h1:us1JCG5rgdDF2rgwiigyaeDSdSpu5ZPX6ZKW+RDyxk4=
+github.com/tknie/flynn v0.0.0-20241025124258-482e7b21f511/go.mod h1:PT0KLQe23svgmu9JcuBqVCpY2Gq77vL/nGztgmyT7/Y=
 github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae h1:EY2CEji+jwHG16tP0kOfuw2V8M5naCyWp7VqADAEO/E=
 github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae/go.mod h1:dVvJAEmU8sloNLQh1wq2+GPwxa/9gg3VXuK/FO8eGX4=
+github.com/tknie/goheif v0.0.0-20241029104240-29478ba33138 h1:PUFKDGFiEfT/e6f5XGQ2IGY9lcjEAGdl45z1yl8xY4Y=
+github.com/tknie/goheif v0.0.0-20241029104240-29478ba33138/go.mod h1:dVvJAEmU8sloNLQh1wq2+GPwxa/9gg3VXuK/FO8eGX4=
 github.com/tknie/log v0.0.0-20231006083545-fabe25f4fb0e h1:aNgWs7XTC4vcIcmzQT496neJexEvjx0Kv2/ho2xUlgo=
 github.com/tknie/log v0.0.0-20231006083545-fabe25f4fb0e/go.mod h1:W67unT0xxqTLc9tyxpdV1lED/JuD0veFgxT/astdxt4=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
