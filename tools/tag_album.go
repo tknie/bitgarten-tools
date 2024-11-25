@@ -38,7 +38,7 @@ func TagAlbum(parameter *TagAlbumParameter) {
 	}
 
 	if parameter.ListSource {
-		err = connSource.ListAlbums()
+		_, err = connSource.ListAlbums()
 		if err != nil {
 			fmt.Println("List albums error:", err)
 			return

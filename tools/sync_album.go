@@ -32,6 +32,7 @@ type SyncAlbumParameter struct {
 	ListSource  bool
 	ListDest    bool
 	InsertAlbum bool
+	SyncAll     bool
 }
 
 func SyncAlbum(parameter *SyncAlbumParameter) {
@@ -50,56 +51,66 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 		fmt.Println("Set POSTGRES_DESTINATION_URL and/or POSTGRES_DESTINATION_PASSWORD to define remote database")
 		return
 	}
+	copyList := make([]string, 0)
+	if parameter.Title != "" {
+		copyList = append(copyList, parameter.Title)
+	}
 	switch {
-	case parameter.ListSource:
-		err = connSource.ListAlbums()
+	case parameter.ListSource || parameter.SyncAll:
+		l, err := connSource.ListAlbums()
 		if err != nil {
 			fmt.Println("List albums error:", err)
 			return
 		}
-		return
+		if len(copyList) == 0 {
+			if !parameter.SyncAll {
+				return
+			}
+			copyList = l
+		}
 	case parameter.ListDest:
-		err = destSource.ListAlbums()
+		_, err = destSource.ListAlbums()
 		if err != nil {
 			fmt.Println("List albums error:", err)
 			return
 		}
 		return
-	case parameter.Title != "":
-		a, err = connSource.ReadAlbum(parameter.Title)
+	default:
+	}
+	for _, t := range copyList {
+		a, err = connSource.ReadAlbum(t)
 		if err != nil {
 			fmt.Println("Error reading album:", err)
 			return
 		}
-	default:
-	}
-	if a != nil {
-		a.Display()
-		for _, p := range a.Pictures {
-			f, err := destSource.CheckPicture(p.ChecksumPicture)
-			if err != nil {
-				fmt.Println("Error checking picature:", err)
-				return
-			}
-			if !f {
-				fmt.Println("Not in destination database, picture", p.ChecksumPicture, f)
-				err := copyPicture(connSource, destSource, p.ChecksumPicture)
+		if a != nil {
+			a.Display()
+			for _, p := range a.Pictures {
+				f, err := destSource.CheckPicture(p.ChecksumPicture)
 				if err != nil {
-					fmt.Println("Error copying picture:", err)
+					fmt.Println("Error checking picature:", err)
 					return
 				}
+				if !f {
+					fmt.Println("Not in destination database, picture", p.ChecksumPicture, f)
+					err := copyPicture(connSource, destSource, p.ChecksumPicture)
+					if err != nil {
+						fmt.Println("Error copying picture:", err)
+						return
+					}
+				}
 			}
-		}
-		err = destSource.WriteAlbum(a)
-		if err != nil {
-			fmt.Println("Error writing album:", err)
-			return
-		}
-		for _, ap := range a.Pictures {
-			err = destSource.WriteAlbumPictures(ap)
+			err = destSource.WriteAlbum(a)
 			if err != nil {
-				fmt.Println("Error writing album pictures:", err)
+				fmt.Println("Error writing album:", err)
 				return
+			}
+			for _, ap := range a.Pictures {
+				err = destSource.WriteAlbumPictures(ap)
+				if err != nil {
+					fmt.Println("Error writing album pictures:", err)
+					return
+				}
 			}
 		}
 	}
@@ -108,6 +119,7 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 func copyPicture(connSource, destSource *sql.DatabaseInfo, checksum string) error {
 	p, err := connSource.ReadPicture(checksum)
 	if err != nil {
+		fmt.Println("Error reading picture:", err)
 		return err
 	}
 	c := fmt.Sprintf("%X", md5.Sum(p.Media))

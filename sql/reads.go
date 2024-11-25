@@ -112,10 +112,30 @@ func (di *DatabaseInfo) Open() (common.RegDbID, error) {
 	return id, nil
 }
 
-func (di *DatabaseInfo) ListAlbums() error {
+func (di *DatabaseInfo) ListTables() ([]string, error) {
 	id, err := di.Open()
 	if err != nil {
-		return err
+		fmt.Println("Error opening source:", err)
+		return nil, err
+	}
+	defer id.FreeHandler()
+	tables, err := id.Tables()
+	if err != nil {
+		fmt.Println("Error listing table:", err)
+		return nil, err
+	}
+
+	fmt.Println("Tables:")
+	for _, t := range tables {
+		fmt.Println(" ", t)
+	}
+	return tables, err
+}
+
+func (di *DatabaseInfo) ListAlbums() ([]string, error) {
+	id, err := di.Open()
+	if err != nil {
+		return nil, err
 	}
 	fmt.Println("List Album titles:")
 	q := &common.Query{TableName: "Albums",
@@ -123,16 +143,18 @@ func (di *DatabaseInfo) ListAlbums() error {
 		Fields:     []string{"Title", "Id", "Published"},
 	}
 	count := 0
+	albumList := make([]string, 0)
 	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
 		album := result.Data.(*Albums)
 		count++
 		fmt.Printf("%03d - %3d: %-35s %v\n", count, album.Id, album.Title, album.Published)
+		albumList = append(albumList, album.Title)
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return albumList, nil
 }
 
 func (di *DatabaseInfo) GetAlbums() ([]*Albums, error) {
@@ -326,6 +348,24 @@ func (di *DatabaseInfo) ReadMedia(limit uint32, f common.ResultFunction) error {
 
 	_, err = id.Query(q, f)
 	return err
+}
+
+func (di *DatabaseInfo) Query(query *common.Query, f common.ResultFunction) (*common.Result, error) {
+	id, err := di.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer id.FreeHandler()
+	return id.Query(query, f)
+}
+
+func (di *DatabaseInfo) Insert(name string, insert *common.Entries) ([][]any, error) {
+	id, err := di.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer id.FreeHandler()
+	return id.Insert(name, insert)
 }
 
 func (pic *Picture) Resize(max int) (err error) {

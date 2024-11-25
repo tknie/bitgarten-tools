@@ -29,24 +29,24 @@ import (
 	"github.com/tknie/bitgarten-tools/tools"
 )
 
-const description = `This tool synchronize an album between two bitgarten instances.
+const description = `This tool copy a table to another destination.
 `
 
 func main() {
-	tools.InitLogLevelWithFile("syncAlbum.log")
-	insertAlbum := false
-	syncAll := false
+	tools.InitLogLevelWithFile("syncTables.log")
 
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
-	title := ""
-	listSource := false
-	listDest := false
-	flag.BoolVar(&insertAlbum, "A", false, "Insert Albums")
-	flag.BoolVar(&listSource, "l", false, "List source Albums")
-	flag.BoolVar(&listDest, "L", false, "List destination Albums")
-	flag.BoolVar(&syncAll, "s", false, "Sync all Albums")
-	flag.StringVar(&title, "a", "", "Search Albums title")
+	source := ""
+	dest := ""
+	listSourceTables := false
+	listDestTables := false
+
+	flag.StringVar(&source, "s", "", "Source table")
+	flag.StringVar(&dest, "d", "", "Destination table")
+	flag.BoolVar(&listSourceTables, "l", false, "List source tables")
+	flag.BoolVar(&listDestTables, "L", false, "List destination tables")
+
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -65,9 +65,9 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-	tools.SyncAlbum(&tools.SyncAlbumParameter{ListSource: listSource,
-		ListDest: listDest, Title: title, InsertAlbum: insertAlbum,
-		SyncAll: syncAll})
+	tools.SyncTable(&tools.SyncTableParameter{SourceTable: source,
+		ListSourceTables: listSourceTables, ListDestTables: listDestTables,
+		DestTable: dest})
 }
 
 func writeMemProfile(file string) {

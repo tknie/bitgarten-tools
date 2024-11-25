@@ -19,12 +19,14 @@ BIN             = $(CURDIR)/bin/$(GOOS)_$(GOARCH)
 EXECS           = $(BIN)/exifclean $(BIN)/videothumb $(BIN)/heicthumb \
 				  $(BIN)/picloadql $(BIN)/syncAlbum  $(BIN)/checkMedia \
 				  $(BIN)/tagAlbum  $(BIN)/exiftool $(BIN)/imagehash \
-				  $(BIN)/hashclean $(BIN)/analyzeDirectory
+				  $(BIN)/hashclean $(BIN)/analyzeDirectory \
+				  $(BIN)/syncTables
 OBJECTS         = sql/*.go cmd/exifclean/*.go cmd/heicthumb/main.go \
 				  store/album.go cmd/checkMedia/main.go cmd/tagAlbum/main.go \
                   cmd/picloadql/*.go cmd/videothumb/main.go cmd/imagehash/main.go \
                   store/*.go cmd/syncAlbum/main.go cmd/hashclean/main.go \
-				  tools/*.go cmd/analyzeDirectory/main.go
+				  tools/*.go cmd/analyzeDirectory/main.go \
+				  cmd/syncTables/*.go
 CGO_CFLAGS      = $(if $(ACLDIR),-I$(ACLDIR)/inc,)
 CGO_LDFLAGS     = $(if $(ACLDIR),-L$(ACLDIR)/lib -ladalnkx,)
 CGO_EXT_LDFLAGS = $(if $(ACLDIR),-lsagsmp2 -lsagxts3 -ladazbuf,)

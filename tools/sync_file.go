@@ -1,0 +1,109 @@
+/*
+* Copyright © 2018-2024 private, Darmstadt, Germany and/or its licensors
+*
+* SPDX-License-Identifier: Apache-2.0
+*
+*   Licensed under the Apache License, Version 2.0 (the "License");
+*   you may not use this file except in compliance with the License.
+*   You may obtain a copy of the License at
+*
+*       http://www.apache.org/licenses/LICENSE-2.0
+*
+*   Unless required by applicable law or agreed to in writing, software
+*   distributed under the License is distributed on an "AS IS" BASIS,
+*   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*   See the License for the specific language governing permissions and
+*   limitations under the License.
+*
+ */
+
+package tools
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/flynn/common"
+)
+
+// SyncTableParameter synchronize/copy one table data to another
+type SyncTableParameter struct {
+	SourceTable      string
+	DestTable        string
+	ListSourceTables bool
+	ListDestTables   bool
+}
+
+func SyncTable(parameter *SyncTableParameter) {
+	connSource, err := sql.DatabaseConnect()
+	if err != nil {
+		fmt.Println("Error creating connection:", err)
+		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
+		return
+	}
+
+	if parameter.ListSourceTables {
+		fmt.Println("List source tables...", connSource.Reference)
+		_, _ = connSource.ListTables()
+		return
+	}
+
+	destUrl := os.Getenv("POSTGRES_DESTINATION_URL")
+	pwd := os.Getenv("POSTGRES_DESTINATION_PASSWORD")
+	destSource, err := sql.Connect(destUrl, pwd)
+	if err != nil {
+		fmt.Println("Error creating connection:", err)
+		fmt.Println("Set POSTGRES_DESTINATION_URL and/or POSTGRES_DESTINATION_PASSWORD to define remote database")
+		return
+	}
+
+	if parameter.ListDestTables {
+		fmt.Println("List destination tables...", destSource.Reference)
+		_, _ = destSource.ListTables()
+		return
+	}
+
+	sourceFields, err := getTableFields(connSource, parameter.SourceTable)
+	if err != nil {
+		fmt.Println("Error getting table fields from source:", err)
+		return
+	}
+
+	fmt.Println("Get source column names:", sourceFields)
+	destFields, err := getTableFields(destSource, parameter.DestTable)
+	if err != nil {
+		fmt.Println("Error getting table fields from destination:", err)
+		return
+	}
+	fmt.Println("Get source column names:", destFields)
+
+	q := &common.Query{TableName: parameter.SourceTable,
+		Search: "",
+		Fields: sourceFields,
+	}
+	_, err = connSource.Query(q, func(search *common.Query, result *common.Result) error {
+		// fmt.Println("Entry:", result.Rows)
+		input := &common.Entries{Fields: sourceFields,
+			Values: [][]any{result.Rows}}
+		_, err = destSource.Insert(parameter.DestTable, input)
+		return err
+	})
+	if err != nil {
+		fmt.Println("Query error:", err)
+	}
+}
+
+func getTableFields(conn *sql.DatabaseInfo, name string) ([]string, error) {
+	id, err := conn.Open()
+	if err != nil {
+		fmt.Println("Error opening source:", err)
+		return nil, err
+	}
+	fields, err := id.GetTableColumn(name)
+	if err != nil {
+		fmt.Println("Error opening source:", err)
+		return nil, err
+	}
+	return fields, nil
+}
