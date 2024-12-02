@@ -41,11 +41,13 @@ func main() {
 	dest := ""
 	listSourceTables := false
 	listDestTables := false
+	commit := false
 
 	flag.StringVar(&source, "s", "", "Source table")
 	flag.StringVar(&dest, "d", "", "Destination table")
 	flag.BoolVar(&listSourceTables, "l", false, "List source tables")
 	flag.BoolVar(&listDestTables, "L", false, "List destination tables")
+	flag.BoolVar(&commit, "c", false, "Commit insert")
 
 	flag.Usage = func() {
 		fmt.Print(description)
@@ -67,7 +69,7 @@ func main() {
 	defer writeMemProfile(*memprofile)
 	tools.SyncTable(&tools.SyncTableParameter{SourceTable: source,
 		ListSourceTables: listSourceTables, ListDestTables: listDestTables,
-		DestTable: dest})
+		DestTable: dest, Commit: commit})
 }
 
 func writeMemProfile(file string) {

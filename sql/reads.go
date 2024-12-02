@@ -340,9 +340,13 @@ func (di *DatabaseInfo) ReadMedia(limit uint32, f common.ResultFunction) error {
 		return err
 	}
 	defer id.FreeHandler()
+	doLimit := "ALL"
+	if limit > 0 {
+		doLimit = strconv.Itoa(int(limit))
+	}
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &Picture{},
-		Limit:      strconv.Itoa(int(limit)),
+		Limit:      doLimit,
 		Fields:     []string{"ChecksumPicture", "Sha256checksum", "Media"},
 	}
 

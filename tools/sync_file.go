@@ -33,6 +33,7 @@ type SyncTableParameter struct {
 	DestTable        string
 	ListSourceTables bool
 	ListDestTables   bool
+	Commit           bool
 }
 
 func SyncTable(parameter *SyncTableParameter) {
@@ -78,20 +79,37 @@ func SyncTable(parameter *SyncTableParameter) {
 	}
 	fmt.Println("Get source column names:", destFields)
 
+	search := os.Getenv("SYNC_FILE_SEARCH")
+	if search != "" {
+		fmt.Println("Used search ...:", search)
+	}
+
 	q := &common.Query{TableName: parameter.SourceTable,
-		Search: "",
+		Search: search,
 		Fields: sourceFields,
 	}
+
+	count := 0
 	_, err = connSource.Query(q, func(search *common.Query, result *common.Result) error {
 		// fmt.Println("Entry:", result.Rows)
-		input := &common.Entries{Fields: sourceFields,
-			Values: [][]any{result.Rows}}
-		_, err = destSource.Insert(parameter.DestTable, input)
-		return err
+		count++
+
+		if count%1000 == 0 {
+			fmt.Println("Copied records:", count)
+		}
+
+		if parameter.Commit {
+			input := &common.Entries{Fields: sourceFields,
+				Values: [][]any{result.Rows}}
+			_, err = destSource.Insert(parameter.DestTable, input)
+			return err
+		}
+		return nil
 	})
 	if err != nil {
 		fmt.Println("Query error:", err)
 	}
+	fmt.Println("Query reads records:", count)
 }
 
 func getTableFields(conn *sql.DatabaseInfo, name string) ([]string, error) {

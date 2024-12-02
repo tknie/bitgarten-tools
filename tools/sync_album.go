@@ -33,6 +33,7 @@ type SyncAlbumParameter struct {
 	ListDest    bool
 	InsertAlbum bool
 	SyncAll     bool
+	SkipCheck   bool
 }
 
 func SyncAlbum(parameter *SyncAlbumParameter) {
@@ -93,7 +94,8 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 				}
 				if !f {
 					fmt.Println("Not in destination database, picture", p.ChecksumPicture, f)
-					err := copyPicture(connSource, destSource, p.ChecksumPicture)
+					err := copyPicture(connSource, destSource, p.ChecksumPicture,
+						parameter.SkipCheck)
 					if err != nil {
 						fmt.Println("Error copying picture:", err)
 						return
@@ -116,15 +118,15 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 	}
 }
 
-func copyPicture(connSource, destSource *sql.DatabaseInfo, checksum string) error {
+func copyPicture(connSource, destSource *sql.DatabaseInfo, checksum string, skipCheck bool) error {
 	p, err := connSource.ReadPicture(checksum)
 	if err != nil {
 		fmt.Println("Error reading picture:", err)
 		return err
 	}
 	c := fmt.Sprintf("%X", md5.Sum(p.Media))
-	if p.ChecksumPicture != c {
-		return fmt.Errorf("checksum mismatch: %s", p.ChecksumPicture)
+	if !skipCheck && p.ChecksumPicture != c {
+		return fmt.Errorf("checksum mismatch: %s != %s(%d) %v", p.ChecksumPicture, c, len(c), skipCheck)
 	}
 	fmt.Println("Successful read picture", p.ChecksumPicture, p.Created)
 	err = destSource.WritePicture(p)

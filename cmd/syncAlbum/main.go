@@ -42,11 +42,13 @@ func main() {
 	title := ""
 	listSource := false
 	listDest := false
+	skipCheck := false
 	flag.BoolVar(&insertAlbum, "A", false, "Insert Albums")
 	flag.BoolVar(&listSource, "l", false, "List source Albums")
 	flag.BoolVar(&listDest, "L", false, "List destination Albums")
 	flag.BoolVar(&syncAll, "s", false, "Sync all Albums")
 	flag.StringVar(&title, "a", "", "Search Albums title")
+	flag.BoolVar(&skipCheck, "S", false, "Skip checksum check")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -67,7 +69,7 @@ func main() {
 	defer writeMemProfile(*memprofile)
 	tools.SyncAlbum(&tools.SyncAlbumParameter{ListSource: listSource,
 		ListDest: listDest, Title: title, InsertAlbum: insertAlbum,
-		SyncAll: syncAll})
+		SyncAll: syncAll, SkipCheck: skipCheck})
 }
 
 func writeMemProfile(file string) {
