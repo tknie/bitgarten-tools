@@ -10,7 +10,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
-	github.com/tknie/flynn v0.0.0-20241123200345-8c779af234a3
+	github.com/tknie/flynn v0.0.0-20241125081020-3b9ffeb8b63b
 	github.com/tknie/log v0.0.0-20241117202403-65556e62b83d
 	go.uber.org/zap v1.27.0
 )
@@ -37,7 +37,7 @@ require (
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
 	github.com/google/uuid v1.6.0
-	github.com/ogen-go/ogen v1.6.0
+	github.com/ogen-go/ogen v1.8.0
 	go.opentelemetry.io/otel v1.32.0
 	go.opentelemetry.io/otel/metric v1.32.0
 	go.opentelemetry.io/otel/trace v1.32.0

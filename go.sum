@@ -96,6 +96,8 @@ github.com/ogen-go/ogen v1.5.0 h1:BhwhiEGNum18dLzhkKl0+aqy/0C1gRhqy0dPkI7NAvk=
 github.com/ogen-go/ogen v1.5.0/go.mod h1:fZ5xl1T3NJOCvHfqszizSYSz+iuI1jW1wVoRENSKR8A=
 github.com/ogen-go/ogen v1.6.0 h1:5pwTvLdJHVz7MhTHvrcoaQePROXyJnuY5ECcC+GZDrA=
 github.com/ogen-go/ogen v1.6.0/go.mod h1:Y+ZYfR1bKmEQBSdxblRtMRsf8Fk/ExskKc4dZNW+hZ0=
+github.com/ogen-go/ogen v1.8.0 h1:p0LMWXdEz7ddqwHQ8Rnde5V1FuU/fwkCKE35rc6a4cQ=
+github.com/ogen-go/ogen v1.8.0/go.mod h1:2ShRm6u/nXUHuwdVKv2SeaG8enBKPKAE3kSbHwwFh6o=
 github.com/oklog/ulid/v2 v2.0.2 h1:r4fFzBm+bv0wNKNh5eXTwU7i85y5x+uwkxCUTNVQqLc=
 github.com/oklog/ulid/v2 v2.0.2/go.mod h1:mtBL0Qe/0HAx6/a4Z30qxVIAL1eQDweXq5lxOEiwQ68=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
@@ -138,6 +140,8 @@ github.com/tknie/flynn v0.0.0-20241120133938-60287a1a882f h1:2zOdabeQ2ENoekzidjz
 github.com/tknie/flynn v0.0.0-20241120133938-60287a1a882f/go.mod h1:MJU/oFfRDaAOEEwYuzWAc0/e7k+GxYa9MCK0G5u8pn8=
 github.com/tknie/flynn v0.0.0-20241123200345-8c779af234a3 h1:QbJU7fJgcgjZRK7zlfYFwogCrZBF9/GR3NYkTjk7JOc=
 github.com/tknie/flynn v0.0.0-20241123200345-8c779af234a3/go.mod h1:MJU/oFfRDaAOEEwYuzWAc0/e7k+GxYa9MCK0G5u8pn8=
+github.com/tknie/flynn v0.0.0-20241125081020-3b9ffeb8b63b h1:kW4FsoEShB/miEbaRDW0YkHo1Hfm7WGfUSJWSjvtW6A=
+github.com/tknie/flynn v0.0.0-20241125081020-3b9ffeb8b63b/go.mod h1:lFLgbmKFuS8oD+9m2ZPQnHLBz1Dww8+tAu5BeFDJvt8=
 github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae h1:EY2CEji+jwHG16tP0kOfuw2V8M5naCyWp7VqADAEO/E=
 github.com/tknie/goheif v0.0.0-20240128173714-9840945571ae/go.mod h1:dVvJAEmU8sloNLQh1wq2+GPwxa/9gg3VXuK/FO8eGX4=
 github.com/tknie/goheif v0.0.0-20241029104240-29478ba33138 h1:PUFKDGFiEfT/e6f5XGQ2IGY9lcjEAGdl45z1yl8xY4Y=
