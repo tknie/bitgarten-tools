@@ -23,7 +23,9 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `This tool checks extract all EXIF data out of pictures
@@ -35,9 +37,11 @@ func main() {
 	tools.InitLogLevelWithFile("exiftool.log")
 	limit := 0
 	preFilter := ""
+	json := false
 
 	flag.IntVar(&limit, "l", 50, "Maximum number of records loaded")
 	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -45,5 +49,10 @@ func main() {
 	}
 	flag.Parse()
 
-	tools.ExifTool(&tools.ExifToolParameter{PreFilter: preFilter, Limit: limit})
+	bitgartentools.InitTool("exifTool", json)
+	var err error
+	defer bitgartentools.FinalizeTool("exifTool", json, err)
+
+	err = tools.ExifTool(&tools.ExifToolParameter{PreFilter: preFilter, Limit: limit})
+	log.Log.Debugf("Exif tool error %v", err)
 }

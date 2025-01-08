@@ -19,12 +19,13 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/tknie/flynn"
 	"github.com/tknie/flynn/common"
@@ -48,11 +49,11 @@ type HeicThumbParameter struct {
 	ScaleRange      int
 }
 
-func (parameter *HeicThumbParameter) HeicThumb() {
+func (parameter *HeicThumbParameter) HeicThumb() error {
 	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error opening connection:", err)
-		return
+		return err
 	}
 	defer id.FreeHandler()
 
@@ -61,7 +62,7 @@ func (parameter *HeicThumbParameter) HeicThumb() {
 		wid, err := sql.DatabaseHandler()
 		if err != nil {
 			fmt.Println("Error connect write ...:", err)
-			return
+			return err
 		}
 		parameter.WriteHandler = wid
 		defer wid.FreeHandler()
@@ -97,7 +98,7 @@ func (parameter *HeicThumbParameter) HeicThumb() {
 	if err != nil {
 		fmt.Println("Error query ...:", err)
 		log.Log.Errorf("Error query thumbnail image: %v", err)
-		return
+		return err
 	}
 	log.Log.Debugf("Generate of thumbnails done")
 	if parameter.Commit {
@@ -106,10 +107,11 @@ func (parameter *HeicThumbParameter) HeicThumb() {
 		err = parameter.WriteHandler.Commit()
 		if err != nil {
 			fmt.Println("Error commiting data...", err)
-			return
+			return err
 		}
 	}
 	fmt.Println("Finished HEIC thumbnails generated")
+	return nil
 }
 
 func generateQueryImageThumbnail(search *common.Query, result *common.Result) error {
@@ -232,34 +234,34 @@ func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
 	log.Log.Debugf("End query similar")
 }
 
-func (parameter *HeicThumbParameter) HeicScale() {
+func (parameter *HeicThumbParameter) HeicScale() error {
 	if parameter.Title == "" {
 		fmt.Println("Album not set")
-		return
+		return errors.New("album not given")
 	}
 	log.Log.Debugf("Scale Albums %s", parameter.Title)
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
-		return
+		return err
 	}
 
 	a, err := connSource.ReadAlbum(parameter.Title)
 	if err != nil {
 		fmt.Println("Error reading album:", err)
-		return
+		return err
 	}
 	a.Display()
 	id, err := connSource.Open()
 	if err != nil {
 		fmt.Println("Error opening:", err)
-		return
+		return err
 	}
 	defer id.FreeHandler()
 	if parameter.Commit {
 		err = id.BeginTransaction()
 		if err != nil {
 			fmt.Println("Error starting transaction:", err)
-			return
+			return err
 		}
 	}
 	for _, albumPicture := range a.Pictures {
@@ -269,13 +271,13 @@ func (parameter *HeicThumbParameter) HeicScale() {
 			if err != nil {
 				fmt.Println("Error reading picture")
 				id.Rollback()
-				return
+				return err
 			}
 			err = pic.Resize(1280)
 			if err != nil {
 				fmt.Println("Resize of picture fails:", err)
 				id.Rollback()
-				return
+				return err
 			}
 			log.Log.Debugf("Resize picture %s->%s to %d,%d", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
 			fmt.Printf("Resize picture %s->%s to %d,%d\n", pic.ChecksumPicture, albumPicture.ChecksumPicture, pic.Width, pic.Height)
@@ -302,7 +304,7 @@ func (parameter *HeicThumbParameter) HeicScale() {
 				if err != nil {
 					fmt.Println("Error inserting:", err)
 					id.Rollback()
-					return
+					return err
 				}
 				list = [][]any{{
 					pic.ChecksumPicture,
@@ -318,7 +320,7 @@ func (parameter *HeicThumbParameter) HeicScale() {
 				if err != nil {
 					fmt.Println("Error inserting:", err)
 					id.Rollback()
-					return
+					return err
 				}
 			}
 		}
@@ -326,7 +328,8 @@ func (parameter *HeicThumbParameter) HeicScale() {
 	err = id.Commit()
 	if err != nil {
 		fmt.Println("Error commiting album:", err)
-		return
+		return err
 	}
 	a.Display()
+	return nil
 }

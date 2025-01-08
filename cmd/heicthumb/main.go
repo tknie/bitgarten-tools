@@ -26,7 +26,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `This tool creates HEIC scaled and creates
@@ -47,6 +49,7 @@ func main() {
 	var album string
 	var scale bool
 	var scaleRange int
+	var jsonResult bool
 
 	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
 	flag.StringVar(&title, "t", "", "Search for picture title")
@@ -57,12 +60,17 @@ func main() {
 	flag.BoolVar(&storeData, "S", false, "Store data to database")
 	flag.BoolVar(&createThumbnail, "y", false, "Create thumbnails instead of search for similarity")
 	flag.BoolVar(&scale, "s", false, "Scale for album")
+	flag.BoolVar(&jsonResult, "j", false, "return output in JSON format")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	bitgartentools.InitTool("heicThumb", jsonResult)
+	var err error
+	defer bitgartentools.FinalizeTool("heicThumb", jsonResult, err)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -81,11 +89,12 @@ func main() {
 	if scale {
 		p.Title = album
 		p.ScaleRange = scaleRange
-		p.HeicScale()
+		err = p.HeicScale()
 	} else {
 		p.Title = title
-		p.HeicThumb()
+		err = p.HeicThumb()
 	}
+	log.Log.Debugf("Error received: %v", err)
 
 }
 

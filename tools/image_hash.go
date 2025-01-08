@@ -31,8 +31,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/corona10/goimagehash"
 	"github.com/tknie/flynn/common"
@@ -64,6 +64,8 @@ type ImageHashParameter struct {
 	Deleted   bool
 	All       bool
 	HashType  string
+	Commit    bool
+	Json      bool
 }
 
 var hashOutput func(pic *store.Pictures, output string)
@@ -107,6 +109,7 @@ func ImageHash(parameter *ImageHashParameter) error {
 		Limit:      strconv.Itoa(parameter.Limit),
 		Search:     sqlCmd.String(),
 	}
+	fmt.Printf("\"Hash\":[")
 	counter := uint64(0)
 	processed := uint64(0)
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
@@ -150,10 +153,20 @@ func ImageHash(parameter *ImageHashParameter) error {
 		}
 		hd.Checksumpicture = p.ChecksumPicture
 		hd.Hash = hd.PerceptionHash
-		fmt.Printf("%s -> %s\n", p.Title, hd.Checksumpicture)
-		err = insertHash(p, hd)
-		if err == nil {
-			processed++
+		if parameter.Json {
+			if counter > 1 {
+				fmt.Printf(",")
+			}
+			fmt.Printf("{\"title\":\"%s\",\"checksumpicture\":\"%s\",\"hash\":\"%v\"}",
+				p.Title, hd.Checksumpicture, hd.PerceptionHash)
+		} else {
+			fmt.Printf("%s -> %s\n", p.Title, hd.Checksumpicture)
+		}
+		if parameter.Commit {
+			err = insertHash(p, hd)
+			if err == nil {
+				processed++
+			}
 		}
 		return nil
 	})
@@ -161,6 +174,7 @@ func ImageHash(parameter *ImageHashParameter) error {
 		return fmt.Errorf("query error: %v", err)
 	}
 	hashOutput(nil, fmt.Sprintf("Found %d pictures where %d pictures are hashed", counter, processed))
+	fmt.Printf("],")
 
 	return nil
 }

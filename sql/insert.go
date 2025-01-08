@@ -31,7 +31,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -499,8 +499,7 @@ func insertWorkerThread(currentIndex int) {
 			wg.Done()
 			counter++
 		case <-stop:
-			fmt.Printf("Stored data in %v count=%d\n", di.duraction, counter)
-			log.Log.Debugf("Stored data in %v count=%d", di.duraction, counter)
+			log.Log.Infof("Stored data in %v count=%d", di.duraction, counter)
 			SetState(currentIndex, StopStoreWorker)
 			return
 		}
@@ -560,11 +559,11 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return err
 		}
 	}
-	log.Log.Infof("Store file MD5=%s SHA=%s -> %s (worker %d/%s)", pic.ChecksumPicture,
+	log.Log.Debugf("Check file available MD5=%s SHA=%s -> %s (worker %d/%s)", pic.ChecksumPicture,
 		pic.ChecksumPictureSHA, pic.PictureName, di.workerNr, pic.Available)
 	if pic.Available == store.NoAvailable || pic.Available == store.ToBigNoAvailable ||
 		pic.Available == store.ToBigMediaNotFound {
-		fmt.Printf("Store file data MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
+		log.Log.Infof("Store file data MD5=%s SHA=%s -> %s\n", pic.ChecksumPicture,
 			pic.ChecksumPictureSHA, pic.PictureName)
 		log.Log.Infof("Insert picture data %s", pic.Available)
 		err = insertPictureData(ti, pic)

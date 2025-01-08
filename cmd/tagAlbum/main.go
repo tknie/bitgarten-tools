@@ -26,7 +26,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `Tag the album of list.
@@ -37,14 +39,22 @@ func main() {
 
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
 	listSource := false
+	json := false
+
 	flag.BoolVar(&listSource, "l", false, "List source Albums")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	bitgartentools.InitTool("tagAlbum", json)
+	var err error
+	defer bitgartentools.FinalizeTool("tagAlbum", json, err)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -57,7 +67,8 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-	tools.TagAlbum(&tools.TagAlbumParameter{ListSource: listSource})
+	err = tools.TagAlbum(&tools.TagAlbumParameter{ListSource: listSource})
+	log.Log.Debugf("Error tagging album: %v", err)
 }
 
 func writeMemProfile(file string) {

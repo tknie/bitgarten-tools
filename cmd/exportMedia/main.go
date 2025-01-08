@@ -28,41 +28,35 @@ import (
 
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
-	"github.com/tknie/log"
 )
 
-const description = `This tool copy a table to another destination.
-`
+const description = `This tool exports all files into a directory
+ `
 
 func main() {
-	tools.InitLogLevelWithFile("syncTables.log")
-
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
-	source := ""
-	dest := ""
-	listSourceTables := false
-	listDestTables := false
-	commit := false
-	json := false
 
-	flag.StringVar(&source, "s", "", "Source table")
-	flag.StringVar(&dest, "d", "", "Destination table")
-	flag.BoolVar(&listSourceTables, "l", false, "List source tables")
-	flag.BoolVar(&listDestTables, "L", false, "List destination tables")
-	flag.BoolVar(&commit, "c", false, "Commit insert")
-	flag.BoolVar(&json, "j", false, "Output in JSON format")
-
+	err := tools.InitLogLevelWithFile("exportMedia.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
 		flag.PrintDefaults()
 	}
+	var limit int
+	json := false
+	directory := ""
+	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
+	flag.StringVar(&directory, "d", "", "Write files to directory")
 	flag.Parse()
 
-	bitgartentools.InitTool("syncTables", json)
-	var err error
-	defer bitgartentools.FinalizeTool("syncTables", json, err)
+	bitgartentools.InitTool("checkMedia", json)
+	defer bitgartentools.FinalizeTool("checkMedia", json, err)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -75,10 +69,12 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-	err = tools.SyncTable(&tools.SyncTableParameter{SourceTable: source,
-		ListSourceTables: listSourceTables, ListDestTables: listDestTables,
-		DestTable: dest, Commit: commit})
-	log.Log.Debugf("Error synchronizing tables: %v", err)
+
+	err = tools.ExportMedia(&tools.ExportMediaParameter{Limit: limit, Directory: directory})
+	if err != nil {
+		fmt.Println("Export Media error:", err)
+	}
+	fmt.Println("Export Media done")
 }
 
 func writeMemProfile(file string) {
@@ -94,4 +90,5 @@ func writeMemProfile(file string) {
 		defer f.Close()
 		fmt.Println("Memory profile written")
 	}
+
 }

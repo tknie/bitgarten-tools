@@ -29,8 +29,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
@@ -62,16 +62,16 @@ type VideoGenerateParameter struct {
 	commit bool
 }
 
-func VideoThumb(parameter *VideoThumbParameter) {
+func VideoThumb(parameter *VideoThumbParameter) error {
 	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error connect ...:", err)
-		return
+		return err
 	}
 	wid, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error connect ...:", err)
-		return
+		return err
 	}
 	gid = id
 	q := &common.Query{TableName: "Pictures",
@@ -91,7 +91,7 @@ func VideoThumb(parameter *VideoThumbParameter) {
 		if err != nil {
 			log.Log.Errorf("Error video title query: %v", err)
 			fmt.Println("Error video title query ...:", err)
-			return
+			return err
 		}
 	} else {
 		prefix := "lower(MIMEType) LIKE 'video%' AND thumbnail is NULL AND markdelete = false AND picopt='sqlstore'"
@@ -104,10 +104,11 @@ func VideoThumb(parameter *VideoThumbParameter) {
 		if err != nil {
 			log.Log.Errorf("Error video query: %v", err)
 			fmt.Println("Error video query ...:", err)
-			return
+			return err
 		}
 	}
 	fmt.Println("video thumbnail generated")
+	return nil
 }
 
 func generateQueryVideoThumbnail(search *common.Query, result *common.Result) error {

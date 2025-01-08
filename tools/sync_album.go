@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgartentools/sql"
 )
 
 type SyncAlbumParameter struct {
@@ -36,13 +36,13 @@ type SyncAlbumParameter struct {
 	SkipCheck   bool
 }
 
-func SyncAlbum(parameter *SyncAlbumParameter) {
+func SyncAlbum(parameter *SyncAlbumParameter) error {
 	var a *sql.Albums
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
 		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
-		return
+		return err
 	}
 	destUrl := os.Getenv("POSTGRES_DESTINATION_URL")
 	pwd := os.Getenv("POSTGRES_DESTINATION_PASSWORD")
@@ -50,7 +50,7 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
 		fmt.Println("Set POSTGRES_DESTINATION_URL and/or POSTGRES_DESTINATION_PASSWORD to define remote database")
-		return
+		return err
 	}
 	copyList := make([]string, 0)
 	if parameter.Title != "" {
@@ -61,11 +61,11 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 		l, err := connSource.ListAlbums()
 		if err != nil {
 			fmt.Println("List albums error:", err)
-			return
+			return err
 		}
 		if len(copyList) == 0 {
 			if !parameter.SyncAll {
-				return
+				return nil
 			}
 			copyList = l
 		}
@@ -73,16 +73,16 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 		_, err = destSource.ListAlbums()
 		if err != nil {
 			fmt.Println("List albums error:", err)
-			return
+			return err
 		}
-		return
+		return nil
 	default:
 	}
 	for _, t := range copyList {
 		a, err = connSource.ReadAlbum(t)
 		if err != nil {
 			fmt.Println("Error reading album:", err)
-			return
+			return err
 		}
 		if a != nil {
 			a.Display()
@@ -90,7 +90,7 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 				f, err := destSource.CheckPicture(p.ChecksumPicture)
 				if err != nil {
 					fmt.Println("Error checking picature:", err)
-					return
+					return err
 				}
 				if !f {
 					fmt.Println("Not in destination database, picture", p.ChecksumPicture, f)
@@ -98,24 +98,25 @@ func SyncAlbum(parameter *SyncAlbumParameter) {
 						parameter.SkipCheck)
 					if err != nil {
 						fmt.Println("Error copying picture:", err)
-						return
+						return err
 					}
 				}
 			}
 			err = destSource.WriteAlbum(a)
 			if err != nil {
 				fmt.Println("Error writing album:", err)
-				return
+				return err
 			}
 			for _, ap := range a.Pictures {
 				err = destSource.WriteAlbumPictures(ap)
 				if err != nil {
 					fmt.Println("Error writing album pictures:", err)
-					return
+					return err
 				}
 			}
 		}
 	}
+	return nil
 }
 
 func copyPicture(connSource, destSource *sql.DatabaseInfo, checksum string, skipCheck bool) error {

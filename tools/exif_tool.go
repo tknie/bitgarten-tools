@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/tknie/flynn/common"
 )
@@ -34,17 +34,17 @@ type ExifToolParameter struct {
 	Limit     int
 }
 
-func ExifTool(parameter *ExifToolParameter) {
+func ExifTool(parameter *ExifToolParameter) error {
 
 	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
-		return
+		return err
 	}
 	wid, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
-		return
+		return err
 	}
 	if parameter.PreFilter != "" {
 		parameter.PreFilter = fmt.Sprintf(" AND LOWER(title) LIKE '%s%%'", parameter.PreFilter)
@@ -90,4 +90,5 @@ func ExifTool(parameter *ExifToolParameter) {
 	}
 	fmt.Println()
 	fmt.Printf("Finally worked on %d records and %d are skipped\n", count, skipped)
+	return nil
 }

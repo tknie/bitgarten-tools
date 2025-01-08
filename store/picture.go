@@ -188,12 +188,12 @@ func resizeHeif(media []byte, max int) ([]byte, *exif.Exif, uint32, uint32, erro
 	ra := bytes.NewReader(media)
 	exifData, err := goheif.ExtractExif(ra)
 	if err != nil {
-		fmt.Println("Error extracting exif:", err)
+		log.Log.Infof("Error extracting exif: %v", err)
 		return nil, nil, 0, 0, err
 	}
 	e, err := exif.Decode(bytes.NewBuffer(exifData))
 	if err != nil {
-		fmt.Println("Error extracting exif:", err)
+		log.Log.Infof("Error decoding exif: %v", err)
 		return nil, nil, 0, 0, err
 	}
 	r := bytes.NewBuffer(media)
@@ -325,17 +325,9 @@ func (pic *PictureBinary) ExtractExif() error {
 // CreateThumbnail create thumbnail
 func (pic *PictureBinary) CreateThumbnail() error {
 	if strings.HasPrefix(pic.MetaData.MIMEType, "image") {
-		// thmb, w, h, err := resizePicture(pic.Data.Media, 1280)
-		// if err != nil {
-		// 	fmt.Println("Error generating thumbnail", err)
-		// 	return err
-		// }
-		// pic.Data.Media = thmb
-		// pic.MetaData.Width = w
-		// pic.MetaData.Height = h
 		thmb, w, h, err := resizePicture(pic.Data.Media, 200)
 		if err != nil {
-			fmt.Println("Error generating thumbnail (resize)", pic.MetaData.MIMEType, err)
+			log.Log.Infof("Error generating thumbnail (resize) %s: %v", pic.MetaData.MIMEType, err)
 			return err
 		}
 		pic.Data.Thumbnail = thmb
@@ -344,7 +336,7 @@ func (pic *PictureBinary) CreateThumbnail() error {
 		pic.Data.ChecksumThumbnail = CreateMd5(pic.Data.Thumbnail)
 		log.Log.Debugf("Thumbnail checksum %s", pic.Data.ChecksumThumbnail)
 	} else {
-		fmt.Println("No image, skip thumbnail generation ....")
+		log.Log.Infof("No image, skip thumbnail generation ....%s", pic.FileName)
 	}
 	return nil
 
@@ -360,7 +352,7 @@ func (pic *Pictures) CreateThumbnail() error {
 	case strings.HasPrefix(strings.ToLower(pic.MIMEType), "image/h"):
 		thmb, e, w, h, err := resizeHeif(pic.Media, 200)
 		if err != nil {
-			fmt.Println("Error generating thumbnail of", pic.PictureName, ":", err)
+			log.Log.Infof("Error generating HEIF thumbnail of %s: %v", pic.PictureName, err)
 			return err
 		}
 		pic.Thumbnail = thmb
@@ -375,7 +367,7 @@ func (pic *Pictures) CreateThumbnail() error {
 	case strings.HasPrefix(pic.MIMEType, "image"):
 		thmb, w, h, err := resizePicture(pic.Media, 200)
 		if err != nil {
-			fmt.Println("Error generating thumbnail of", pic.PictureName, ":", err)
+			log.Log.Infof("Error generating picture thumbnail of %s: %v", pic.PictureName, err)
 			return err
 		}
 		pic.Thumbnail = thmb

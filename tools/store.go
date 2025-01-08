@@ -27,8 +27,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/tknie/log"
 )

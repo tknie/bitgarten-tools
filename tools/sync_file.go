@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/flynn/common"
 )
 
@@ -36,18 +36,18 @@ type SyncTableParameter struct {
 	Commit           bool
 }
 
-func SyncTable(parameter *SyncTableParameter) {
+func SyncTable(parameter *SyncTableParameter) error {
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
 		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
-		return
+		return err
 	}
 
 	if parameter.ListSourceTables {
 		fmt.Println("List source tables...", connSource.Reference)
 		_, _ = connSource.ListTables()
-		return
+		return nil
 	}
 
 	destUrl := os.Getenv("POSTGRES_DESTINATION_URL")
@@ -56,26 +56,26 @@ func SyncTable(parameter *SyncTableParameter) {
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
 		fmt.Println("Set POSTGRES_DESTINATION_URL and/or POSTGRES_DESTINATION_PASSWORD to define remote database")
-		return
+		return err
 	}
 
 	if parameter.ListDestTables {
 		fmt.Println("List destination tables...", destSource.Reference)
 		_, _ = destSource.ListTables()
-		return
+		return nil
 	}
 
 	sourceFields, err := getTableFields(connSource, parameter.SourceTable)
 	if err != nil {
 		fmt.Println("Error getting table fields from source:", err)
-		return
+		return err
 	}
 
 	fmt.Println("Get source column names:", sourceFields)
 	destFields, err := getTableFields(destSource, parameter.DestTable)
 	if err != nil {
 		fmt.Println("Error getting table fields from destination:", err)
-		return
+		return err
 	}
 	fmt.Println("Get source column names:", destFields)
 
@@ -110,6 +110,7 @@ func SyncTable(parameter *SyncTableParameter) {
 		fmt.Println("Query error:", err)
 	}
 	fmt.Println("Query reads records:", count)
+	return nil
 }
 
 func getTableFields(conn *sql.DatabaseInfo, name string) ([]string, error) {

@@ -26,7 +26,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `This tool create thumbnails for videos.
@@ -40,15 +42,21 @@ func main() {
 	var chksum string
 	var title string
 	var commit bool
+	json := false
 	flag.StringVar(&chksum, "c", "", "Search for picture id checksum")
 	flag.StringVar(&title, "a", "", "Search for album title")
 	flag.BoolVar(&commit, "C", false, "Commit updates")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	bitgartentools.InitTool("videoThumb", json)
+	var err error
+	defer bitgartentools.FinalizeTool("videoThumb", json, err)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -62,7 +70,8 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	tools.VideoThumb(&tools.VideoThumbParameter{Title: title, ChkSum: chksum, Commit: commit})
+	err = tools.VideoThumb(&tools.VideoThumbParameter{Title: title, ChkSum: chksum, Commit: commit})
+	log.Log.Debugf("Error video thumb creation: %v", err)
 }
 
 func writeMemProfile(file string) {

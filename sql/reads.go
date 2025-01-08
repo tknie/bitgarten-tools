@@ -29,7 +29,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"
@@ -59,6 +59,7 @@ type Picture struct {
 	Exifxdimension  uint64
 	Exifydimension  uint64
 	Exiforientation string
+	PicOpt          string
 	Created         time.Time
 	Updated_at      time.Time
 }
@@ -347,7 +348,7 @@ func (di *DatabaseInfo) ReadMedia(limit uint32, f common.ResultFunction) error {
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &Picture{},
 		Limit:      doLimit,
-		Fields:     []string{"ChecksumPicture", "Sha256checksum", "Media"},
+		Fields:     []string{"ChecksumPicture", "Sha256checksum", "Media", "picopt"},
 	}
 
 	_, err = id.Query(q, f)

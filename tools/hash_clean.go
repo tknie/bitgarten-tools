@@ -28,7 +28,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgartentools/sql"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
@@ -87,6 +87,7 @@ type HashCleanParameter struct {
 	MinCount int
 	Title    string
 	Commit   bool
+	Json     bool
 }
 
 type heicCheck struct {
@@ -94,12 +95,14 @@ type heicCheck struct {
 	checksumpicture string
 }
 
-func HashClean(parameter *HashCleanParameter) {
-	fmt.Println("Query database entries for one week not hashed commit=", parameter.Commit)
+func HashClean(parameter *HashCleanParameter) error {
+	if !parameter.Json {
+		fmt.Println("Query database entries for one week not hashed commit=", parameter.Commit)
+	}
 	hashList, err := parameter.queryHash()
 	if err != nil {
 		fmt.Println("Error query max hash:", err)
-		return
+		return err
 	}
 	for i, h := range hashList {
 		if h == "0" {
@@ -110,10 +113,10 @@ func HashClean(parameter *HashCleanParameter) {
 		err = queryPictureByHash(h, parameter.Commit)
 		if err != nil {
 			fmt.Println("Error query max hash:", err)
-			return
+			return err
 		}
 	}
-	fmt.Println("Final end")
+	return nil
 }
 
 func (parameter *HashCleanParameter) queryHash() ([]string, error) {
@@ -131,11 +134,15 @@ func (parameter *HashCleanParameter) queryHash() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	limit := "ALL"
+	if parameter.Limit > 0 {
+		limit = strconv.Itoa(parameter.Limit)
+	}
 	query := &common.Query{
 		TableName: "picturehash",
 		//Fields:     []string{"count(perceptionhash) as count", "perceptionhash"},
 		DataStruct: &PictureHashCount{},
-		Limit:      strconv.Itoa(parameter.Limit),
+		Limit:      limit,
 		Search:     sql,
 	}
 	counter := uint64(0)
@@ -386,14 +393,15 @@ func KeysString(m map[string]bool) string {
 	return strings.Join(keys, ",")
 }
 
-func HeicClean(parameter *HashCleanParameter) {
-	fmt.Println("Query database entries for one week not hashed commit=", parameter.Commit)
+func HeicClean(parameter *HashCleanParameter) error {
+	if !parameter.Json {
+		fmt.Println("Query database entries for one week not HEIC images commit=", parameter.Commit)
+	}
 	err := parameter.queryHEIC()
 	if err != nil {
 		fmt.Println("Error query max hash:", err)
-		return
 	}
-
+	return err
 }
 
 func markPictureDelete(id common.RegDbID, checksumpicture string) (int64, error) {
@@ -410,6 +418,7 @@ func markPictureDelete(id common.RegDbID, checksumpicture string) (int64, error)
 	return ra, nil
 }
 
+// queryHEIC search for all HEIC images in database
 func (parameter *HashCleanParameter) queryHEIC() error {
 	id, err := sql.DatabaseHandler()
 	if err != nil {
@@ -432,11 +441,15 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	if err != nil {
 		return err
 	}
+	limit := "ALL"
+	if parameter.Limit > 0 {
+		limit = strconv.Itoa(parameter.Limit)
+	}
 	query := &common.Query{
 		TableName:  "pictures",
 		Fields:     []string{"checksumpicture", "title"},
 		DataStruct: &sql.Picture{},
-		Limit:      strconv.Itoa(parameter.Limit),
+		Limit:      limit,
 		Search:     sqlCmd,
 	}
 	counter := uint64(0)
@@ -444,6 +457,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	err = id.BatchSelectFct(query, func(search *common.Query, result *common.Result) error {
 		pic := result.Data.(*sql.Picture)
 		log.Log.Debugf("HEIC found: %s -> %s", pic.Title, pic.ChecksumPicture)
+		// No IMG_ files to process.
 		if !strings.HasPrefix(pic.Title, "IMG_") {
 			title := strings.TrimSuffix(filepath.Base(pic.Title), filepath.Ext(pic.Title))
 			log.Log.Debugf("add found list: <%s>", title)
@@ -458,14 +472,22 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 		fmt.Println("Error query ...:", err)
 		return err
 	}
+	// Sort found list of HEIC images
 	sort.Slice(foundList, func(i, j int) bool { return foundList[i].title < foundList[j].title })
 	lastFound := -1
 	childs := 0
-	fmt.Printf("Working found list of %4d\n", len(foundList))
+	if parameter.Json {
+		fmt.Printf("\"list\":%d,", len(foundList))
+	} else {
+		fmt.Printf("Working found list of %4d\n", len(foundList))
+	}
 	for i, l := range foundList {
-		if i%1000 == 0 {
-			fmt.Printf("Work through %06d/%06d\n", i, len(foundList))
+		if !parameter.Json {
+			if i%1000 == 0 {
+				fmt.Printf("Work through %06d/%06d\n", i, len(foundList))
+			}
 		}
+		// Check if found is title then last title
 		if i > 0 && strings.HasPrefix(l.title, foundList[i-1].title) {
 			if lastFound != -1 {
 				// fmt.Println(foundList[lastFound].title)
@@ -473,6 +495,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 				lastFound = i - 1
 			}
 			log.Log.Debugf("Check tags %s ck %s", foundList[i-1].title, foundList[i-1].checksumpicture)
+			// check number of tags
 			tags, err := searchTags(l.checksumpicture)
 			if err != nil {
 				fmt.Println("Error reading tags:", err)
@@ -480,6 +503,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 			}
 			log.Log.Debugf("Found tags %s %s child %d", l.title, l.checksumpicture, tags)
 			if tags == 0 && parameter.Commit {
+				// No tags found and commit then mark delete
 				fmt.Printf("Mark deleted: %s sub of %s\n", l.title, foundList[i-1].title)
 				ra, err := markPictureDelete(id, l.checksumpicture)
 				if err != nil || ra != 1 {
@@ -507,7 +531,11 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 			return err
 		}
 	}
-	fmt.Printf("Query HEIC end: found=%d length=%d childs=%d\n", counter, len(foundList), childs)
+	if parameter.Json {
+		fmt.Printf("\"found\":%d, \"length\":%d, \"childs\":%d,", counter, len(foundList), childs)
+	} else {
+		fmt.Printf("Query HEIC end: found=%d length=%d childs=%d\n", counter, len(foundList), childs)
+	}
 	return nil
 }
 

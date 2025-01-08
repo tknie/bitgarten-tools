@@ -23,7 +23,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/tools"
 
 	"github.com/tknie/log"
 )
@@ -38,7 +39,9 @@ func main() {
 	tools.InitLogLevelWithFile("exifclean.log")
 
 	tableName := ""
+	json := false
 	flag.StringVar(&tableName, "t", "pictures", "Table name to search in")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -46,6 +49,11 @@ func main() {
 	}
 	flag.Parse()
 
+	bitgartentools.InitTool("exifClean", json)
+	var err error
+	defer bitgartentools.FinalizeTool("exifClean", json, err)
+
 	log.Log.Debugf("Start exifclean")
-	tools.CleanExif(tableName)
+	err = tools.CleanExif(tableName)
+	log.Log.Debugf("Error output: %v", err)
 }

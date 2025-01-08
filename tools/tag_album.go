@@ -21,7 +21,7 @@ package tools
 import (
 	"fmt"
 
-	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgartentools/sql"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
@@ -31,25 +31,25 @@ type TagAlbumParameter struct {
 	ListSource bool
 }
 
-func TagAlbum(parameter *TagAlbumParameter) {
+func TagAlbum(parameter *TagAlbumParameter) error {
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
-		return
+		return err
 	}
 
 	if parameter.ListSource {
 		_, err = connSource.ListAlbums()
 		if err != nil {
 			fmt.Println("List albums error:", err)
-			return
+			return err
 		}
-		return
+		return nil
 	}
 
 	albums, err := connSource.GetAlbums()
 	if err != nil {
 		fmt.Println("Error reading albums:", err)
-		return
+		return err
 	}
 	log.Log.Debugf("Received Albums count = %d", len(albums))
 	for _, a := range albums {
@@ -58,13 +58,13 @@ func TagAlbum(parameter *TagAlbumParameter) {
 			a, err = connSource.ReadAlbum(a.Title)
 			if err != nil {
 				fmt.Println("Error reading album:", err)
-				return
+				return err
 			}
 			a.Display()
 			id, err := connSource.Open()
 			if err != nil {
 				fmt.Println("Error opening:", err)
-				return
+				return err
 			}
 			for _, p := range a.Pictures {
 				fmt.Println(p.Description + " " + p.ChecksumPicture)
@@ -81,10 +81,11 @@ func TagAlbum(parameter *TagAlbumParameter) {
 				_, err = id.Insert("picturetags", input)
 				if err != nil {
 					fmt.Println("Error inserting:", err)
-					return
+					return err
 				}
 			}
 
 		}
 	}
+	return nil
 }

@@ -30,7 +30,7 @@ import (
 
 	"github.com/ogen-go/ogen/http"
 	"github.com/ogen-go/ogen/ogenerrors"
-	"github.com/tknie/bitgarten-tools/api"
+	"github.com/tknie/bitgartentools/api"
 )
 
 var bitgartenUrl = os.Getenv("BITGARTEN_SERVER")

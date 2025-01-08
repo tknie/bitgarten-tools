@@ -23,8 +23,10 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `This tool checks creates similar hash for all types
@@ -38,7 +40,9 @@ func main() {
 	var limit int
 	var minCount int
 	var heicclean bool
+	var nameclean bool
 	var commit bool
+	var jsonResult bool
 	var title string
 
 	flag.IntVar(&limit, "l", tools.DefaultLimit, "Maximum number of records loaded")
@@ -47,7 +51,9 @@ func main() {
 	flag.BoolVar(&commit, "C", false, "Enable commit to database")
 	flag.BoolVar(&sql.ExitOnError, "E", false, "Exit if an error happens")
 	flag.BoolVar(&heicclean, "H", false, "Cleanup heic images")
+	flag.BoolVar(&nameclean, "N", false, "Cleanup images dependant on names and hash by checking and compare. Let the biggest image.")
 	flag.StringVar(&title, "t", "", "Specific title to be searched for")
+	flag.BoolVar(&jsonResult, "j", false, "return output in JSON format")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -55,10 +61,19 @@ func main() {
 	}
 	flag.Parse()
 
-	if heicclean {
-		tools.HeicClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Title: title,
-			Commit: commit})
-	} else {
-		tools.HashClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit})
+	bitgartentools.InitTool("hashclean", jsonResult)
+	var err error
+	defer bitgartentools.FinalizeTool("hashclean", jsonResult, err)
+
+	switch {
+	case nameclean:
+		err = tools.NameClean(&tools.NameCleanParameter{Limit: limit, MinCount: minCount, Title: title,
+			Commit: commit, Json: jsonResult})
+	case heicclean:
+		err = tools.HeicClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Title: title,
+			Commit: commit, Json: jsonResult})
+	default:
+		err = tools.HashClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit, Json: jsonResult})
 	}
+	log.Log.Debugf("Error processing hashclean: %v", err)
 }

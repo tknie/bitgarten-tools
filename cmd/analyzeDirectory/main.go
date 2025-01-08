@@ -26,7 +26,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `This tool checks found files in directory and analyze number of new or registered
@@ -36,6 +38,7 @@ media in the databases using the checksum.
 
 func main() {
 	var limit int
+	json := false
 
 	err := tools.InitLogLevelWithFile("analyzeDirectory.log")
 	if err != nil {
@@ -50,7 +53,11 @@ func main() {
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Parse()
+
+	bitgartentools.InitTool("analyzeDirectory", json)
+	defer bitgartentools.FinalizeTool("analyzeDirectory", json, err)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -75,7 +82,8 @@ func main() {
 	}
 
 	fmt.Println("Analyze directories:", directories)
-	tools.AnalyzeDirectories(directories)
+	err = tools.AnalyzeDirectories(directories)
+	log.Log.Debugf("Result analyzing directories: %v", err)
 }
 
 func writeMemProfile(file string) {

@@ -21,8 +21,8 @@ package tools
 import (
 	"sync"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/tknie/log"
 )
@@ -44,8 +44,9 @@ func CheckMedia(pic *sql.Picture) {
 	checkPictureChannel <- pic
 }
 
-func CheckMediaWait() {
+func CheckMediaWait() error {
 	wgCheck.Wait()
+	return nil
 }
 
 func pictureChecker() {
@@ -55,6 +56,7 @@ func pictureChecker() {
 			log.Log.Debugf("Checking record %s %s", pic.ChecksumPicture, pic.Sha256checksum)
 
 			switch {
+			case pic.PicOpt == "webstore":
 			case len(pic.Media) == 0:
 				output(pic, pic.ChecksumPicture+" Media empty")
 				log.Log.Debugf("Error record len %s %s", pic.ChecksumPicture, pic.Sha256checksum)

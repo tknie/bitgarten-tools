@@ -23,7 +23,7 @@ import (
 	"fmt"
 
 	"github.com/docker/go-units"
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/store"
 
 	"github.com/tknie/log"
 

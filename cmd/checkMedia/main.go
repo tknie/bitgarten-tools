@@ -26,8 +26,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/tools"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
@@ -39,7 +40,6 @@ it with the database checksumpicture data content.
 `
 
 func main() {
-	var limit int
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
@@ -53,8 +53,14 @@ func main() {
 		fmt.Println("Default flags:")
 		flag.PrintDefaults()
 	}
+	var limit int
+	json := false
 	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Parse()
+
+	bitgartentools.InitTool("checkMedia", json)
+	defer bitgartentools.FinalizeTool("checkMedia", json, err)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -69,9 +75,16 @@ func main() {
 	defer writeMemProfile(*memprofile)
 	errCount := uint32(0)
 	tools.InitCheck(func(pic *sql.Picture, status string) {
-		fmt.Println(status)
+		if json {
+			fmt.Printf("{\"Status\":\"%s\"}", status)
+		} else {
+			fmt.Println(status)
+		}
 		errCount++
 	})
+	if json {
+		fmt.Printf("\"Status\":[")
+	}
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
 		fmt.Printf("Error connecting URL: %v", err)
@@ -85,8 +98,12 @@ func main() {
 		counter++
 		log.Log.Debugf("Received record %s %s", pic.ChecksumPicture, pic.Sha256checksum)
 		tools.CheckMedia(p)
+
 		if counter%1000 == 0 {
-			fmt.Printf("Mediacheck working, checked %10d entries\n", counter)
+			if !json {
+				fmt.Printf("Mediacheck working, checked %10d entries\n", counter)
+			}
+			log.Log.Infof("Mediacheck working, checked %10d entries\n", counter)
 		}
 		// fmt.Println(pic.ChecksumPicture)
 		return nil
@@ -94,12 +111,17 @@ func main() {
 	if err != nil {
 		fmt.Println("Got return check media", err)
 	}
-	tools.CheckMediaWait()
-	if errCount > 0 {
-		fmt.Printf("Working ended with errors/warnings, checked %d\n", counter)
+	err = tools.CheckMediaWait()
+	if json {
+		fmt.Printf("],\"checked\":%d,", counter)
 	} else {
-		fmt.Printf("Working ended successfully, checked %d\n", counter)
+		if errCount > 0 {
+			fmt.Printf("Working ended with errors/warnings, checked %d\n", counter)
+		} else {
+			fmt.Printf("Working ended successfully, checked %d\n", counter)
+		}
 	}
+	log.Log.Debugf("Error check media wait: %v", err)
 }
 
 func writeMemProfile(file string) {

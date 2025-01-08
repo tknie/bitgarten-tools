@@ -23,10 +23,15 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/tknie/log"
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 type indexType int
@@ -226,6 +231,43 @@ func EndStats() {
 		log.Log.Errorf("End stats %03d -> %s", n, e)
 		return true
 	})
+}
+
+func PrintJsonStats() {
+	fmt.Printf("\"Statistics\":{")
+	fmt.Printf("\"Start\":\"%s\",", ps.start)
+	fmt.Printf("\"Checked\":\"%d\",", ps.checked)
+	fmt.Printf("\"Skipped\":\"%d\",", ps.skipped)
+	fmt.Printf("\"ToBig\":\"%d\",", ps.ToBig)
+	fmt.Printf("\"Request BLOB size\":\"%d\",", ps.RequestBlobSize)
+	fmt.Printf("\"MaxBlobSize\":\"%d\",", ps.MaxBlobSize)
+	//Errors          sync.Map
+	fmt.Printf("\"NrErrors\":\"%d\"", ps.NrErrors)
+	fmt.Printf("},")
+	fmt.Printf("\"Errors\":[")
+	addComma := false
+	ps.Errors.Range(func(e, n any) bool {
+		if addComma {
+			fmt.Printf(",")
+		} else {
+			addComma = true
+		}
+		msg := e.(string)
+		msg = strings.Replace(msg, "\"", "'", -1)
+		fmt.Printf("{\"Error\":\"%s\",\"Count\":%d}", normalizeString(msg), n)
+		return true
+	})
+	fmt.Printf("],")
+}
+
+func normalizeString(src string) string {
+	result := strings.TrimSpace(src)
+	result = strings.ReplaceAll(result, "\\x", "")
+	result, _, err := transform.String(transform.Chain(norm.NFKD, runes.Remove(runes.In(unicode.Mn))), result)
+	if err != nil {
+		return ""
+	}
+	return result
 }
 
 func schedule(what func(), delay time.Duration) {

@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgartentools/sql"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
@@ -34,19 +34,19 @@ type exif struct {
 	Exifmake        string
 }
 
-func CleanExif(tableName string) {
+func CleanExif(tableName string) error {
 
 	log.Log.Debugf("Start exifclean")
 
 	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error opening connection:", err)
-		return
+		return err
 	}
 	wid, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error opening connection:", err)
-		return
+		return err
 	}
 	query := &common.Query{
 		TableName:  tableName,
@@ -90,7 +90,8 @@ func CleanExif(tableName string) {
 	})
 	if err != nil {
 		fmt.Println("Aborted with error:", err)
-		return
+		return err
 	}
 	fmt.Println("Updates: ", count, r.Counter)
+	return nil
 }

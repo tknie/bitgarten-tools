@@ -26,7 +26,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `This tool synchronize an album between two bitgarten instances.
@@ -43,18 +45,24 @@ func main() {
 	listSource := false
 	listDest := false
 	skipCheck := false
+	json := false
 	flag.BoolVar(&insertAlbum, "A", false, "Insert Albums")
 	flag.BoolVar(&listSource, "l", false, "List source Albums")
 	flag.BoolVar(&listDest, "L", false, "List destination Albums")
 	flag.BoolVar(&syncAll, "s", false, "Sync all Albums")
 	flag.StringVar(&title, "a", "", "Search Albums title")
 	flag.BoolVar(&skipCheck, "S", false, "Skip checksum check")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	bitgartentools.InitTool("syncAlbum", json)
+	var err error
+	defer bitgartentools.FinalizeTool("syncAlbum", json, err)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
@@ -67,9 +75,10 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
-	tools.SyncAlbum(&tools.SyncAlbumParameter{ListSource: listSource,
+	err = tools.SyncAlbum(&tools.SyncAlbumParameter{ListSource: listSource,
 		ListDest: listDest, Title: title, InsertAlbum: insertAlbum,
 		SyncAll: syncAll, SkipCheck: skipCheck})
+	log.Log.Debugf("Error syncrhonising album: %v", err)
 }
 
 func writeMemProfile(file string) {

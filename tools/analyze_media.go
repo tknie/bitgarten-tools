@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/store"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/store"
 	"github.com/tknie/log"
 )
 
@@ -74,7 +74,7 @@ func analyzeOutput(s time.Time, parameter interface{}) {
 	fmt.Printf("%-22s: %5d / %5d\n\n", "Pictures errors/empty", scan.countErrors, scan.countEmpty)
 }
 
-func AnalyzeDirectories(directories []string) {
+func AnalyzeDirectories(directories []string) error {
 	checker, err := sql.CreateConnection()
 	if err != nil {
 		log.Log.Fatalf("Database connection not established: %v", err)
@@ -106,7 +106,7 @@ func AnalyzeDirectories(directories []string) {
 		})
 		if err != nil {
 			fmt.Println("Error working in directories:", err)
-			return
+			return err
 		}
 		stopSchedule <- true
 		<-syncSchedule
@@ -119,6 +119,7 @@ func AnalyzeDirectories(directories []string) {
 		analyzeOutput(s.start, s)
 		fmt.Printf("Finished Analyze files ended at %v\n", s.end.Format(timeFormat))
 	}
+	return nil
 }
 
 func loadFile(db *sql.DatabaseInfo, scan *scanStat, fileName string) error {

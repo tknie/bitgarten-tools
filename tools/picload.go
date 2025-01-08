@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tknie/bitgarten-tools/sql"
+	"github.com/tknie/bitgartentools/sql"
 
 	"github.com/docker/go-units"
 	"github.com/tknie/log"
@@ -47,14 +47,19 @@ type PicLoadParameter struct {
 	ShortenPath    bool
 	Directories    []string
 	InsertAlbum    bool
+	Json           bool
 }
 
-func PicLoad(parameter *PicLoadParameter) {
+func PicLoad(parameter *PicLoadParameter) error {
 
 	StoreWorker(parameter.NrThreadReader)
 	sql.InsertWorker(parameter.NrThreadStorer)
 	MaxBlobSize = parameter.MaxBlobSize
-	fmt.Println("Max lob size:", units.HumanSize(float64(MaxBlobSize)))
+	if parameter.Json {
+		fmt.Printf("\"MaxLOBSize\":\"%s\",", units.HumanSize(float64(MaxBlobSize)))
+	} else {
+		fmt.Println("Max lob size:", units.HumanSize(float64(MaxBlobSize)))
+	}
 	ShortPath = parameter.ShortenPath
 
 	regs := make([]*regexp.Regexp, 0)
@@ -65,29 +70,52 @@ func PicLoad(parameter *PicLoadParameter) {
 		}
 		regs = append(regs, reg)
 	}
+	if !parameter.Json {
+		sql.StartStats()
 
-	sql.StartStats()
+	}
 	start := time.Now()
 	switch {
 	case parameter.FileName != "":
-		fmt.Printf("Store file '%s' to album id %d\n", parameter.FileName, parameter.AlbumId)
+		if !parameter.Json {
+			fmt.Printf("Store file '%s' to album id %d\n", parameter.FileName, parameter.AlbumId)
+		}
 		suffix := parameter.FileName[strings.LastIndex(parameter.FileName, ".")+1:]
 		suffix = strings.ToLower(suffix)
 		parameter.storeFile(parameter.FileName, suffix)
 		time.Sleep(1 * time.Minute)
 	case len(parameter.Directories) > 0:
+		if parameter.Json {
+			fmt.Printf("\"ScanResults\":[")
+		}
 		for _, pictureDirectory := range parameter.Directories {
+			if parameter.Json {
+				fmt.Printf("{")
+			}
+
 			parameter.storeDirectory(pictureDirectory, regs)
+			if parameter.Json {
+				fmt.Printf("}")
+			}
+		}
+		if parameter.Json {
+			fmt.Printf("],")
 		}
 	}
 	log.Log.Debugf("Wait wgstore")
 	wgStore.Wait()
 
-	sql.EndStats()
-	fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
+	if parameter.Json {
+		sql.PrintJsonStats()
+		fmt.Printf("\"Used\":\"%s\",", time.Since(start))
+	} else {
+		sql.EndStats()
+		fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
+	}
 	for i := 0; i < parameter.NrThreadReader; i++ {
 		sql.StopWorker()
 	}
+	return nil
 }
 
 func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs []*regexp.Regexp) {
@@ -106,7 +134,11 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 				log.Log.Fatal("Error creating Album")
 			}
 		}
-		fmt.Printf("%s Loading path %s\n", time.Now().Format(timeFormat), pictureDirectory)
+		if parameter.Json {
+			fmt.Printf("\"Directory\":\"%s\",\"start\":\"%s\"", pictureDirectory, time.Now().Format(timeFormat))
+		} else {
+			fmt.Printf("%s Loading path %s\n", time.Now().Format(timeFormat), pictureDirectory)
+		}
 		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
 				log.Log.Infof("Info empty or dir: %s", path)

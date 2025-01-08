@@ -24,8 +24,9 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/tknie/bitgarten-tools/store"
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/store"
+	"github.com/tknie/bitgartentools/tools"
 )
 
 const description = `This tool generates image hashs.
@@ -46,12 +47,14 @@ func main() {
 	all := false
 	hashType := tools.Hashes[tools.DefaultHash]
 	jsonResult := false
+	commit := false
 
 	flag.IntVar(&limit, "l", 50, "Maximum number of records loaded")
 	flag.StringVar(&preFilter, "f", "", "Prefix of title used in search")
 	flag.BoolVar(&deleted, "D", false, "Scan deleted pictures as well")
 	flag.BoolVar(&all, "A", false, "Scan all pictures (no limit to one week)")
 	flag.BoolVar(&jsonResult, "j", false, "return output in JSON format")
+	flag.BoolVar(&commit, "C", false, "commit all changes")
 	flag.StringVar(&hashType, "h", tools.Hashes[tools.DefaultHash], "Hash type to use, valid are (averageHash,perceptHash,diffHash,waveletHash), default perceptHash")
 	flag.Usage = func() {
 		fmt.Print(description)
@@ -59,6 +62,10 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	bitgartentools.InitTool("imageHash", jsonResult)
+	var err error
+	defer bitgartentools.FinalizeTool("imageHash", jsonResult, err)
 
 	infoMap := make(map[string]any)
 	list := make([]*jsonInfo, 0)
@@ -79,21 +86,19 @@ func main() {
 				fmt.Println()
 			}
 		}, infoMap)
-		fmt.Println("Query database entries not hashed for one last week")
 	}
 
-	err := tools.ImageHash(&tools.ImageHashParameter{Limit: limit, HashType: hashType,
-		Deleted: deleted, All: all, PreFilter: preFilter})
+	err = tools.ImageHash(&tools.ImageHashParameter{Limit: limit, HashType: hashType,
+		Deleted: deleted, All: all, PreFilter: preFilter, Json: jsonResult, Commit: commit})
 	if err != nil {
 		fmt.Printf("Error generating image hash: %v\n", err)
 	}
 	if jsonResult {
-		x := struct{ Result map[string]any }{infoMap}
-		out, err := json.Marshal(x)
-		if err != nil {
-			fmt.Printf("Marhsall JSON error: %v\n", err)
+		out, jerr := json.Marshal(infoMap)
+		if jerr != nil {
+			fmt.Printf("Marhsall JSON error: %v\n", jerr)
 			return
 		}
-		fmt.Println(string(out))
+		fmt.Print("\"Result\":", string(out), ",")
 	}
 }

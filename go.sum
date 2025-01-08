@@ -84,8 +84,8 @@ github.com/tknie/adabas-go-api v1.7.11 h1:Ad1WNkPRdjDWAzdD+xcNQp9VxWlwwIWx9K4PvK
 github.com/tknie/adabas-go-api v1.7.11/go.mod h1:rqUjLj7nYLkAA1PjUlA2TZ9NlJPCK2CBvHgMrjyRU2A=
 github.com/tknie/errorrepo v0.1.0 h1:pOt79EWL4P4UjPzXknNcdAr01fjgF38XY1u1ZzHttqo=
 github.com/tknie/errorrepo v0.1.0/go.mod h1:K4bEhPce5B7ybIptX2D2mpRfjWehStjeUG1fiegwoq0=
-github.com/tknie/flynn v0.6.0 h1:XzQwGXML9H8VbM/zQomezX/MBiVkypHHIe4RYvsSyX4=
-github.com/tknie/flynn v0.6.0/go.mod h1:/ctlsh1Q0Po7URj1Q3R8aw9h41Skxj6W132uu8IPfik=
+github.com/tknie/flynn v0.6.1-0.20241225110340-71f67753ffa5 h1:b2W4qUIiNUsb4/VfEVXKRxEARrPZVJYhQLcyercU6IU=
+github.com/tknie/flynn v0.6.1-0.20241225110340-71f67753ffa5/go.mod h1:tIxqR6t5TI6EzAWTcyn93hx6+trJR6yiD+Ysely8380=
 github.com/tknie/goheif v0.0.0-20241029104240-29478ba33138 h1:PUFKDGFiEfT/e6f5XGQ2IGY9lcjEAGdl45z1yl8xY4Y=
 github.com/tknie/goheif v0.0.0-20241029104240-29478ba33138/go.mod h1:dVvJAEmU8sloNLQh1wq2+GPwxa/9gg3VXuK/FO8eGX4=
 github.com/tknie/log v0.1.0 h1:MrYiDgntQvXm1H0kjJZnz+AI7dB9KbhVYpcohRnAfvU=

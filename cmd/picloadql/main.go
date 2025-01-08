@@ -26,8 +26,10 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/tknie/bitgarten-tools/sql"
-	"github.com/tknie/bitgarten-tools/tools"
+	"github.com/tknie/bitgartentools"
+	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 
 	"github.com/docker/go-units"
 )
@@ -47,6 +49,7 @@ func main() {
 	var fileName string
 	var albumid int
 	var insertAlbum bool
+	var json bool
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
@@ -59,6 +62,7 @@ func main() {
 	flag.StringVar(&fileName, "i", "", "File name for single picture store")
 	flag.StringVar(&binarySize, "b", "500MB", "Maximum binary blob size")
 	flag.BoolVar(&sql.ExitOnError, "E", false, "Exit if an error happens")
+	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -85,6 +89,9 @@ func main() {
 		return
 	}
 
+	bitgartentools.InitTool("picloadQL", json)
+	defer bitgartentools.FinalizeTool("picloadQL", json, err)
+
 	directories := flag.Args()
 	if len(directories) == 0 {
 		directories, err = tools.EvaluatePictureDirectories()
@@ -95,12 +102,21 @@ func main() {
 		}
 	}
 
-	fmt.Println("Scan Directories:", directories)
-	tools.PicLoad(&tools.PicLoadParameter{NrThreadReader: nrThreadReader,
+	if json {
+		fmt.Printf("\"ScanDirectories\":[")
+		for _, d := range directories {
+			fmt.Printf("\"%s\"", d)
+		}
+		fmt.Printf("],")
+	} else {
+		fmt.Println("Scan Directories:", directories)
+	}
+	err = tools.PicLoad(&tools.PicLoadParameter{NrThreadReader: nrThreadReader,
 		NrThreadStorer: nrThreadStorer, MaxBlobSize: sz, Filter: filter,
 		AlbumId: albumid, InsertAlbum: insertAlbum,
 		ShortenPath: shortenPath, FileName: fileName,
-		Directories: directories})
+		Directories: directories, Json: json})
+	log.Log.Debugf("Error loading data: %v", err)
 }
 
 func writeMemProfile(file string) {
