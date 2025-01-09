@@ -75,15 +75,23 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 func writeMediaFile(search *common.Query, result *common.Result) error {
 	parameter := search.FctParameter.(*ExportMediaParameter)
 	pic := result.Data.(*store.Pictures)
-	fmt.Printf("Write Media file %s/%s/%s\n", pic.ExifOrigTime.Format(exportTimeFormat), pic.Title,
-		pic.ChecksumPicture)
 	filename := fmt.Sprintf("%s/%s/%s/%s", parameter.Directory,
 		pic.ExifOrigTime.Format(exportTimeFormat), pic.Title,
 		pic.ChecksumPicture)
 	dirname := filepath.Dir(filename)
-	fmt.Println("Create directory:", dirname)
-	os.MkdirAll(dirname, 0700)
+	log.Log.Debugf("Create directory: %s", dirname)
+	if stat, err := os.Stat(filename); err == nil {
+		fmt.Println(filename, "exist", stat.Size(), " -> ", len(pic.Media))
+		return nil
+	}
+	if _, err := os.Stat(dirname); os.IsNotExist(err) {
+		os.MkdirAll(dirname, 0700)
+	}
 	err := os.WriteFile(filename, pic.Media, 0644)
-
+	if err == nil {
+		fmt.Printf("Write Media file %s\n", filename)
+	} else {
+		fmt.Printf("Error writing Media file %s: %v\n", filename, err)
+	}
 	return err
 }
