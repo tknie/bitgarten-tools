@@ -38,6 +38,13 @@ type ExportMediaParameter struct {
 	Limit     int
 }
 
+type stat struct {
+	wrote     uint64
+	processed uint64
+}
+
+var statCount = &stat{}
+
 func ExportMedia(parameter *ExportMediaParameter) error {
 	if parameter.Directory == "" {
 		parameter.Directory = "./"
@@ -69,10 +76,13 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 		return err
 	}
 	log.Log.Debugf("Call batch done ...")
+	fmt.Println("Processed:", statCount.processed)
+	fmt.Println("Wrote    :", statCount.wrote)
 	return nil
 }
 
 func writeMediaFile(search *common.Query, result *common.Result) error {
+	statCount.processed++
 	parameter := search.FctParameter.(*ExportMediaParameter)
 	pic := result.Data.(*store.Pictures)
 	filename := fmt.Sprintf("%s/%s/%s/%s", parameter.Directory,
@@ -89,6 +99,7 @@ func writeMediaFile(search *common.Query, result *common.Result) error {
 	}
 	err := os.WriteFile(filename, pic.Media, 0644)
 	if err == nil {
+		statCount.wrote++
 		fmt.Printf("Write Media file %s\n", filename)
 	} else {
 		fmt.Printf("Error writing Media file %s: %v\n", filename, err)
