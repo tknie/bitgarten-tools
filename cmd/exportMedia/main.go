@@ -50,8 +50,10 @@ func main() {
 	var limit int
 	json := false
 	directory := ""
+	markDelete := false
 	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
 	flag.BoolVar(&json, "j", false, "Output in JSON format")
+	flag.BoolVar(&markDelete, "D", false, "Search include mark deleted")
 	flag.StringVar(&directory, "d", "", "Write files to directory")
 	flag.Parse()
 
@@ -70,7 +72,8 @@ func main() {
 	}
 	defer writeMemProfile(*memprofile)
 
-	err = tools.ExportMedia(&tools.ExportMediaParameter{Limit: limit, Directory: directory})
+	err = tools.ExportMedia(&tools.ExportMediaParameter{Limit: limit, MarkDelete: markDelete,
+		Directory: directory})
 	if err != nil {
 		fmt.Println("Export Media error:", err)
 	}

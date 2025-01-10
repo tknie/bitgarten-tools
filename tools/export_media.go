@@ -34,8 +34,9 @@ import (
 const exportTimeFormat = "2006-01-02"
 
 type ExportMediaParameter struct {
-	Directory string
-	Limit     int
+	Directory  string
+	Limit      int
+	MarkDelete bool
 }
 
 type stat struct {
@@ -60,9 +61,13 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 	if parameter.Limit > 0 {
 		limit = strconv.Itoa(parameter.Limit)
 	}
-
+	search := ""
+	if !parameter.MarkDelete {
+		search = "markdelete = false"
+	}
 	q := &common.Query{TableName: "Pictures",
 		DataStruct:   &store.Pictures{},
+		Search:       search,
 		Limit:        limit,
 		FctParameter: parameter,
 		Fields: []string{"MIMEType", "title", "exiforigtime",
@@ -85,9 +90,9 @@ func writeMediaFile(search *common.Query, result *common.Result) error {
 	statCount.processed++
 	parameter := search.FctParameter.(*ExportMediaParameter)
 	pic := result.Data.(*store.Pictures)
-	filename := fmt.Sprintf("%s/%s/%s/%s", parameter.Directory,
-		pic.ExifOrigTime.Format(exportTimeFormat), pic.Title,
-		pic.ChecksumPicture)
+	filename := fmt.Sprintf("%s/%s/%c/%s/%s-%s", parameter.Directory,
+		pic.ExifOrigTime.Format(exportTimeFormat), pic.Title[0], pic.Title,
+		pic.ChecksumPicture, pic.Title)
 	dirname := filepath.Dir(filename)
 	log.Log.Debugf("Create directory: %s", dirname)
 	if stat, err := os.Stat(filename); err == nil {
