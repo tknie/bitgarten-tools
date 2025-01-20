@@ -20,12 +20,14 @@ package tools
 
 import (
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/flynn/common"
+	"github.com/tknie/log"
 )
 
 const checkQuery = `
@@ -33,13 +35,13 @@ with titleTable (title,
 subtitle) as (
 select
 	title,
-	replace(title ,
+	replace(replace(replace(title ,
 	'_4_5005_c.jpeg',
-	'')
+	''),'_1_105_c.jpeg',''),'_1_201_a.heic','')
 from
 	pictures
 where
-	title like '%_4_5005_c.jpeg%')
+	(title like '%_4_5005_c.jpeg%' or title like '%_1_105_c.jpeg%' or title like '%_1_201_a.heic%'){{.}})
 select * from
 (select
 	pt.checksumpicture,
@@ -98,44 +100,48 @@ func NameClean(parameter *NameCleanParameter) error {
 	}
 	defer did.FreeHandler()
 
+	search := ""
+	if parameter.Title != "" {
+		search = "AND title like '" + parameter.Title + "%'"
+	}
+	search, _ = templateSql(checkQuery, search)
+	log.Log.Debugf("Search : %s", search)
+
 	query := &common.Query{
 		TableName: "picturehash",
 		Limit:     strconv.Itoa(parameter.Limit),
-		Search:    checkQuery,
+		Search:    search,
 	}
 	counter := uint64(0)
 	deleted := uint64(0)
 	var currentHash pgtype.Numeric
 	subtitle := ""
 	err = id.BatchSelectFct(query, func(search *common.Query, result *common.Result) error {
-		if !parameter.Json && counter%30 == 0 {
-			fmt.Println("==================================================================")
-			fmt.Println(result.Fields)
-			fmt.Println("------------------------------------------------------------------")
-		}
 		index := result.GetRowValueByName("r").(int64)
 		tags := result.GetRowValueByName("tags")
 		if index == 1 {
 			currentHash = result.GetRowValueByName("perceptionhash").(pgtype.Numeric)
 			subtitle = result.GetRowValueByName("subtitle").(string)
 		} else {
-			recordHash := result.GetRowValueByName("perceptionhash").(pgtype.Numeric)
-			s := result.GetRowValueByName("subtitle").(string)
-			if strings.HasPrefix(s, subtitle) {
-				if recordHash.Int.Cmp(currentHash.Int) == 0 {
-					if tags == nil {
-						deleted++
-						if parameter.Commit {
-							checksumPicture := result.GetRowValueByName("checksumPicture").(string)
-							markDelete(checksumPicture)
+			if currentHash.Int.Cmp(big.NewInt(0)) > 0 {
+				recordHash := result.GetRowValueByName("perceptionhash").(pgtype.Numeric)
+				s := result.GetRowValueByName("subtitle").(string)
+				if strings.HasPrefix(s, subtitle) {
+					if recordHash.Int.Cmp(currentHash.Int) == 0 {
+						if tags == nil {
+							deleted++
+							if parameter.Commit {
+								checksumPicture := result.GetRowValueByName("checksumPicture").(string)
+								markDelete(checksumPicture)
+							}
 						}
-					}
-					if !parameter.Json {
-						fmt.Println(subtitle, "Deleted:", deleted, "Tags:", tags, "Hash:", currentHash)
-					}
-				} else {
-					if !parameter.Json {
-						fmt.Println("Record hash differences:", recordHash, currentHash)
+						if !parameter.Json {
+							fmt.Println(subtitle, "Deleted:", deleted, "Tags:", tags, "Hash:", currentHash)
+						}
+					} else {
+						if !parameter.Json {
+							fmt.Println("Record hash differences:", recordHash, currentHash)
+						}
 					}
 				}
 			}
