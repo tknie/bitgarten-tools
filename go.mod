@@ -10,7 +10,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
-	github.com/tknie/flynn v0.6.1-0.20241225110340-71f67753ffa5
+	github.com/tknie/flynn v0.9.0
 	github.com/tknie/log v0.1.0
 	go.uber.org/zap v1.27.0
 )
@@ -64,6 +64,6 @@ require (
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/text v0.21.0
-	google.golang.org/protobuf v1.36.3 // indirect
+	google.golang.org/protobuf v1.36.4 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
