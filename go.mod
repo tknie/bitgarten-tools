@@ -42,9 +42,9 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/ogen-go/ogen v1.10.0
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/otel v1.34.0
-	go.opentelemetry.io/otel/metric v1.34.0
-	go.opentelemetry.io/otel/trace v1.34.0
+	go.opentelemetry.io/otel v1.35.0
+	go.opentelemetry.io/otel/metric v1.35.0
+	go.opentelemetry.io/otel/trace v1.35.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
