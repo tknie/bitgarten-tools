@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/disintegration/imaging v1.6.2
-	github.com/go-sql-driver/mysql v1.9.0
+	github.com/go-sql-driver/mysql v1.9.2
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
