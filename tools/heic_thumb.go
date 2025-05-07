@@ -265,8 +265,8 @@ func (parameter *HeicThumbParameter) HeicScale() error {
 		}
 	}
 	for _, albumPicture := range a.Pictures {
-		fmt.Println("Scale", albumPicture.Name+" "+albumPicture.Description+" "+albumPicture.ChecksumPicture)
-		if !strings.HasSuffix(albumPicture.Name, ".mp4") {
+		fmt.Println("Scale", albumPicture.Name+" "+albumPicture.Description+" "+albumPicture.ChecksumPicture+" "+albumPicture.MimeType)
+		if !strings.HasPrefix(albumPicture.MimeType, "video/") {
 			pic, err := connSource.ReadPicture(albumPicture.ChecksumPicture)
 			if err != nil {
 				fmt.Println("Error reading picture")
