@@ -20,7 +20,6 @@
 package tools
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -136,8 +135,9 @@ func writerMediaFile() {
 					fmt.Println("Check of filename fails", filename, ":", err)
 					os.Exit(1)
 				}
-				if bytes.Compare(pic.Media, data) != 0 {
-					fmt.Println("Compare of filename fails", filename, ":", err)
+				md5 := store.CreateMd5(data)
+				if md5 != pic.ChecksumPicture {
+					fmt.Println("Compare of filename fails", filename, md5, "!=", pic.ChecksumPicture)
 					os.Exit(1)
 				}
 				atomic.AddUint64(&statCount.found, 1)
