@@ -20,6 +20,7 @@
 package tools
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,17 +45,20 @@ type ExportMediaParameter struct {
 type stat struct {
 	wrote     uint64
 	processed uint64
+	found     uint64
 }
 
 var statCount = &stat{}
 var exportParameter *ExportMediaParameter
 
-var picChannel = make(chan *store.Pictures)
+var picChannel chan *store.Pictures
 var stop = make(chan bool)
 
 var wgWrite sync.WaitGroup
 
 func StartExport(workers int) {
+	picChannel = make(chan *store.Pictures, workers)
+
 	for range workers {
 		go writerMediaFile()
 	}
@@ -99,6 +103,7 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 	stop <- true
 	log.Log.Debugf("Call batch done ...")
 	fmt.Println("Processed:", statCount.processed)
+	fmt.Println("Found    :", statCount.found)
 	fmt.Println("Wrote    :", statCount.wrote)
 	return nil
 }
@@ -122,18 +127,32 @@ func writerMediaFile() {
 			log.Log.Debugf("Create directory: %s", dirname)
 			if stat, err := os.Stat(filename); err == nil {
 				fmt.Println(filename, "exist", stat.Size(), " -> ", len(pic.Media))
-				os.Exit(1)
-			}
-			if _, err := os.Stat(dirname); os.IsNotExist(err) {
-				os.MkdirAll(dirname, 0700)
-			}
-			err := os.WriteFile(filename, pic.Media, 0644)
-			if err == nil {
-				statCount.wrote++
-				fmt.Printf("Write Media file %s\n", filename)
+				if stat.Size() != int64(len(pic.Media)) {
+					fmt.Println("Size test of filename fails", filename, ":", err)
+					os.Exit(1)
+				}
+				data, err := os.ReadFile(filename)
+				if err != nil {
+					fmt.Println("Check of filename fails", filename, ":", err)
+					os.Exit(1)
+				}
+				if !bytes.Equal(pic.Media, data) {
+					fmt.Println("Compare of filename fails", filename, ":", err)
+					os.Exit(1)
+				}
+				atomic.AddUint64(&statCount.found, 1)
 			} else {
-				fmt.Printf("Error writing Media file %s: %v\n", filename, err)
-				os.Exit(1)
+				if _, err := os.Stat(dirname); os.IsNotExist(err) {
+					os.MkdirAll(dirname, 0700)
+				}
+				err := os.WriteFile(filename, pic.Media, 0644)
+				if err == nil {
+					atomic.AddUint64(&statCount.wrote, 1)
+					// fmt.Printf("Write Media file %s\n", filename)
+				} else {
+					fmt.Printf("Error writing Media file %s: %v\n", filename, err)
+					os.Exit(1)
+				}
 			}
 			wgWrite.Done()
 		case <-stop:
