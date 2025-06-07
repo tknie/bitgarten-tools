@@ -51,7 +51,9 @@ func main() {
 	json := false
 	directory := ""
 	markDelete := false
+	workers := 2
 	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
+	flag.IntVar(&workers, "t", 2, "Maximum number of workers writing media")
 	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.BoolVar(&markDelete, "D", false, "Search include mark deleted")
 	flag.StringVar(&directory, "d", "", "Write files to directory")
@@ -71,6 +73,8 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	defer writeMemProfile(*memprofile)
+
+	tools.StartExport(workers)
 
 	err = tools.ExportMedia(&tools.ExportMediaParameter{Limit: limit, MarkDelete: markDelete,
 		Directory: directory})

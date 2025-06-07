@@ -24,6 +24,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
+	"sync/atomic"
 
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/bitgartentools/store"
@@ -45,11 +47,24 @@ type stat struct {
 }
 
 var statCount = &stat{}
+var exportParameter *ExportMediaParameter
+
+var picChannel = make(chan *store.Pictures)
+var stop = make(chan bool)
+
+var wgWrite sync.WaitGroup
+
+func StartExport(workers int) {
+	for range workers {
+		go writerMediaFile()
+	}
+}
 
 func ExportMedia(parameter *ExportMediaParameter) error {
 	if parameter.Directory == "" {
 		parameter.Directory = "./"
 	}
+	exportParameter = parameter
 	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("Error connect ...:", err)
@@ -80,6 +95,8 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 		fmt.Println("Error exporting media query ...:", err)
 		return err
 	}
+	wgWrite.Wait()
+	stop <- true
 	log.Log.Debugf("Call batch done ...")
 	fmt.Println("Processed:", statCount.processed)
 	fmt.Println("Wrote    :", statCount.wrote)
@@ -87,27 +104,40 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 }
 
 func writeMediaFile(search *common.Query, result *common.Result) error {
-	statCount.processed++
-	parameter := search.FctParameter.(*ExportMediaParameter)
 	pic := result.Data.(*store.Pictures)
-	filename := fmt.Sprintf("%s/%s/%c/%s/%s-%s", parameter.Directory,
-		pic.ExifOrigTime.Format(exportTimeFormat), pic.Title[0], pic.Title,
-		pic.ChecksumPicture, pic.Title)
-	dirname := filepath.Dir(filename)
-	log.Log.Debugf("Create directory: %s", dirname)
-	if stat, err := os.Stat(filename); err == nil {
-		fmt.Println(filename, "exist", stat.Size(), " -> ", len(pic.Media))
-		return nil
+	picChannel <- pic
+	wgWrite.Add(1)
+	return nil
+}
+
+func writerMediaFile() {
+	for {
+		select {
+		case pic := <-picChannel:
+			atomic.AddUint64(&statCount.processed, 1)
+			filename := fmt.Sprintf("%s/%s/%c/%s/%s-%s", exportParameter.Directory,
+				pic.ExifOrigTime.Format(exportTimeFormat), pic.Title[0], pic.Title,
+				pic.ChecksumPicture, pic.Title)
+			dirname := filepath.Dir(filename)
+			log.Log.Debugf("Create directory: %s", dirname)
+			if stat, err := os.Stat(filename); err == nil {
+				fmt.Println(filename, "exist", stat.Size(), " -> ", len(pic.Media))
+				os.Exit(1)
+			}
+			if _, err := os.Stat(dirname); os.IsNotExist(err) {
+				os.MkdirAll(dirname, 0700)
+			}
+			err := os.WriteFile(filename, pic.Media, 0644)
+			if err == nil {
+				statCount.wrote++
+				fmt.Printf("Write Media file %s\n", filename)
+			} else {
+				fmt.Printf("Error writing Media file %s: %v\n", filename, err)
+				os.Exit(1)
+			}
+			wgWrite.Done()
+		case <-stop:
+			return
+		}
 	}
-	if _, err := os.Stat(dirname); os.IsNotExist(err) {
-		os.MkdirAll(dirname, 0700)
-	}
-	err := os.WriteFile(filename, pic.Media, 0644)
-	if err == nil {
-		statCount.wrote++
-		fmt.Printf("Write Media file %s\n", filename)
-	} else {
-		fmt.Printf("Error writing Media file %s: %v\n", filename, err)
-	}
-	return err
 }
