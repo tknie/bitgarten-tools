@@ -136,7 +136,7 @@ func writerMediaFile() {
 					fmt.Println("Check of filename fails", filename, ":", err)
 					os.Exit(1)
 				}
-				if !bytes.Equal(pic.Media, data) {
+				if bytes.Compare(pic.Media, data) != 0 {
 					fmt.Println("Compare of filename fails", filename, ":", err)
 					os.Exit(1)
 				}
