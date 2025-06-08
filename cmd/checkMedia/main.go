@@ -25,6 +25,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"time"
 
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/sql"
@@ -101,7 +102,7 @@ func main() {
 
 		if counter%1000 == 0 {
 			if !json {
-				fmt.Printf("Mediacheck working, checked %10d entries\n", counter)
+				fmt.Printf("%s: Mediacheck working, checked %10d entries\n", time.Now().Format(bitgartentools.TimeFormat), counter)
 			}
 			log.Log.Infof("Mediacheck working, checked %10d entries\n", counter)
 		}

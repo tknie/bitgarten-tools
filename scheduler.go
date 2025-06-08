@@ -71,7 +71,7 @@ func EndStats(fct func()) {
 	fmt.Println("Waiting ending...")
 	wgStat.Wait()
 
-	fmt.Printf("%s Done\n", time.Now().Format(timeFormat))
+	fmt.Printf("%s Done\n", time.Now().Format(TimeFormat))
 	fct()
 }
 

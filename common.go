@@ -23,29 +23,30 @@ import (
 	"time"
 )
 
-const timeFormat = "2006-01-02 15:04:05"
+// TimeFormat time formating schema
+const TimeFormat = "2006-01-02 15:04:05"
 
 func InitTool(toolName string, json bool) {
 	if json {
-		fmt.Printf("{\"start\":\"%s\",\"tool\":\"%s\",", time.Now().Format(timeFormat), toolName)
+		fmt.Printf("{\"start\":\"%s\",\"tool\":\"%s\",", time.Now().Format(TimeFormat), toolName)
 		return
 	}
-	fmt.Printf("%s: STARTING tool '%s'\n", time.Now().Format(timeFormat), toolName)
+	fmt.Printf("%s: STARTING tool '%s'\n", time.Now().Format(TimeFormat), toolName)
 }
 
 func FinalizeTool(toolName string, json bool, err error) {
 	if err != nil {
 		if json {
-			fmt.Printf("\"error\":\"%v\",\"end\": \"%s\"}", err, time.Now().Format(timeFormat))
+			fmt.Printf("\"error\":\"%v\",\"end\": \"%s\"}", err, time.Now().Format(TimeFormat))
 			return
 		}
-		fmt.Printf("%s: CANCELED tool '%s' with error: %v\n", time.Now().Format(timeFormat), toolName, err)
+		fmt.Printf("%s: CANCELED tool '%s' with error: %v\n", time.Now().Format(TimeFormat), toolName, err)
 		return
 	}
 	if json {
-		fmt.Printf("\"end\": \"%s\"}\n", time.Now().Format(timeFormat))
+		fmt.Printf("\"end\": \"%s\"}\n", time.Now().Format(TimeFormat))
 		return
 	}
-	fmt.Printf("%s: ENDED tool '%s'\n", time.Now().Format(timeFormat), toolName)
+	fmt.Printf("%s: ENDED tool '%s'\n", time.Now().Format(TimeFormat), toolName)
 
 }
