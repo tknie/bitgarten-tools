@@ -109,7 +109,9 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 
 func writeMediaFile(search *common.Query, result *common.Result) error {
 	pic := result.Data.(*store.Pictures)
-	picChannel <- pic
+	//	var p store.Pictures
+	p := *pic
+	picChannel <- &p
 	wgWrite.Add(1)
 	return nil
 }
@@ -142,6 +144,11 @@ func writerMediaFile() {
 				}
 				atomic.AddUint64(&statCount.found, 1)
 			} else {
+				md5 := store.CreateMd5(pic.Media)
+				if md5 != pic.ChecksumPicture {
+					fmt.Println("Compare of pic data fails", filename, md5, "!=", pic.ChecksumPicture)
+					os.Exit(1)
+				}
 				if _, err := os.Stat(dirname); os.IsNotExist(err) {
 					os.MkdirAll(dirname, 0700)
 				}
