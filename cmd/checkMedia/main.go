@@ -104,7 +104,7 @@ func main() {
 			if !json {
 				fmt.Printf("%s: Mediacheck working, checked %10d entries\n", time.Now().Format(bitgartentools.TimeFormat), counter)
 			}
-			log.Log.Infof("Mediacheck working, checked %10d entries\n", counter)
+			log.Log.Infof("Mediacheck working, checked %10d entries", counter)
 		}
 		// fmt.Println(pic.ChecksumPicture)
 		return nil
