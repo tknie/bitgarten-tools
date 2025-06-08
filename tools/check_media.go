@@ -19,6 +19,7 @@
 package tools
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/tknie/bitgartentools/sql"
@@ -57,6 +58,8 @@ func pictureChecker() {
 
 			switch {
 			case pic.PicOpt == "webstore":
+				fmt.Println("Found and skipping webstore file:", pic.ChecksumPicture)
+				log.Log.Infof("Found and skipping webstore file: %s", pic.ChecksumPicture)
 			case len(pic.Media) == 0:
 				output(pic, pic.ChecksumPicture+" Media empty")
 				log.Log.Infof("Error record len %s %s", pic.ChecksumPicture, pic.Sha256checksum)
