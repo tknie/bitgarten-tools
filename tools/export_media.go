@@ -119,8 +119,8 @@ func writeMediaFile(search *common.Query, result *common.Result) error {
 	pic := result.Data.(*store.Pictures)
 	//	var p store.Pictures
 	p := *pic
-	picChannel <- &p
 	wgWrite.Add(1)
+	picChannel <- &p
 	return nil
 }
 
