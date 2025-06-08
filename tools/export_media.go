@@ -95,10 +95,11 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 			"checksumpicture", "Media"},
 	}
 	outStat := func() {
-		fmt.Println("Processed:", statCount.processed)
-		fmt.Println("Found    :", statCount.found)
-		fmt.Println("Wrote    :", statCount.wrote)
-		fmt.Println("DB error :", statCount.dberror)
+		fmt.Println("Export progess....")
+		fmt.Println("  Processed :", statCount.processed)
+		fmt.Println("  Found     :", statCount.found)
+		fmt.Println("  Wrote     :", statCount.wrote)
+		fmt.Println("  DB errors :", statCount.dberror)
 	}
 	bitgartentools.Schedule(outStat, 60*time.Second)
 	log.Log.Debugf("Call batch ...")

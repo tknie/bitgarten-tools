@@ -59,13 +59,13 @@ func pictureChecker() {
 			case pic.PicOpt == "webstore":
 			case len(pic.Media) == 0:
 				output(pic, pic.ChecksumPicture+" Media empty")
-				log.Log.Debugf("Error record len %s %s", pic.ChecksumPicture, pic.Sha256checksum)
+				log.Log.Infof("Error record len %s %s", pic.ChecksumPicture, pic.Sha256checksum)
 			case store.CreateMd5(pic.Media) != pic.ChecksumPicture:
 				output(pic, pic.ChecksumPicture+" md5 error")
-				log.Log.Debugf("Error md5  %s", store.CreateMd5(pic.Media))
+				log.Log.Infof("Error md5  %s", store.CreateMd5(pic.Media))
 			case store.CreateSHA(pic.Media) != pic.Sha256checksum:
 				output(pic, pic.ChecksumPicture+" sha error")
-				log.Log.Debugf("Error sha  %s", store.CreateSHA(pic.Media))
+				log.Log.Infof("Error sha  %s", store.CreateSHA(pic.Media))
 			}
 			wgCheck.Done()
 		case <-stopCheck:
