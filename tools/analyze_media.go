@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/bitgartentools/store"
 	"github.com/tknie/log"
@@ -41,29 +42,7 @@ type scanStat struct {
 	countEmpty  uint64
 }
 
-var stopSchedule chan bool
-var syncSchedule chan bool
-
 var currentDirectory = "<not defined>"
-
-func schedule(what func(start time.Time, parameter interface{}), parameter interface{}, delay time.Duration) {
-	stopSchedule = make(chan bool)
-	syncSchedule = make(chan bool)
-	startTime := time.Now()
-	go func() {
-		for {
-			select {
-			case <-time.After(delay):
-			case <-stopSchedule:
-				what(startTime, parameter)
-				syncSchedule <- true
-				return
-			}
-			what(startTime, parameter)
-		}
-	}()
-
-}
 
 func analyzeOutput(s time.Time, parameter interface{}) {
 	scan := parameter.(*scanStat)
@@ -83,7 +62,7 @@ func AnalyzeDirectories(directories []string) error {
 	scans := make([]*scanStat, 0)
 	for _, pictureDirectory := range directories {
 		scan := &scanStat{directory: pictureDirectory, start: time.Now()}
-		schedule(analyzeOutput, scan, 30*time.Second)
+		bitgartentools.ScheduleParameter(analyzeOutput, scan, 30*time.Second)
 		currentDirectory = pictureDirectory
 		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
@@ -108,8 +87,7 @@ func AnalyzeDirectories(directories []string) error {
 			fmt.Println("Error working in directories:", err)
 			return err
 		}
-		stopSchedule <- true
-		<-syncSchedule
+		bitgartentools.StopScheduler()
 		scan.end = time.Now()
 		fmt.Printf("Finished Analyze files ended at %v\n", time.Now().Format(timeFormat))
 		scans = append(scans, scan)

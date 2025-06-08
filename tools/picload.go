@@ -110,6 +110,7 @@ func PicLoad(parameter *PicLoadParameter) error {
 		fmt.Printf("\"Used\":\"%s\",", time.Since(start))
 	} else {
 		sql.EndStats()
+
 		fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
 	}
 	for i := 0; i < parameter.NrThreadReader; i++ {

@@ -28,6 +28,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/tknie/bitgartentools"
 	"github.com/tknie/log"
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
@@ -135,9 +136,7 @@ var ps = &PictureConnection{}
 
 const timeFormat = "2006-01-02 15:04:05"
 
-var stopSchedule chan bool
 var statLock sync.Mutex
-var wgStat sync.WaitGroup
 
 var maxNrCount = 4
 
@@ -213,24 +212,9 @@ func ByteCountBinary(b int64) string {
 
 func StartStats() {
 
-	schedule(output, 15*time.Second)
+	ps.start = time.Now()
+	bitgartentools.Schedule(output, 15*time.Second)
 
-}
-
-func EndStats() {
-	fmt.Println("Trigger ending...")
-	wgStat.Add(1)
-	stopSchedule <- true
-	fmt.Println("Waiting ending...")
-	wgStat.Wait()
-
-	fmt.Printf("%s Done\n", time.Now().Format(timeFormat))
-	output()
-	ps.Errors.Range(func(e, n any) bool {
-		fmt.Println("Error:", e, ":", n)
-		log.Log.Errorf("End stats %03d -> %s", n, e)
-		return true
-	})
 }
 
 func PrintJsonStats() {
@@ -268,23 +252,6 @@ func normalizeString(src string) string {
 		return ""
 	}
 	return result
-}
-
-func schedule(what func(), delay time.Duration) {
-	stopSchedule = make(chan bool)
-	ps.start = time.Now()
-	go func() {
-		for {
-			select {
-			case <-time.After(delay):
-			case <-stopSchedule:
-				wgStat.Done()
-				return
-			}
-			what()
-		}
-	}()
-
 }
 
 func DeferredBlobSize(blobSize int64) {
@@ -384,4 +351,15 @@ func IncErrorFile(err error, fileName string) {
 func (di *timeInfo) used(index int) {
 	ps.StatInfo[index].counter++
 	ps.StatInfo[index].duration += time.Since(di.startTime)
+}
+
+func EndStats() {
+	bitgartentools.EndStats(func() {
+		output()
+		ps.Errors.Range(func(e, n any) bool {
+			fmt.Println("Error:", e, ":", n)
+			log.Log.Errorf("End stats %03d -> %s", n, e)
+			return true
+		})
+	})
 }

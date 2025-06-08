@@ -26,7 +26,9 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
+	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/bitgartentools/store"
 	"github.com/tknie/flynn/common"
@@ -45,6 +47,7 @@ type stat struct {
 	wrote     uint64
 	processed uint64
 	found     uint64
+	dberror   uint64
 }
 
 var statCount = &stat{}
@@ -91,6 +94,13 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 		Fields: []string{"MIMEType", "title", "exiforigtime",
 			"checksumpicture", "Media"},
 	}
+	outStat := func() {
+		fmt.Println("Processed:", statCount.processed)
+		fmt.Println("Found    :", statCount.found)
+		fmt.Println("Wrote    :", statCount.wrote)
+		fmt.Println("DB error :", statCount.dberror)
+	}
+	bitgartentools.Schedule(outStat, 60*time.Second)
 	log.Log.Debugf("Call batch ...")
 	_, err = id.Query(q, writeMediaFile)
 	if err != nil {
@@ -101,9 +111,7 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 	wgWrite.Wait()
 	stop <- true
 	log.Log.Debugf("Call batch done ...")
-	fmt.Println("Processed:", statCount.processed)
-	fmt.Println("Found    :", statCount.found)
-	fmt.Println("Wrote    :", statCount.wrote)
+	outStat()
 	return nil
 }
 
@@ -152,12 +160,14 @@ func writerMedia(pic *store.Pictures) {
 			md5pic := store.CreateMd5(pic.Media)
 			if md5pic != pic.ChecksumPicture {
 				fmt.Println("Compare of database MD5 fails", filename, md5, "->", md5pic, "!=", pic.ChecksumPicture)
+			} else {
+				fmt.Println("Compare of filename fails", filename, md5, "!=", pic.ChecksumPicture)
 				os.Exit(1)
 			}
-			fmt.Println("Compare of filename fails", filename, md5, "!=", pic.ChecksumPicture)
-			os.Exit(1)
+			atomic.AddUint64(&statCount.dberror, 1)
+		} else {
+			atomic.AddUint64(&statCount.found, 1)
 		}
-		atomic.AddUint64(&statCount.found, 1)
 	} else {
 		md5 := store.CreateMd5(pic.Media)
 		if md5 != pic.ChecksumPicture {
