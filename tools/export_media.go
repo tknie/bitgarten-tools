@@ -47,6 +47,7 @@ type stat struct {
 	wrote     uint64
 	processed uint64
 	found     uint64
+	errors    uint64
 	dberror   uint64
 }
 
@@ -148,13 +149,17 @@ func writerMedia(pic *store.Pictures) {
 	if stat, err := os.Stat(filename); err == nil {
 		log.Log.Debugf("%s exists %d -> %d", filename, stat.Size(), len(pic.Media))
 		if stat.Size() != int64(len(pic.Media)) {
-			fmt.Println("Size test of filename fails", filename, ":", err)
-			os.Exit(1)
+			fmt.Printf("Size test of filename fails %s -> %d != %d\n", filename, stat.Size(), len(pic.Media))
+			log.Log.Infof("Size test of filename fails %s -> %d != %d", filename, stat.Size(), len(pic.Media))
+			atomic.AddUint64(&statCount.errors, 1)
+			return
 		}
 		data, err := os.ReadFile(filename)
 		if err != nil {
-			fmt.Println("Check of filename fails", filename, ":", err)
-			os.Exit(1)
+			fmt.Printf("Read of filename fails %s: %v\n", filename, err)
+			log.Log.Infof("Read of filename fails %s: %v", filename, err)
+			atomic.AddUint64(&statCount.errors, 1)
+			return
 		}
 		md5 := store.CreateMd5(data)
 		if md5 != pic.ChecksumPicture {
@@ -165,7 +170,8 @@ func writerMedia(pic *store.Pictures) {
 			} else {
 				fmt.Println("Compare of filename fails", filename, md5, "!=", pic.ChecksumPicture)
 				log.Log.Infof("Compare of filename fails %s %s != %s", filename, md5, pic.ChecksumPicture)
-				os.Exit(1)
+				atomic.AddUint64(&statCount.errors, 1)
+				return
 			}
 			atomic.AddUint64(&statCount.dberror, 1)
 		} else {
@@ -176,7 +182,8 @@ func writerMedia(pic *store.Pictures) {
 		if md5 != pic.ChecksumPicture {
 			fmt.Println("Compare of pic data fails", filename, md5, "!=", pic.ChecksumPicture)
 			log.Log.Infof("Compare of pic data fails %s %s != %s", filename, md5, pic.ChecksumPicture)
-			os.Exit(1)
+			atomic.AddUint64(&statCount.errors, 1)
+			return
 		}
 		if _, err := os.Stat(dirname); os.IsNotExist(err) {
 			os.MkdirAll(dirname, 0700)
