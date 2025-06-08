@@ -83,9 +83,9 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 	if parameter.Limit > 0 {
 		limit = strconv.Itoa(parameter.Limit)
 	}
-	search := ""
-	if !parameter.MarkDelete {
-		search = "markdelete = false"
+	search := "markdelete = false"
+	if parameter.MarkDelete {
+		search = ""
 	}
 	q := &common.Query{TableName: "Pictures",
 		DataStruct:   &store.Pictures{},
@@ -93,7 +93,7 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 		Limit:        limit,
 		FctParameter: parameter,
 		Fields: []string{"MIMEType", "title", "exiforigtime",
-			"checksumpicture", "Media"},
+			"checksumpicture", "Media", "PicOpt"},
 	}
 	outStat := func() {
 		fmt.Println("Export progess....")
@@ -119,10 +119,10 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 
 func writeMediaFile(search *common.Query, result *common.Result) error {
 	pic := result.Data.(*store.Pictures)
-	//	var p store.Pictures
-	p := *pic
+	p := &store.Pictures{}
+	*p = *pic
 	wgWrite.Add(1)
-	picChannel <- &p
+	picChannel <- p
 	return nil
 }
 
@@ -145,6 +145,10 @@ func writerMedia(pic *store.Pictures) {
 		pic.ExifOrigTime.Format(exportTimeFormat), pic.Title[0], pic.Title,
 		pic.ChecksumPicture, pic.Title)
 	dirname := filepath.Dir(filename)
+	if pic.PicOpt == "webstore" {
+		fmt.Printf("Skip webstore %s\n", filename)
+		return
+	}
 	log.Log.Debugf("Create directory: %s", dirname)
 	if stat, err := os.Stat(filename); err == nil {
 		log.Log.Debugf("%s exists %d -> %d", filename, stat.Size(), len(pic.Media))

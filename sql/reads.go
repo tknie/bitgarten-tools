@@ -335,7 +335,11 @@ func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error
 }
 
 func (di *DatabaseInfo) ReadMedia(limit uint32, f common.ResultFunction) error {
+	return di.SearchMedia(limit, "", f)
+}
 
+func (di *DatabaseInfo) SearchMedia(limit uint32, search string,
+	f common.ResultFunction) error {
 	id, err := di.Open()
 	if err != nil {
 		return err
@@ -348,6 +352,7 @@ func (di *DatabaseInfo) ReadMedia(limit uint32, f common.ResultFunction) error {
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &Picture{},
 		Limit:      doLimit,
+		Search:     search,
 		Fields:     []string{"ChecksumPicture", "Sha256checksum", "Media", "picopt"},
 	}
 

@@ -55,9 +55,11 @@ func main() {
 		flag.PrintDefaults()
 	}
 	var limit int
+	chksum := ""
 	json := false
 	flag.IntVar(&limit, "l", 10, "Maximum records to read (0 is all)")
 	flag.BoolVar(&json, "j", false, "Output in JSON format")
+	flag.StringVar(&chksum, "c", "", "Check image checksum only")
 	flag.Parse()
 
 	bitgartentools.InitTool("checkMedia", json)
@@ -91,8 +93,12 @@ func main() {
 		fmt.Printf("Error connecting URL: %v", err)
 		return
 	}
+	search := ""
+	if chksum != "" {
+		search = "ChecksumPicture = '" + chksum + "'"
+	}
 	counter := uint64(0)
-	err = connSource.ReadMedia(uint32(limit), func(search *common.Query, result *common.Result) error {
+	err = connSource.SearchMedia(uint32(limit), search, func(search *common.Query, result *common.Result) error {
 		p := &sql.Picture{}
 		pic := result.Data.(*sql.Picture)
 		*p = *pic
