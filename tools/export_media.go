@@ -161,8 +161,10 @@ func writerMedia(pic *store.Pictures) {
 			md5pic := store.CreateMd5(pic.Media)
 			if md5pic != pic.ChecksumPicture {
 				fmt.Println("Compare of database MD5 fails", filename, md5, "->", md5pic, "!=", pic.ChecksumPicture)
+				log.Log.Infof("Compare of database MD5 fails %s %s -> %s != %s", filename, md5, md5pic, pic.ChecksumPicture)
 			} else {
 				fmt.Println("Compare of filename fails", filename, md5, "!=", pic.ChecksumPicture)
+				log.Log.Infof("Compare of filename fails %s %s != %s", filename, md5, pic.ChecksumPicture)
 				os.Exit(1)
 			}
 			atomic.AddUint64(&statCount.dberror, 1)
@@ -173,6 +175,7 @@ func writerMedia(pic *store.Pictures) {
 		md5 := store.CreateMd5(pic.Media)
 		if md5 != pic.ChecksumPicture {
 			fmt.Println("Compare of pic data fails", filename, md5, "!=", pic.ChecksumPicture)
+			log.Log.Infof("Compare of pic data fails %s %s != %s", filename, md5, pic.ChecksumPicture)
 			os.Exit(1)
 		}
 		if _, err := os.Stat(dirname); os.IsNotExist(err) {
