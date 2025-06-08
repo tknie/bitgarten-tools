@@ -30,8 +30,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	golang.org/x/image v0.27.0 // indirect
-	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/image v0.28.0 // indirect
+	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 )
 
@@ -60,10 +60,10 @@ require (
 	github.com/tknie/errorrepo v0.1.0 // indirect
 	github.com/tknie/goheif v0.0.0-20241029104240-29478ba33138
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.38.0 // indirect
-	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b // indirect
-	golang.org/x/sync v0.14.0 // indirect
-	golang.org/x/text v0.25.0
+	golang.org/x/crypto v0.39.0 // indirect
+	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
+	golang.org/x/sync v0.15.0 // indirect
+	golang.org/x/text v0.26.0
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
