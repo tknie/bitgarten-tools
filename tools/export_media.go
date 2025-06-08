@@ -120,50 +120,61 @@ func writerMediaFile() {
 	for {
 		select {
 		case pic := <-picChannel:
-			atomic.AddUint64(&statCount.processed, 1)
-			filename := fmt.Sprintf("%s/%s/%c/%s/%s-%s", exportParameter.Directory,
-				pic.ExifOrigTime.Format(exportTimeFormat), pic.Title[0], pic.Title,
-				pic.ChecksumPicture, pic.Title)
-			dirname := filepath.Dir(filename)
-			log.Log.Debugf("Create directory: %s", dirname)
-			if stat, err := os.Stat(filename); err == nil {
-				fmt.Println(filename, "exist", stat.Size(), " -> ", len(pic.Media))
-				if stat.Size() != int64(len(pic.Media)) {
-					fmt.Println("Size test of filename fails", filename, ":", err)
-					os.Exit(1)
-				}
-				data, err := os.ReadFile(filename)
-				if err != nil {
-					fmt.Println("Check of filename fails", filename, ":", err)
-					os.Exit(1)
-				}
-				md5 := store.CreateMd5(data)
-				if md5 != pic.ChecksumPicture {
-					fmt.Println("Compare of filename fails", filename, md5, "!=", pic.ChecksumPicture)
-					os.Exit(1)
-				}
-				atomic.AddUint64(&statCount.found, 1)
-			} else {
-				md5 := store.CreateMd5(pic.Media)
-				if md5 != pic.ChecksumPicture {
-					fmt.Println("Compare of pic data fails", filename, md5, "!=", pic.ChecksumPicture)
-					os.Exit(1)
-				}
-				if _, err := os.Stat(dirname); os.IsNotExist(err) {
-					os.MkdirAll(dirname, 0700)
-				}
-				err := os.WriteFile(filename, pic.Media, 0644)
-				if err == nil {
-					atomic.AddUint64(&statCount.wrote, 1)
-					// fmt.Printf("Write Media file %s\n", filename)
-				} else {
-					fmt.Printf("Error writing Media file %s: %v\n", filename, err)
-					os.Exit(1)
-				}
-			}
-			wgWrite.Done()
+			writerMedia(pic)
 		case <-stop:
 			return
 		}
 	}
+}
+
+func writerMedia(pic *store.Pictures) {
+	defer wgWrite.Done()
+
+	atomic.AddUint64(&statCount.processed, 1)
+	filename := fmt.Sprintf("%s/%s/%c/%s/%s-%s", exportParameter.Directory,
+		pic.ExifOrigTime.Format(exportTimeFormat), pic.Title[0], pic.Title,
+		pic.ChecksumPicture, pic.Title)
+	dirname := filepath.Dir(filename)
+	log.Log.Debugf("Create directory: %s", dirname)
+	if stat, err := os.Stat(filename); err == nil {
+		log.Log.Debugf("%s exists %d -> %d", filename, stat.Size(), len(pic.Media))
+		if stat.Size() != int64(len(pic.Media)) {
+			fmt.Println("Size test of filename fails", filename, ":", err)
+			os.Exit(1)
+		}
+		data, err := os.ReadFile(filename)
+		if err != nil {
+			fmt.Println("Check of filename fails", filename, ":", err)
+			os.Exit(1)
+		}
+		md5 := store.CreateMd5(data)
+		if md5 != pic.ChecksumPicture {
+			md5pic := store.CreateMd5(pic.Media)
+			if md5pic != pic.ChecksumPicture {
+				fmt.Println("Compare of database MD5 fails", filename, md5, "->", md5pic, "!=", pic.ChecksumPicture)
+				os.Exit(1)
+			}
+			fmt.Println("Compare of filename fails", filename, md5, "!=", pic.ChecksumPicture)
+			os.Exit(1)
+		}
+		atomic.AddUint64(&statCount.found, 1)
+	} else {
+		md5 := store.CreateMd5(pic.Media)
+		if md5 != pic.ChecksumPicture {
+			fmt.Println("Compare of pic data fails", filename, md5, "!=", pic.ChecksumPicture)
+			os.Exit(1)
+		}
+		if _, err := os.Stat(dirname); os.IsNotExist(err) {
+			os.MkdirAll(dirname, 0700)
+		}
+		err := os.WriteFile(filename, pic.Media, 0644)
+		if err == nil {
+			atomic.AddUint64(&statCount.wrote, 1)
+			log.Log.Debugf("Write Media file %s\n", filename)
+		} else {
+			fmt.Printf("Error writing Media file %s: %v\n", filename, err)
+			os.Exit(1)
+		}
+	}
+
 }
