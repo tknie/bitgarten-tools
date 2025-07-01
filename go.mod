@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/disintegration/imaging v1.6.2
-	github.com/go-sql-driver/mysql v1.9.2
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
@@ -42,16 +42,16 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/ogen-go/ogen v1.14.0
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/otel v1.36.0
-	go.opentelemetry.io/otel/metric v1.36.0
-	go.opentelemetry.io/otel/trace v1.36.0
+	go.opentelemetry.io/otel v1.37.0
+	go.opentelemetry.io/otel/metric v1.37.0
+	go.opentelemetry.io/otel/trace v1.37.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
 	github.com/corona10/goimagehash v1.1.0
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
-	github.com/godror/godror v0.48.3 // indirect
+	github.com/godror/godror v0.49.0 // indirect
 	github.com/godror/knownpb v0.3.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
@@ -61,7 +61,7 @@ require (
 	github.com/tknie/goheif v0.0.0-20241029104240-29478ba33138
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.39.0 // indirect
-	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
+	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/text v0.26.0
 	google.golang.org/protobuf v1.36.6 // indirect
