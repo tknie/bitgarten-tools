@@ -49,6 +49,7 @@ const (
 )
 
 const lastIndex = doneIndex
+const prefix = "loadStats"
 
 var indexInfo = []string{"load", "loaded", "inserted", "end store",
 	"duplicate", "duplicateLocation", "commited", "done"}
@@ -175,25 +176,25 @@ var output = func() {
 	}
 	lastChecked = ps.checked
 	tn := time.Now().Format(timeFormat)
-	fmt.Printf("%s statistics started=%05d checked=%05d skipped=%02d too big=%02d errors=%02d\n",
-		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
-	log.Log.Infof("%s statistics started=%05d checked=%05d skipped=%02d too big=%02d errors=%02d\n",
-		tn, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
+	fmt.Printf("%s %s started=%05d checked=%05d skipped=%02d too big=%02d errors=%02d\n",
+		tn, prefix, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
+	log.Log.Infof("%s %s started=%05d checked=%05d skipped=%02d too big=%02d errors=%02d\n",
+		tn, prefix, ps.Started, ps.checked, ps.skipped, ps.ToBig, ps.NrErrors)
 	for i := 0; i < int(doneIndex)+1; i++ {
 		avg := time.Duration(0)
 		if ps.StatInfo[i].counter > 0 {
 			avg = ps.StatInfo[i].duration / time.Duration(ps.StatInfo[i].counter)
 		}
 		avg = avg.Round(time.Second)
-		fmt.Printf("%s statistics %18s -> counter=%04d duration=%v average=%v\n", tn, indexInfo[i],
+		fmt.Printf("%s %s %18s -> counter=%04d duration=%v average=%v\n", tn, prefix, indexInfo[i],
 			ps.StatInfo[i].counter, ps.StatInfo[i].duration.Round(time.Second), avg)
-		log.Log.Infof("%s statistics %18s -> counter=%04d duration=%v average=%v", tn, indexInfo[i],
+		log.Log.Infof("%s %s %18s -> counter=%04d duration=%v average=%v", tn, prefix, indexInfo[i],
 			ps.StatInfo[i].counter, ps.StatInfo[i].duration.Round(time.Second), avg)
 	}
-	fmt.Printf("%s statistics max Blocksize=%s deferred Blocksize=%v\n",
-		tn, ByteCountBinary(ps.MaxBlobSize), ByteCountBinary(ps.RequestBlobSize))
-	log.Log.Infof("%s statistics max Blocksize=%s deferred Blocksize=%v\n",
-		tn, ByteCountBinary(ps.MaxBlobSize), ByteCountBinary(ps.RequestBlobSize))
+	fmt.Printf("%s %s max Blocksize=%s deferred Blocksize=%v\n",
+		tn, prefix, ByteCountBinary(ps.MaxBlobSize), ByteCountBinary(ps.RequestBlobSize))
+	log.Log.Infof("%s %s max Blocksize=%s deferred Blocksize=%v\n",
+		tn, prefix, ByteCountBinary(ps.MaxBlobSize), ByteCountBinary(ps.RequestBlobSize))
 	log.Log.Infof("--------------------------------------------------------------\n")
 }
 
@@ -211,10 +212,8 @@ func ByteCountBinary(b int64) string {
 }
 
 func StartStats() {
-
 	ps.start = time.Now()
 	bitgartentools.Schedule(output, 15*time.Second)
-
 }
 
 func PrintJsonStats() {

@@ -109,7 +109,9 @@ func ImageHash(parameter *ImageHashParameter) error {
 		Limit:      strconv.Itoa(parameter.Limit),
 		Search:     sqlCmd.String(),
 	}
-	fmt.Printf("\"Hash\":[")
+	if parameter.Json {
+		fmt.Printf("\"Hash\":[")
+	}
 	counter := uint64(0)
 	processed := uint64(0)
 	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
@@ -174,7 +176,9 @@ func ImageHash(parameter *ImageHashParameter) error {
 		return fmt.Errorf("query error: %v", err)
 	}
 	hashOutput(nil, fmt.Sprintf("Found %d pictures where %d pictures are hashed", counter, processed))
-	fmt.Printf("],")
+	if parameter.Json {
+		fmt.Printf("],")
+	}
 
 	return nil
 }
