@@ -10,7 +10,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
-	github.com/tknie/flynn v0.9.8
+	github.com/tknie/flynn v0.9.9
 	github.com/tknie/log v0.1.0
 	go.uber.org/zap v1.27.0
 )
@@ -51,7 +51,7 @@ require (
 require (
 	github.com/corona10/goimagehash v1.1.0
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
-	github.com/godror/godror v0.49.0 // indirect
+	github.com/godror/godror v0.49.1 // indirect
 	github.com/godror/knownpb v0.3.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
