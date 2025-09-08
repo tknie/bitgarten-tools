@@ -62,8 +62,8 @@ require (
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/text v0.28.0
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/text v0.29.0
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
