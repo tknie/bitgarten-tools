@@ -473,7 +473,7 @@ func InsertWorker(nrThreadStorer int) {
 }
 
 func insertWorkerThread(currentIndex int) {
-	log.Log.Debugf("Start inser-worker-thread:", currentIndex)
+	log.Log.Debugf("Start inser-worker-thread: %d", currentIndex)
 	di, err := CreateConnection()
 	if err != nil {
 		fmt.Println("Connection error:", err)
@@ -582,7 +582,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		}
 		_, err = di.id.Insert("PictureLocations", insert)
 		if err != nil {
-			log.Log.Errorf("Insert location error: %v", err)
+			log.Log.Errorf("Insert location error: %v (%s)", err, pic.ChecksumPicture)
 			di.id.Rollback()
 			if !checkErrorContinue(err) {
 				fmt.Println("Error inserting PictureLocations",

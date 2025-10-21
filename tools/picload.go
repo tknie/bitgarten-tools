@@ -121,6 +121,7 @@ func PicLoad(parameter *PicLoadParameter) error {
 
 func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs []*regexp.Regexp) {
 	if pictureDirectory != "" {
+		log.Log.Debugf("Store directory %s", pictureDirectory)
 
 		if parameter.InsertAlbum {
 			di, err := sql.CreateConnection()
@@ -132,7 +133,9 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 			parameter.AlbumId, err = di.InsertNewAlbum(dir)
 			if err != nil {
 				fmt.Println("Error inserting album:", err)
-				log.Log.Fatal("Error creating Album")
+				log.Log.Errorf("Error creating Album")
+
+				os.Exit(1)
 			}
 		}
 		if parameter.Json {
