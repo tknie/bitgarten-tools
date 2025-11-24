@@ -39,7 +39,7 @@ require (
 require (
 	github.com/docker/go-units v0.5.0
 	github.com/go-faster/errors v0.7.1
-	github.com/go-faster/jx v1.1.0
+	github.com/go-faster/jx v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/ogen-go/ogen v1.16.0
 	github.com/stretchr/testify v1.11.1
