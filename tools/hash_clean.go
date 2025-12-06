@@ -29,6 +29,7 @@ import (
 	"text/template"
 
 	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/services"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
@@ -97,7 +98,7 @@ type heicCheck struct {
 
 func HashClean(parameter *HashCleanParameter) error {
 	if !parameter.Json {
-		fmt.Println("Query database entries for one week not hashed commit=", parameter.Commit)
+		services.ServerMessage("Query database entries for one week not hashed commit=%v", parameter.Commit)
 	}
 	hashList, err := parameter.queryHash()
 	if err != nil {
@@ -349,7 +350,7 @@ func cleanUpPictures(commit bool, tagMap map[string]bool, firstFound *PictureByH
 				log.Log.Debugf("%d entries deleted", dr)
 
 			}
-			fmt.Println("Need to mark delete -> ", pbh.Checksumpicture)
+			services.ServerMessage("Need to mark delete -> %v", pbh.Checksumpicture)
 			ra, err := markPictureDelete(id, pbh.Checksumpicture)
 			if err != nil {
 				return nil
@@ -395,7 +396,7 @@ func KeysString(m map[string]bool) string {
 
 func HeicClean(parameter *HashCleanParameter) error {
 	if !parameter.Json {
-		fmt.Println("Query database entries for one week not HEIC images commit=", parameter.Commit)
+		services.ServerMessage("Query database entries for one week not HEIC images commit=%v", parameter.Commit)
 	}
 	err := parameter.queryHEIC()
 	if err != nil {
@@ -405,7 +406,7 @@ func HeicClean(parameter *HashCleanParameter) error {
 }
 
 func markPictureDelete(id common.RegDbID, checksumpicture string) (int64, error) {
-	fmt.Println("Need to mark delete -> ", checksumpicture)
+	services.ServerMessage("Need to mark delete -> %v", checksumpicture)
 	input := &common.Entries{
 		Fields: []string{"markdelete"},
 		Update: []string{"checksumpicture='" + checksumpicture + "'"},
@@ -479,12 +480,12 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	if parameter.Json {
 		fmt.Printf("\"list\":%d,", len(foundList))
 	} else {
-		fmt.Printf("Working found list of %4d\n", len(foundList))
+		services.ServerMessage("Working found list of %4d", len(foundList))
 	}
 	for i, l := range foundList {
 		if !parameter.Json {
 			if i%1000 == 0 {
-				fmt.Printf("Work through %06d/%06d\n", i, len(foundList))
+				services.ServerMessage("Work through %06d/%06d", i, len(foundList))
 			}
 		}
 		// Check if found is title then last title

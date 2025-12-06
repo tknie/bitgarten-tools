@@ -21,6 +21,8 @@ package bitgartentools
 import (
 	"fmt"
 	"time"
+
+	"github.com/tknie/services"
 )
 
 // TimeFormat time formating schema
@@ -31,7 +33,7 @@ func InitTool(toolName string, json bool) {
 		fmt.Printf("{\"start\":\"%s\",\"tool\":\"%s\",", time.Now().Format(TimeFormat), toolName)
 		return
 	}
-	fmt.Printf("%s: STARTING tool '%s'\n", time.Now().Format(TimeFormat), toolName)
+	services.ServerMessage("STARTING tool '%s'\n", toolName)
 }
 
 func FinalizeTool(toolName string, json bool, err error) {
