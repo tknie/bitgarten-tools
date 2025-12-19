@@ -78,8 +78,7 @@ func storeWorkerThread(currentIndex int) {
 		sql.SetReaderState(currentIndex, sql.WaitingStoreWorker)
 		select {
 		case file := <-storeChannel:
-			sql.SetReaderStateWithFile(currentIndex, sql.LoadingStoreWorker, file.fileName)
-			err := storeFileInAlbumID(checker, file, file.albumid)
+			err := storeFileInAlbumID(currentIndex, checker, file, file.albumid)
 			if err != nil {
 				if !strings.HasPrefix(err.Error(), "file empty") {
 					fmt.Println("Error inserting SQL picture:", err)
@@ -96,11 +95,13 @@ func storeWorkerThread(currentIndex int) {
 	}
 }
 
-func storeFileInAlbumID(db *sql.DatabaseInfo, file *StoreFile, storeAlbum int) error {
+func storeFileInAlbumID(currentIndex int, db *sql.DatabaseInfo,
+	file *StoreFile, storeAlbum int) error {
 	log.Log.Debugf("Store file %s in AlbumId %d", file.fileName, storeAlbum)
 	ti := sql.IncStored()
 	baseName := path.Base(file.fileName)
 	//dirName := path.Dir(fileName)
+	sql.SetReaderStateWithFile(currentIndex, sql.LoadingStoreWorker, file.fileName)
 	pic, err := LoadFile(db, file.fileName)
 	if err != nil {
 		log.Log.Errorf("Store file %s load failed: %v", file.fileName, err)
@@ -120,6 +121,7 @@ func storeFileInAlbumID(db *sql.DatabaseInfo, file *StoreFile, storeAlbum int) e
 	pic.Index = globalindex
 	pic.Title = baseName
 	pic.StoreAlbum = storeAlbum
+	sql.SetReaderStateWithFile(currentIndex, sql.SqlStoreWorker, file.fileName)
 	sql.StorePictures(pic)
 	ti.IncEndStored()
 	return nil

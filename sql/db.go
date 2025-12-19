@@ -20,6 +20,7 @@
 package sql
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -43,10 +44,14 @@ func DatabaseConnect() (*DatabaseInfo, error) {
 
 func DatabaseLocation() (*common.Reference, string, error) {
 	url := os.Getenv("POSTGRES_URL")
+	if url == "" {
+		fmt.Println("POSTGRES_URL not defined")
+		return nil, "", errors.New("POSTGRES_URL not defined")
+	}
 
 	ref, passwd, err := common.NewReference(url)
 	if err != nil {
-		fmt.Println("URL error:", err)
+		fmt.Println("POSTGRES_URL parser error:", err)
 		return nil, "", err
 	}
 	if passwd == "" {

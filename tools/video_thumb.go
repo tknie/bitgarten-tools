@@ -222,11 +222,11 @@ func storeThumb(filename, chksum string, pic *store.Pictures) error {
 	for _, sec := range []string{"4", "2", "1", "0"} {
 		log.Log.Debugf("Thumbnail generated with second " + sec)
 
+		args := []string{"-ss", sec, "-i", filename, "-vf", "scale=iw*sar:ih",
+			"-frames:v", "1", logpath + "/" + chksum + "-%03d.jpg"}
+		log.Log.Debugf("Start ffmpeg with arguments: %v", args)
 		// Call ffmpeg to create thumbnail
-		c := exec.Command(
-			"ffmpeg", "-ss", sec, "-i", filename, "-vf", "scale=iw*sar:ih",
-			"-frames:v", "1", logpath+"/"+chksum+"-%03d.jpg",
-		)
+		c := exec.Command("ffmpeg", args...)
 		c.Stdout = &cBuffer
 		c.Stderr = &cBuffer
 		err := c.Run()

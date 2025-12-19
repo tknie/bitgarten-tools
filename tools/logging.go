@@ -44,7 +44,16 @@ func InitLogLevelWithFile(fileName string) (err error) {
 	p := os.Getenv("LOGPATH")
 	if p == "" {
 		p = "."
+	} else {
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			err := os.Mkdir(p, os.ModePerm)
+			if err != nil {
+				fmt.Printf("Error creating log path '%s': %v\n", p, err)
+				os.Exit(255)
+			}
+		}
 	}
+
 	name := p + string(os.PathSeparator) + fileName
 
 	rawJSON := []byte(`{

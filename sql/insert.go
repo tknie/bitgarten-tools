@@ -483,18 +483,21 @@ func insertWorkerThread(currentIndex int) {
 	workerNr := atomic.AddInt32(&workerCounter, 1)
 	di.workerNr = workerNr
 	defer di.Close()
-	defer log.Log.Debugf("Leaving worker...")
+	defer log.Log.Infof("Leaving worker...")
 	for {
 		SetState(currentIndex, WaitingStoreWorker)
 		select {
 		case pic := <-picChannel:
-			log.Log.Debugf("Inserting pic in worker %d", workerNr)
+			log.Log.Infof("Inserting pic in worker %d", workerNr)
 			SetStateWithFile(currentIndex, InsertingStoreWorker, pic.Title)
 			err = di.InsertPictures(pic)
 			if err != nil {
+				log.Log.Debugf("worker (%d) error inserting picture: %v", workerNr, err)
 				fmt.Printf("worker (%d) error inserting picture: %v\n", workerNr, err)
+			} else {
+				log.Log.Debugf("worker (%d) success inserting picture", workerNr)
 			}
-			log.Log.Debugf("Inserting pic worker %d done", workerNr)
+			log.Log.Infof("Inserting pic worker %d done", workerNr)
 			SetState(currentIndex, DoneStoreWorker)
 			wg.Done()
 			counter++
@@ -511,6 +514,9 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 	if err != nil {
 		IncError("Begin Tx "+pic.PictureName, err)
 		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
+		log.Log.Errorf("Error init Transaction storing file: %s: %v", pic.PictureName, err)
+		di.id.Close()
+		di.id = 0
 		return err
 	}
 	log.Log.Debugf("Insert album picture info Md5=%s", pic.Md5)
@@ -536,7 +542,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 }
 
 func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
-	log.Log.Debugf("Insert picture in AlbumPictures (worker %d)", di.workerNr)
+	log.Log.Infof("Insert picture in AlbumPictures (worker %d)", di.workerNr)
 	if pic.ChecksumPictureSHA == "" {
 		pic.ChecksumPictureSHA = store.CreateSHA(pic.Media)
 	}
@@ -545,7 +551,8 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	if err != nil {
 		IncError("BeginTx "+pic.PictureName, err)
 		fmt.Println("Error init Transaction storing file:", pic.PictureName, "->", err)
-		log.Log.Errorf("Error init Transaction storing file:", pic.PictureName, "->", err)
+		log.Log.Errorf("Error init Transaction storing file: %s: %v", pic.PictureName, err)
+
 		return err
 	}
 
@@ -559,7 +566,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return err
 		}
 	}
-	log.Log.Debugf("Check file available MD5=%s SHA=%s -> %s (worker %d/%s)", pic.ChecksumPicture,
+	log.Log.Infof("Check file available MD5=%s SHA=%s -> %s (worker %d/%s)", pic.ChecksumPicture,
 		pic.ChecksumPictureSHA, pic.PictureName, di.workerNr, pic.Available)
 	if pic.Available == store.NoAvailable || pic.Available == store.ToBigNoAvailable ||
 		pic.Available == store.ToBigMediaNotFound {
@@ -570,8 +577,8 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		if err != nil {
 			log.Log.Errorf("Reopen transaction")
 			_ = di.id.BeginTransaction()
+			return err
 		}
-
 	}
 
 	log.Log.Debugf("Check picture location available: %d", pic.Available)
@@ -595,7 +602,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			return nil
 		}
 
-		log.Log.Debugf("Commiting picture location (worker %d)", di.workerNr)
+		log.Log.Infof("Commiting picture location (worker %d)", di.workerNr)
 		err = di.id.Commit()
 		if err != nil {
 			IncError("Commit error "+pic.PictureName, fmt.Errorf("error commiting: %v", err))
@@ -613,7 +620,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		}
 		ti.IncCommit()
 	}
-	log.Log.Debugf("Success inserting picture (worker %d)", di.workerNr)
+	log.Log.Infof("Success inserting picture (worker %d)", di.workerNr)
 	return nil
 }
 

@@ -48,8 +48,10 @@ const (
 	doneIndex
 )
 
+var StatisticsTimeFrame = time.Duration(60)
+
 const lastIndex = doneIndex
-const prefix = "loadStats"
+const prefix = "-"
 
 var indexInfo = []string{"load", "loaded", "inserted", "end store",
 	"duplicate", "duplicateLocation", "commited", "done"}
@@ -89,9 +91,10 @@ const (
 	DoneStoreWorker
 	StopStoreWorker
 	Done2StoreWorker
+	SqlStoreWorker
 )
 
-var workerStates = []string{"init", "loading", "inserting", "waiting", "done", "stop", "done2"}
+var workerStates = []string{"init", "loading", "inserting", "waiting", "done", "stop", "done2", "sqlStore"}
 
 func (ws workerState) String() string {
 	return workerStates[ws]
@@ -139,10 +142,11 @@ const timeFormat = "2006-01-02 15:04:05"
 
 var statLock sync.Mutex
 
-var maxNrCount = 4
+var maxNrCount = 20
 
 var similarCount = maxNrCount
 var lastChecked uint64
+var startWaitTime time.Time
 
 func init() {
 	maxNrCount = 4
@@ -159,7 +163,10 @@ func init() {
 
 var output = func() {
 	if ps.checked != 0 && ps.checked == lastChecked {
-		fmt.Printf("Waiting counter = %04d\n", similarCount)
+		if similarCount == maxNrCount {
+			startWaitTime = time.Now()
+		}
+		fmt.Printf("Waiting counter = %04d (%v)\n", similarCount, time.Since(startWaitTime))
 		for i, sws := range storeWorkerStatistics {
 			fmt.Printf("%d. store worker thread works in state '%s': %s\n", i, sws.state, sws.currentFile)
 		}
@@ -213,7 +220,7 @@ func ByteCountBinary(b int64) string {
 
 func StartStats() {
 	ps.start = time.Now()
-	bitgartentools.Schedule(output, 15*time.Second)
+	bitgartentools.Schedule(output, StatisticsTimeFrame*time.Second)
 }
 
 func PrintJsonStats() {
