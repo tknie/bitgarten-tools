@@ -7,7 +7,7 @@ toolchain go1.24.5
 require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/jackc/pgx/v5 v5.7.6
+	github.com/jackc/pgx/v5 v5.8.0
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/tknie/flynn v0.9.9
@@ -66,7 +66,6 @@ require (
 	github.com/tknie/errorrepo v0.1.0 // indirect
 	github.com/tknie/goheif v0.0.0-20241029104240-29478ba33138
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.32.0
