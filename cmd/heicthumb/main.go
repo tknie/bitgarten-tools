@@ -1,5 +1,5 @@
 /*
-* Copyright © 2023-2024 private, Darmstadt, Germany and/or its licensors
+* Copyright © 2023-2026 private, Darmstadt, Germany and/or its licensors
 *
 * SPDX-License-Identifier: Apache-2.0
 *
