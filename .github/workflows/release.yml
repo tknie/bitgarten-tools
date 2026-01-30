@@ -31,4 +31,5 @@ jobs:
         goarch: ${{ matrix.goarch }}
         multi_binaries: true
         project_path: ./cmd/...
+        pre_command: "apt-get update && apt-get -y install libpam0g-dev libde265-dev"
         extra_files: LICENSE README.md
