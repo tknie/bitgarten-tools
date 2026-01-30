@@ -76,7 +76,7 @@ func VideoThumb(parameter *VideoThumbParameter) error {
 	gid = id
 	q := &common.Query{TableName: "Pictures",
 		DataStruct: &store.Pictures{},
-		Fields:     []string{"MIMEType", "title", "checksumpicture", "Media"},
+		Fields:     []string{"MIMEType", "title", "checksumpicture", "Media", "picopt"},
 		FctParameter: &VideoGenerateParameter{id: wid,
 			commit: parameter.Commit},
 	}
@@ -94,7 +94,7 @@ func VideoThumb(parameter *VideoThumbParameter) error {
 			return err
 		}
 	} else {
-		prefix := "lower(MIMEType) LIKE 'video%' AND thumbnail is NULL AND markdelete = false AND picopt='sqlstore'"
+		prefix := "lower(MIMEType) LIKE 'video%' AND thumbnail is NULL AND markdelete = false"
 		if parameter.ChkSum != "" {
 			cprefix := fmt.Sprintf("checksumpicture = '%s' AND ", parameter.ChkSum)
 			prefix = cprefix + prefix
@@ -123,13 +123,28 @@ func generateVideoThumbnail(para *VideoGenerateParameter, pic *store.Pictures) e
 	if title == "" {
 		title = "."
 	}
-	title += "/" + pic.ChecksumPicture + "-" + pic.Title
-	err := os.WriteFile(title, pic.Media, 0644)
-	if err != nil {
-		fmt.Println("Error removing:", err)
-		return err
+	fmt.Println("Pic option:", pic.PicOpt)
+	switch pic.PicOpt {
+	case "sqlstore":
+		title += "/" + pic.ChecksumPicture + "-" + pic.Title
+		err := os.WriteFile(title, pic.Media, 0644)
+		if err != nil {
+			fmt.Println("Error writing file:", err)
+			return err
+		}
+	case "webstore":
+		title += "/" + pic.ChecksumPicture + "-" + pic.Title
+		err := sql.DownloadToTitle(pic.ChecksumPicture, title)
+		if err != nil {
+			fmt.Println("Error download title:", err)
+			return err
+		}
+	default:
+		fmt.Println("Picture not in sqlstore or webstore:", pic.PicOpt)
+		log.Log.Fatalf("Picture not in sqlstore or webstore: %s", pic.PicOpt)
+		return fmt.Errorf("picture not in sqlstore: %s", pic.PicOpt)
 	}
-	err = storeThumb(title, pic.ChecksumPicture, pic)
+	err := storeThumb(title, pic.ChecksumPicture, pic)
 	if err != nil {
 		if err == io.EOF {
 			return nil

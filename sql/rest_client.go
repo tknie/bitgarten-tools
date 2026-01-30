@@ -19,9 +19,11 @@
 package sql
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -69,6 +71,47 @@ func CheckRestClient(md5 string) (bool, error) {
 		log.Log.Errorf("RES  : %T %v", res, res)
 	}
 	return false, fmt.Errorf("ERROR WEB")
+}
+
+func DownloadToTitle(md5 string, title string) error {
+	ctx := context.Background()
+	c, err := api.NewClient(bitgartenUrl, &sec{})
+	if err != nil {
+		log.Log.Debugf("Error creating client: %v", err)
+		return err
+	}
+	fmt.Println("Downloading", md5, "to", title)
+	params := api.DownloadFileParams{Path: filepath.Clean(bitgartenLocation) + "/" + md5}
+	d, err := c.DownloadFile(ctx, params)
+	if err != nil {
+		fmt.Println("Error downloading file:", err)
+		return err
+	}
+	switch res := d.(type) {
+	case *api.DownloadFileOK:
+		f, err := os.Create(title)
+		if err != nil {
+			fmt.Println("Error creating file:", err)
+			return err
+		}
+		defer f.Close()
+		dst := bufio.NewWriter(f)
+		defer dst.Flush()
+		var n int64
+		n, err = io.Copy(dst, res.Data)
+		if err != nil {
+			fmt.Println("Error copying file:", err)
+			return err
+		}
+		fmt.Println("Downloaded bytes:", n)
+	case *api.DownloadFileForbidden, *api.DownloadFileUnauthorized:
+		fmt.Println("Error permission file:")
+		return fmt.Errorf("Permission Error")
+	default:
+		fmt.Printf("Error downloading file: %T\n", d)
+		return fmt.Errorf("Error download file type %T:", d)
+	}
+	return nil
 }
 
 func StoreRestClient(md5 string, media []byte) error {
