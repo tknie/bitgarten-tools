@@ -454,6 +454,7 @@ func createStringMd5(input string) string {
 
 func StorePictures(pic *store.Pictures) {
 	wg.Add(1)
+	log.Log.Infof("Add picture to insert queue: %s", pic.PictureName)
 	picChannel <- pic
 	atomic.AddUint32(&sqlSendCounter, 1)
 }
@@ -488,7 +489,7 @@ func insertWorkerThread(currentIndex int) {
 		SetState(currentIndex, WaitingStoreWorker)
 		select {
 		case pic := <-picChannel:
-			log.Log.Infof("Inserting pic in worker %d", workerNr)
+			log.Log.Infof("Received pic in worker from insert queue %d", workerNr)
 			SetStateWithFile(currentIndex, InsertingStoreWorker, pic.Title)
 			err = di.InsertPictures(pic)
 			if err != nil {
@@ -502,7 +503,7 @@ func insertWorkerThread(currentIndex int) {
 			wg.Done()
 			counter++
 		case <-stop:
-			log.Log.Infof("Stored data in %v count=%d", di.duraction, counter)
+			log.Log.Infof("Ended worker for insert queue used %v count=%d", di.duraction, counter)
 			SetState(currentIndex, StopStoreWorker)
 			return
 		}

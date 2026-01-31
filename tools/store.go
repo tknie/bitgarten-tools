@@ -57,7 +57,7 @@ var stopStore = make(chan bool)
 
 func queueStoreFileInAlbumID(fileName string, albumid int) {
 	wgStore.Add(1)
-	log.Log.Debugf("Add wgstore " + fileName)
+	log.Log.Infof("Add to store queue " + fileName)
 	storeChannel <- &StoreFile{fileName: fileName, albumid: albumid}
 }
 
@@ -78,8 +78,10 @@ func storeWorkerThread(currentIndex int) {
 		sql.SetReaderState(currentIndex, sql.WaitingStoreWorker)
 		select {
 		case file := <-storeChannel:
+			log.Log.Infof("Took file out of store queue: %s", file.fileName)
 			err := storeFileInAlbumID(currentIndex, checker, file, file.albumid)
 			if err != nil {
+				log.Log.Infof("Error processing store queue file %s: %v", file.fileName, err)
 				if !strings.HasPrefix(err.Error(), "file empty") {
 					fmt.Println("Error inserting SQL picture:", err)
 				}
@@ -90,6 +92,7 @@ func storeWorkerThread(currentIndex int) {
 			sql.SetReaderState(currentIndex, sql.Done2StoreWorker)
 		case <-stopStore:
 			sql.SetReaderState(currentIndex, sql.StopStoreWorker)
+			log.Log.Infof("Store worker %d stopping now", currentIndex)
 			return
 		}
 	}
@@ -112,7 +115,7 @@ func storeFileInAlbumID(currentIndex int, db *sql.DatabaseInfo,
 	if pic.Available == store.BothAvailable {
 		ti.IncDuplicate()
 		ti.IncDuplicateLocation()
-		log.Log.Debugf("Duplicate found")
+		log.Log.Infof("Duplicate found")
 		return nil
 	}
 	log.Log.Debugf("Store file %s", file.fileName)
@@ -124,6 +127,7 @@ func storeFileInAlbumID(currentIndex int, db *sql.DatabaseInfo,
 	sql.SetReaderStateWithFile(currentIndex, sql.SqlStoreWorker, file.fileName)
 	sql.StorePictures(pic)
 	ti.IncEndStored()
+	log.Log.Infof("Stored file %s", file.fileName)
 	return nil
 }
 
