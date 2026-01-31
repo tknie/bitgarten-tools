@@ -99,6 +99,26 @@ func CreateConnection() (*DatabaseInfo, error) {
 	return &DatabaseInfo{id, nil, "", 0, 0}, nil
 }
 
+func (di *DatabaseInfo) Reopen() error {
+	ref, passwd, err := DatabaseLocation()
+	if err != nil {
+		return err
+	}
+	dc := &DataConfig{User: ref.User, Password: passwd, URL: ref.Host,
+		Port: ref.Port, Database: ref.Database}
+	_, url := dc.PostgresXConnection()
+	ref, pwd, err := common.NewReference(url)
+	if err != nil {
+		return err
+	}
+	di.id, err = flynn.Handler(ref, pwd)
+	if err != nil {
+		fmt.Println("Error db open:", err)
+		return err
+	}
+	return nil
+}
+
 func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
 	found, err := di.CheckAlbum(album)
 	if err != nil {
@@ -579,7 +599,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			log.Log.Errorf("Reopen transaction")
 			_ = di.id.Rollback()
 			di.id.Close()
-			di.id = 0
+			di.Reopen()
 			return err
 		}
 	}
