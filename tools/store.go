@@ -88,11 +88,11 @@ func storeWorkerThread(currentIndex int) {
 			}
 			sql.SetReaderState(currentIndex, sql.DoneStoreWorker)
 			wgStore.Done()
-			log.Log.Debugf("Done wgstore " + file.fileName)
+			log.Log.Infof("Done store queue " + file.fileName)
 			sql.SetReaderState(currentIndex, sql.Done2StoreWorker)
 		case <-stopStore:
 			sql.SetReaderState(currentIndex, sql.StopStoreWorker)
-			log.Log.Infof("Store worker %d stopping now", currentIndex)
+			log.Log.Infof("Ended store queue worker %d stopping now", currentIndex)
 			return
 		}
 	}
