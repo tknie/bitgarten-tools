@@ -100,6 +100,8 @@ func CreateConnection() (*DatabaseInfo, error) {
 }
 
 func (di *DatabaseInfo) Reopen() error {
+	log.Log.Infof("Reopen %v", di.id)
+	di.id.Close()
 	ref, passwd, err := DatabaseLocation()
 	if err != nil {
 		return err
@@ -109,13 +111,17 @@ func (di *DatabaseInfo) Reopen() error {
 	_, url := dc.PostgresXConnection()
 	ref, pwd, err := common.NewReference(url)
 	if err != nil {
+		fmt.Println("Error db open:", err)
 		return err
 	}
 	di.id, err = flynn.Handler(ref, pwd)
 	if err != nil {
+		log.Log.Errorf("Reopened error %s: %v", ref.Host, err)
 		fmt.Println("Error db open:", err)
+		log.Log.Fatalf("Error: %v", err)
 		return err
 	}
+	log.Log.Infof("Reopened connection to ....%s with %v", ref.Host, di.id)
 	return nil
 }
 
@@ -596,9 +602,8 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		log.Log.Infof("Insert picture data %s", pic.Available)
 		err = insertPictureData(ti, pic)
 		if err != nil {
-			log.Log.Errorf("Reopen transaction")
+			log.Log.Errorf("Reopen transaction after insert picture data error: %v", err)
 			_ = di.id.Rollback()
-			di.id.Close()
 			di.Reopen()
 			return err
 		}
