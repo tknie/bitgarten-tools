@@ -577,7 +577,9 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 		err = insertPictureData(ti, pic)
 		if err != nil {
 			log.Log.Errorf("Reopen transaction")
-			_ = di.id.BeginTransaction()
+			_ = di.id.Rollback()
+			di.id.Close()
+			di.id = 0
 			return err
 		}
 	}
