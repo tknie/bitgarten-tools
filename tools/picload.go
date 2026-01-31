@@ -179,6 +179,7 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 			fmt.Println("Abort/Error during file walk:", err)
 			return
 		}
+		fmt.Println("Walk of directory", pictureDirectory, "done")
 	}
 
 }

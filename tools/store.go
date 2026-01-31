@@ -188,7 +188,7 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 
 	err = pic.CreateThumbnail()
 	if err != nil {
-		log.Log.Errorf("Error creating thumbnail %s: %v", fileName, err)
+		log.Log.Errorf("Error creating thumbnail during load %s: %v", fileName, err)
 		sql.IncErrorFile(err, pic.Directory+"/"+pic.PictureName)
 	}
 
