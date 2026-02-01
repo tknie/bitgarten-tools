@@ -510,7 +510,7 @@ func insertWorkerThread(currentIndex int) {
 	workerNr := atomic.AddInt32(&workerCounter, 1)
 	di.workerNr = workerNr
 	defer di.Close()
-	defer log.Log.Infof("Leaving worker...")
+	defer log.Log.Infof("Leaving worker of insert queue ...")
 	for {
 		SetState(currentIndex, WaitingStoreWorker)
 		select {
@@ -524,7 +524,7 @@ func insertWorkerThread(currentIndex int) {
 			} else {
 				log.Log.Debugf("worker (%d) success inserting picture", workerNr)
 			}
-			log.Log.Infof("Inserting pic worker %d done", workerNr)
+			log.Log.Infof("Inserting pic worker %d in insert queue done", workerNr)
 			SetState(currentIndex, DoneStoreWorker)
 			wg.Done()
 			counter++
@@ -641,6 +641,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 			pic.ChecksumPicture, di.workerNr)
 		atomic.AddUint32(&sqlInsertCounter, 1)
 	} else {
+		log.Log.Debugf("Commiting picture without location (worker %d)", di.workerNr)
 		err = di.id.Commit()
 		if err != nil {
 			IncError("Commit error "+pic.PictureName, fmt.Errorf("error commiting: %v", err))
