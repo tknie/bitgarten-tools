@@ -19,13 +19,14 @@
 package tools
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/tknie/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var level = zapcore.ErrorLevel
@@ -55,32 +56,26 @@ func InitLogLevelWithFile(fileName string) (err error) {
 	}
 
 	name := p + string(os.PathSeparator) + fileName
-
-	rawJSON := []byte(`{
-		"level": "error",
-		"encoding": "console",
-		"outputPaths": [ "loadpicture.log"],
-		"errorOutputPaths": ["stderr"],
-		"encoderConfig": {
-		  "messageKey": "message",
-		  "levelKey": "level",
-		  "levelEncoder": "lowercase"
-		}
-	  }`)
-
-	var cfg zap.Config
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		fmt.Println("Error initialize logging (json)")
-		os.Exit(255)
+	lumberLog := &lumberjack.Logger{
+		Filename:   name, // Location of the log file
+		MaxSize:    10,   // Maximum file size (in MB)
+		MaxBackups: 3,    // Maximum number of old files to retain
+		MaxAge:     28,   // Maximum number of days to retain old files
+		Compress:   true, // Whether to compress/archive old files
+		LocalTime:  true, // Use local time for timestamps
 	}
-	cfg.Level.SetLevel(level)
-	cfg.OutputPaths = []string{name}
-	logger, err := cfg.Build()
-	if err != nil {
-		fmt.Println("Error initialize logging (build)")
-		os.Exit(255)
-	}
-	defer logger.Sync()
+	writer := zapcore.AddSync(lumberLog)
+	cfg := zap.NewProductionEncoderConfig()
+	cfg.TimeKey = "timestamp"
+	cfg.EncodeTime = zapcore.TimeEncoderOfLayout(time.DateTime)
+
+	core := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(cfg),
+		writer,
+		level,
+	)
+	logger := zap.New(core)
+	defer logger.Sync() // Flush any buffered log entries
 
 	sugar := logger.Sugar()
 
