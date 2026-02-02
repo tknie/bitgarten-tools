@@ -34,7 +34,7 @@ and stores it in data field.
 `
 
 func main() {
-	tools.InitLogLevelWithFile("exiftool.log")
+	log.InitZapLogWithFilename("exiftool.log")
 	limit := 0
 	preFilter := ""
 	json := false

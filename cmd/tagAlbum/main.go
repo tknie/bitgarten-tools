@@ -35,7 +35,7 @@ const description = `Tag the album of list.
 `
 
 func main() {
-	tools.InitLogLevelWithFile("tagAlbum.log")
+	log.InitZapLogWithFilename("tagAlbum.log")
 
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")

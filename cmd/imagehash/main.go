@@ -27,6 +27,7 @@ import (
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/store"
 	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `This tool generates image hashs.
@@ -39,7 +40,7 @@ type jsonInfo struct {
 }
 
 func main() {
-	tools.InitLogLevelWithFile("imagehash.log")
+	log.InitZapLogWithFilename("imagehash.log")
 
 	limit := 10
 	preFilter := ""

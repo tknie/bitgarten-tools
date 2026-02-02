@@ -165,7 +165,7 @@ func (pic *PictureBinary) LoadFile() error {
 	pic.Data.Media = make([]byte, fi.Size())
 	var n int
 	n, err = f.Read(pic.Data.Media)
-	log.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Data.Media), err)
+	log.Log.Debugf("Number of bytes read in load file: %d/%d -> %v\n", n, len(pic.Data.Media), err)
 	if err != nil {
 		return err
 	}

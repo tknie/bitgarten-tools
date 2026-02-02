@@ -36,7 +36,7 @@ included in the exif nameing.
 
 func main() {
 
-	tools.InitLogLevelWithFile("exifclean.log")
+	log.InitZapLogWithFilename("exifclean.log")
 
 	tableName := ""
 	json := false

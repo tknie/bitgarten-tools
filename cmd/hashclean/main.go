@@ -36,7 +36,7 @@ In addition the tool does cleanup HEIC scaled photos.
 `
 
 func main() {
-	tools.InitLogLevelWithFile("hashclean.log")
+	log.InitZapLogWithFilename("hashclean.log")
 	var limit int
 	var minCount int
 	var heicclean bool

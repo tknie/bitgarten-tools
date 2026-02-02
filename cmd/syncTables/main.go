@@ -35,7 +35,7 @@ const description = `This tool copy a table to another destination.
 `
 
 func main() {
-	tools.InitLogLevelWithFile("syncTables.log")
+	log.InitZapLogWithFilename("syncTables.log")
 
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")

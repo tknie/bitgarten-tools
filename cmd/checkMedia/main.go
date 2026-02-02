@@ -44,7 +44,7 @@ func main() {
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
-	err := tools.InitLogLevelWithFile("checkMedia.log")
+	err := log.InitZapLogWithFilename("checkMedia.log")
 	if err != nil {
 		fmt.Printf("Error initialzing logging: %v\n", err)
 		return

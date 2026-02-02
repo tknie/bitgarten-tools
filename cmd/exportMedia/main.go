@@ -28,6 +28,7 @@ import (
 
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/log"
 )
 
 const description = `This tool exports all files into a directory
@@ -37,7 +38,7 @@ func main() {
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
-	err := tools.InitLogLevelWithFile("exportMedia.log")
+	err := log.InitZapLogWithFilename("exportMedia.log")
 	if err != nil {
 		fmt.Printf("Error initialzing logging: %v\n", err)
 		return

@@ -35,7 +35,7 @@ const description = `This tool synchronize an album between two bitgarten instan
 `
 
 func main() {
-	tools.InitLogLevelWithFile("syncAlbum.log")
+	log.InitZapLogWithFilename("syncAlbum.log")
 	insertAlbum := false
 	syncAll := false
 

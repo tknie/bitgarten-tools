@@ -37,7 +37,7 @@ the HEIC thumbnail.
 
 func main() {
 
-	tools.InitLogLevelWithFile("heicthumb.log")
+	log.InitZapLogWithFilename("heicthumb.log")
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	var chksum string

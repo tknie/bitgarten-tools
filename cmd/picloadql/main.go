@@ -40,7 +40,7 @@ defines the location to be loaded.
 `
 
 func main() {
-	tools.InitLogLevelWithFile("picloadql.log")
+	log.InitZapLogWithFilename("picloadql.log")
 	var filter string
 	var binarySize string
 	var shortenPath bool

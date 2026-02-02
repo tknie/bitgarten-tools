@@ -40,7 +40,7 @@ func main() {
 	var limit int
 	json := false
 
-	err := tools.InitLogLevelWithFile("analyzeDirectory.log")
+	err := log.InitZapLogWithFilename("analyzeDirectory.log")
 	if err != nil {
 		fmt.Printf("Error initialzing logging: %v\n", err)
 		return

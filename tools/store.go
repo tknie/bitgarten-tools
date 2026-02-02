@@ -171,13 +171,13 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 		pic.MIMEType = "video/" + fileType[1:]
 	default:
 		fmt.Println("Unknown format found:", fileType[1:])
-		return nil, fmt.Errorf("no format to upload of type " + fileType[1:])
+		return nil, fmt.Errorf("no format to upload of type %s", fileType[1:])
 	}
 
 	pic.Media = make([]byte, fi.Size())
 	var n int
 	n, err = f.Read(pic.Media)
-	log.Log.Debugf("Number of bytes read: %d/%d -> %v\n", n, len(pic.Media), err)
+	log.Log.Debugf("Number of bytes reading: %d/%d -> %v\n", n, len(pic.Media), err)
 	if err != nil {
 		sql.IncError("Read error "+fileName, err)
 		return nil, err
