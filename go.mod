@@ -10,8 +10,8 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
-	github.com/tknie/flynn v0.9.10
-	github.com/tknie/log v0.1.0
+	github.com/tknie/flynn v0.9.11
+	github.com/tknie/log v0.3.0
 	go.uber.org/zap v1.27.1
 )
 
