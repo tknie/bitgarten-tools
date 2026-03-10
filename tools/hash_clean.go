@@ -226,12 +226,12 @@ func queryPictureByHash(hash string, commit bool) error {
 	sort.SliceStable(picturesByHash, func(x, y int) bool {
 		return picturesByHash[x].Width > picturesByHash[y].Width
 	})
-	fmt.Printf("Found %d picture hash entries\n", len(picturesByHash))
+	services.ServerMessage("Found %d picture hash entries", len(picturesByHash))
 	var firstFound *PictureByHash
 	tagMap := make(map[string]bool)
 	for _, pbh := range picturesByHash {
 		if strings.HasSuffix(strings.ToLower(pbh.Title), ".heic") {
-			fmt.Println("HEIC found :", pbh.Title)
+			services.ServerMessage("HEIC found : %s", pbh.Title)
 			if firstFound == nil {
 				firstFound = pbh
 			} else {
@@ -277,9 +277,9 @@ func queryPictureByHash(hash string, commit bool) error {
 		}
 	}
 	if firstFound == nil {
-		fmt.Printf("No first found out of %d\n", len(picturesByHash))
+		services.ServerMessage("No first found out of %d", len(picturesByHash))
 	} else {
-		fmt.Printf("Start cleanup for %s entries=%d\n", hash, len(picturesByHash))
+		services.ServerMessage("Start cleanup for %s entries=%d", hash, len(picturesByHash))
 		err = cleanUpPictures(commit, tagMap, firstFound, picturesByHash)
 		if err != nil {
 			fmt.Println("Error cleanup pictures:", err)
@@ -353,18 +353,23 @@ func cleanUpPictures(commit bool, tagMap map[string]bool, firstFound *PictureByH
 			services.ServerMessage("Need to mark delete -> %v", pbh.Checksumpicture)
 			ra, err := markPictureDelete(id, pbh.Checksumpicture)
 			if err != nil {
+				log.Log.Infof("Error setting mark picture delete: %v", err)
 				return nil
 			}
 			if ra != 1 {
+				log.Log.Infof("Error setting mark picture delete, update count wrong: %v", ra)
 				return fmt.Errorf("incorrect update mark delete of %s: %d", pbh.Checksumpicture, ra)
 			}
+			services.ServerMessage("Mark delete -> %v", pbh.Checksumpicture)
 			log.Log.Debugf("%d entries updated", ra)
 		}
 	}
 
 	if commit {
+		services.ServerMessage("Commiting delete...")
 		err = id.Commit()
 		if err != nil {
+			log.Log.Infof("Error commiting mark picture delete: %v", err)
 			return err
 		}
 	} else {
@@ -505,7 +510,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 			log.Log.Debugf("Found tags %s %s child %d", l.title, l.checksumpicture, tags)
 			if tags == 0 && parameter.Commit {
 				// No tags found and commit then mark delete
-				fmt.Printf("Mark deleted: %s sub of %s\n", l.title, foundList[i-1].title)
+				services.ServerMessage("Mark deleted: %s sub of %s", l.title, foundList[i-1].title)
 				ra, err := markPictureDelete(id, l.checksumpicture)
 				if err != nil || ra != 1 {
 					fmt.Println(ra, " pictures marked deleted: %v", err)
@@ -525,7 +530,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 		}
 	}
 	if parameter.Commit {
-		fmt.Println("Do final commit...")
+		services.ServerMessage("Do final commit...")
 		err = id.Commit()
 		if err != nil {
 			fmt.Println("Error commiting to database:", err)
@@ -535,7 +540,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	if parameter.Json {
 		fmt.Printf("\"found\":%d, \"length\":%d, \"childs\":%d,", counter, len(foundList), childs)
 	} else {
-		fmt.Printf("Query HEIC end: found=%d length=%d childs=%d\n", counter, len(foundList), childs)
+		services.ServerMessage("Query HEIC end: found=%d length=%d childs=%d", counter, len(foundList), childs)
 	}
 	return nil
 }

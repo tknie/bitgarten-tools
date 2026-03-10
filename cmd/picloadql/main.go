@@ -30,6 +30,7 @@ import (
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 
 	"github.com/docker/go-units"
 )
@@ -109,7 +110,7 @@ func main() {
 		}
 		fmt.Printf("],")
 	} else {
-		fmt.Println("Scan Directories:", directories)
+		services.ServerMessage("Scan Directories: %v", directories)
 	}
 	err = tools.PicLoad(&tools.PicLoadParameter{NrThreadReader: nrThreadReader,
 		NrThreadStorer: nrThreadStorer, MaxBlobSize: sz, Filter: filter,

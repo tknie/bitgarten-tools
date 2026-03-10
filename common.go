@@ -33,7 +33,7 @@ func InitTool(toolName string, json bool) {
 		fmt.Printf("{\"start\":\"%s\",\"tool\":\"%s\",", time.Now().Format(TimeFormat), toolName)
 		return
 	}
-	services.ServerMessage("STARTING tool '%s'\n", toolName)
+	services.ServerMessage("STARTING tool '%s'", toolName)
 }
 
 func FinalizeTool(toolName string, json bool, err error) {
@@ -42,13 +42,12 @@ func FinalizeTool(toolName string, json bool, err error) {
 			fmt.Printf("\"error\":\"%v\",\"end\": \"%s\"}", err, time.Now().Format(TimeFormat))
 			return
 		}
-		fmt.Printf("%s: CANCELED tool '%s' with error: %v\n", time.Now().Format(TimeFormat), toolName, err)
+		services.ServerMessage("CANCELED tool '%s' with error: %v\n", toolName, err)
 		return
 	}
 	if json {
 		fmt.Printf("\"end\": \"%s\"}\n", time.Now().Format(TimeFormat))
 		return
 	}
-	fmt.Printf("%s: ENDED tool '%s'\n", time.Now().Format(TimeFormat), toolName)
-
+	services.ServerMessage("ENDED tool '%s'\n", toolName)
 }

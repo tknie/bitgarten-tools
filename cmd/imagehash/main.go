@@ -28,6 +28,7 @@ import (
 	"github.com/tknie/bitgartentools/store"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 )
 
 const description = `This tool generates image hashs.
@@ -80,9 +81,9 @@ func main() {
 			}
 		}, infoMap)
 	} else {
-		fmt.Println("Start Bitgarten hash generator to find doublikates of pictures")
+		services.ServerMessage("Start Bitgarten hash generator to find doublikates of pictures")
 		tools.InitHash(func(pic *store.Pictures, status string) {
-			fmt.Println(status)
+			services.ServerMessage("Status:" + status)
 			if pic == nil {
 				fmt.Println()
 			}

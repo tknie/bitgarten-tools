@@ -459,13 +459,13 @@ func checkErrorContinue(err error) bool {
 			atomic.AddUint32(&sqlSkipCounter, 1)
 			return true
 		}
-		fmt.Printf("Error inserting record(no duplicate): %v\n", err)
+		fmt.Printf("Error inserting record(MySQL, no duplicate): %v\n", err)
 	case *pgconn.PgError:
 		if e.Code == "23505" {
 			atomic.AddUint32(&sqlSkipCounter, 1)
 			return true
 		}
-		fmt.Printf("Error inserting record(no duplicate): %v\n", err)
+		fmt.Printf("Error inserting record(Postgres, no duplicate): %v\n", err)
 	default:
 		fmt.Printf("Error inserting record(default): %v\n", err)
 	}
@@ -519,8 +519,10 @@ func insertWorkerThread(currentIndex int) {
 			SetStateWithFile(currentIndex, InsertingStoreWorker, pic.Title)
 			err = di.InsertPictures(pic)
 			if err != nil {
-				log.Log.Debugf("worker (%d) error inserting picture: %v", workerNr, err)
-				fmt.Printf("worker (%d) error inserting picture: %v\n", workerNr, err)
+				log.Log.Debugf("worker (%d) error inserting picture %s(%d): %v",
+					workerNr, pic.PictureName, len(pic.Media), err)
+				fmt.Printf("worker (%d) error inserting picture '%s'(%d): %v\n", workerNr,
+					pic.PictureName, len(pic.Media), err)
 			} else {
 				log.Log.Debugf("worker (%d) success inserting picture", workerNr)
 			}

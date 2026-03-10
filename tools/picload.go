@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/tknie/bitgartentools/sql"
+	"github.com/tknie/services"
 
 	"github.com/docker/go-units"
 	"github.com/tknie/log"
@@ -58,7 +59,7 @@ func PicLoad(parameter *PicLoadParameter) error {
 	if parameter.Json {
 		fmt.Printf("\"MaxLOBSize\":\"%s\",", units.HumanSize(float64(MaxBlobSize)))
 	} else {
-		fmt.Println("Max lob size:", units.HumanSize(float64(MaxBlobSize)))
+		services.ServerMessage("Max lob size: %v", units.HumanSize(float64(MaxBlobSize)))
 	}
 	ShortPath = parameter.ShortenPath
 
@@ -111,7 +112,7 @@ func PicLoad(parameter *PicLoadParameter) error {
 	} else {
 		sql.EndStats()
 
-		fmt.Printf("%s used %v\n", time.Now().Format(timeFormat), time.Since(start))
+		services.ServerMessage("Used %v\n", time.Since(start))
 	}
 	for i := 0; i < parameter.NrThreadReader; i++ {
 		sql.StopWorker()
@@ -141,7 +142,7 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 		if parameter.Json {
 			fmt.Printf("\"Directory\":\"%s\",\"start\":\"%s\"", pictureDirectory, time.Now().Format(timeFormat))
 		} else {
-			fmt.Printf("%s Loading path %s\n", time.Now().Format(timeFormat), pictureDirectory)
+			services.ServerMessage("Loading path %s", pictureDirectory)
 		}
 		err := filepath.Walk(pictureDirectory, func(path string, info os.FileInfo, err error) error {
 			if info == nil || info.IsDir() {
@@ -179,7 +180,7 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 			fmt.Println("Abort/Error during file walk:", err)
 			return
 		}
-		fmt.Println("Walk of directory", pictureDirectory, "done")
+		services.ServerMessage("Walk of directory %s done", pictureDirectory)
 	}
 
 }

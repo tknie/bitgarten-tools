@@ -30,6 +30,7 @@ import (
 
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
@@ -363,8 +364,15 @@ func EndStats() {
 	bitgartentools.EndStats(func() {
 		output()
 		ps.Errors.Range(func(e, n any) bool {
-			fmt.Println("Error:", e, ":", n)
-			log.Log.Errorf("End stats %03d -> %s", n, e)
+			out := fmt.Sprintf("%v", e)
+			switch {
+			case strings.Contains(out, "failed to find exif intro marker"):
+				services.ServerMessage("Warning: %v: count=%v", e, n)
+				log.Log.Errorf("End stats %03d -> %s", n, e)
+			default:
+				services.ServerMessage("Error: %v: count=%v", e, n)
+				log.Log.Errorf("End stats %03d -> %s", n, e)
+			}
 			return true
 		})
 	})
