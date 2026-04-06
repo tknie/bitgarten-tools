@@ -10,7 +10,7 @@ require (
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/tknie/flynn v0.9.11
 	github.com/tknie/log v0.4.0
-	go.uber.org/zap v1.27.1
+	go.uber.org/zap v1.27.1 // indirect
 )
 
 require (
@@ -35,6 +35,7 @@ require (
 	golang.org/x/image v0.36.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
 require (
@@ -45,10 +46,9 @@ require (
 	github.com/ogen-go/ogen v1.20.1
 	github.com/stretchr/testify v1.11.1
 	github.com/tknie/services v0.5.0
-	go.opentelemetry.io/otel v1.42.0
-	go.opentelemetry.io/otel/metric v1.42.0
-	go.opentelemetry.io/otel/trace v1.42.0
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	go.opentelemetry.io/otel v1.43.0
+	go.opentelemetry.io/otel/metric v1.43.0
+	go.opentelemetry.io/otel/trace v1.43.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
