@@ -29,13 +29,23 @@ import (
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 )
 
 const description = `This tool synchronize an album between two bitgarten instances.
 `
 
+func init() {
+	services.ServerMessage("Start Sync Album application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
+
+	err := log.InitZapLogWithFilename("syncAlbum.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
+}
+
 func main() {
-	log.InitZapLogWithFilename("syncAlbum.log")
 	insertAlbum := false
 	syncAll := false
 

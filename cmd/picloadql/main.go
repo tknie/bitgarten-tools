@@ -40,8 +40,17 @@ defines the location to be loaded.
 
 `
 
+func init() {
+	services.ServerMessage("Start Picture Load SQL application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
+
+	err := log.InitZapLogWithFilename("picloadql.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
+}
+
 func main() {
-	log.InitZapLogWithFilename("picloadql.log")
 	var filter string
 	var binarySize string
 	var shortenPath bool

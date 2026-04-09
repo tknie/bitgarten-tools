@@ -197,6 +197,7 @@ func resizeHeif(media []byte, max int) ([]byte, *exif.Exif, uint32, uint32, erro
 		log.Log.Infof("Error decoding exif: %v", err)
 		return nil, nil, 0, 0, err
 	}
+	log.Log.Debugf("Exif HEIF len: %d", len(media))
 	r := bytes.NewBuffer(media)
 	srcImage, err := goheif.Decode(r)
 	if err != nil {

@@ -29,15 +29,25 @@ import (
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 )
 
 const description = `This tool creates HEIC scaled and creates
 the HEIC thumbnail.
 `
 
+func init() {
+	services.ServerMessage("Start HEIC Thumb application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
+
+	err := log.InitZapLogWithFilename("heicthumb.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
+}
+
 func main() {
 
-	log.InitZapLogWithFilename("heicthumb.log")
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	var chksum string

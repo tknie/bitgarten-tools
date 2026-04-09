@@ -25,6 +25,7 @@ import (
 
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/services"
 
 	"github.com/tknie/log"
 )
@@ -34,9 +35,17 @@ included in the exif nameing.
 
 `
 
-func main() {
+func init() {
+	services.ServerMessage("Start Exif Clean application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
 
-	log.InitZapLogWithFilename("exifclean.log")
+	err := log.InitZapLogWithFilename("exifclean.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
+}
+
+func main() {
 
 	tableName := ""
 	json := false

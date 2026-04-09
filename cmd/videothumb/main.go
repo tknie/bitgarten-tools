@@ -29,14 +29,23 @@ import (
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 )
 
 const description = `This tool create thumbnails for videos.
 `
 
-func main() {
-	log.InitZapLogWithFilename("videothumb.log")
+func init() {
+	services.ServerMessage("Start Video Thumb application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
 
+	err := log.InitZapLogWithFilename("videothumb.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
+}
+
+func main() {
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	var chksum string

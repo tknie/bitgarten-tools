@@ -29,20 +29,26 @@ import (
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 )
 
 const description = `This tool exports all files into a directory
  `
 
-func main() {
-	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+func init() {
+	services.ServerMessage("Start Export Media application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
 
 	err := log.InitZapLogWithFilename("exportMedia.log")
 	if err != nil {
 		fmt.Printf("Error initialzing logging: %v\n", err)
 		return
 	}
+}
+
+func main() {
+	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -59,9 +65,10 @@ func main() {
 	flag.BoolVar(&markDelete, "D", false, "Search include mark deleted")
 	flag.StringVar(&directory, "d", "", "Write files to directory")
 	flag.Parse()
+	var err error
 
-	bitgartentools.InitTool("checkMedia", json)
-	defer bitgartentools.FinalizeTool("checkMedia", json, err)
+	bitgartentools.InitTool("exportMedia", json)
+	defer bitgartentools.FinalizeTool("exportMedia", json, err)
 
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)

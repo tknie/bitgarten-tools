@@ -29,6 +29,7 @@ import (
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 )
 
 const description = `This tool checks found files in directory and analyze number of new or registered
@@ -36,15 +37,20 @@ media in the databases using the checksum.
 
 `
 
-func main() {
-	var limit int
-	json := false
+func init() {
+	services.ServerMessage("Start Analyze Directory application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
 
 	err := log.InitZapLogWithFilename("analyzeDirectory.log")
 	if err != nil {
 		fmt.Printf("Error initialzing logging: %v\n", err)
 		return
 	}
+}
+
+func main() {
+	var limit int
+	json := false
+
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -56,6 +62,7 @@ func main() {
 	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.Parse()
 
+	var err error
 	bitgartentools.InitTool("analyzeDirectory", json)
 	defer bitgartentools.FinalizeTool("analyzeDirectory", json, err)
 

@@ -29,13 +29,23 @@ import (
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 )
 
 const description = `Tag the album of list.
 `
 
+func init() {
+	services.ServerMessage("Start Tag Album application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
+
+	err := log.InitZapLogWithFilename("tagAlbum.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
+}
+
 func main() {
-	log.InitZapLogWithFilename("tagAlbum.log")
 
 	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")

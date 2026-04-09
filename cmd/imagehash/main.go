@@ -40,8 +40,17 @@ type jsonInfo struct {
 	Status   string
 }
 
+func init() {
+	services.ServerMessage("Start Image Hash application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
+
+	err := log.InitZapLogWithFilename("imagehash.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
+}
+
 func main() {
-	log.InitZapLogWithFilename("imagehash.log")
 
 	limit := 10
 	preFilter := ""

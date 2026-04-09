@@ -26,11 +26,14 @@ OBJECTS         = sql/*.go cmd/exifclean/*.go cmd/heicthumb/main.go \
                   cmd/picloadql/*.go cmd/videothumb/main.go cmd/imagehash/main.go \
                   store/*.go cmd/syncAlbum/main.go cmd/hashclean/main.go \
 				  tools/*.go cmd/analyzeDirectory/main.go \
-				  cmd/syncTables/*.go cmd/exportMedia/main.go
-CGO_CFLAGS      = $(if $(ACLDIR),-I$(ACLDIR)/inc,)
-CGO_LDFLAGS     = $(if $(ACLDIR),-L$(ACLDIR)/lib -ladalnkx,)
-CGO_EXT_LDFLAGS = $(if $(ACLDIR),-lsagsmp2 -lsagxts3 -ladazbuf,)
-GO_TAGS         = $(if $(ACLDIR),"release adalnk","release")
+				  cmd/syncTables/*.go cmd/exportMedia/main.go version.go
+PACKAGE		    = $(shell $(GO) list -m)
+CGO_CFLAGS      = 
+CGO_LDFLAGS     = 
+CGO_EXT_LDFLAGS = 
+DATE            = $(shell date +%d-%m-%Y'_'%H:%M:%S)
+VERSION        ?= v0.0.1.99
+GO_TAGS         = tools
 GO_FLAGS        = $(if $(debug),"-x",) -tags $(GO_TAGS)
 PLUGINS         = $(BIN)/plugins/bittools
 SWAGGER_SPEC    = $(CURDIR)/swagger/openapi.yaml
@@ -51,7 +54,7 @@ $(CURDIR)/api: $(SWAGGER_SPEC) ; $(info $(M) generating code...) @ ## Generate r
 $(EXECS): $(OBJECTS) ; $(info $(M) building executable $(@:$(BIN)/%=%)…) @ ## Build program binary
 	$Q cd $(CURDIR) &&  \
 	   CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS) $(CGO_EXT_LDFLAGS)" $(GO) build $(GO_FLAGS) \
-		-ldflags '-X $(PACKAGE)/adabas.Version=$(VERSION) -X $(PACKAGE)/adabas.BuildDate=$(DATE)' \
+		-ldflags '-X $(PACKAGE).BuildVersion=$(VERSION) -X $(PACKAGE).BuildDate=$(DATE)' \
 		-o $@ ./cmd/$(@:$(BIN)/%=%)
 
 clean:

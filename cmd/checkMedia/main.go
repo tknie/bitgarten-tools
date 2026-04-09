@@ -30,6 +30,7 @@ import (
 	"github.com/tknie/bitgartentools"
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/bitgartentools/tools"
+	"github.com/tknie/services"
 
 	"github.com/tknie/flynn/common"
 	"github.com/tknie/log"
@@ -40,15 +41,20 @@ it with the database checksumpicture data content.
 
 `
 
-func main() {
-	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+func init() {
+	services.ServerMessage("Start Check Media application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
 
 	err := log.InitZapLogWithFilename("checkMedia.log")
 	if err != nil {
 		fmt.Printf("Error initialzing logging: %v\n", err)
 		return
 	}
+}
+
+func main() {
+	var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+	var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
 	flag.Usage = func() {
 		fmt.Print(description)
 		fmt.Println("Default flags:")
@@ -61,7 +67,7 @@ func main() {
 	flag.BoolVar(&json, "j", false, "Output in JSON format")
 	flag.StringVar(&chksum, "c", "", "Check image checksum only")
 	flag.Parse()
-
+	var err error
 	bitgartentools.InitTool("checkMedia", json)
 	defer bitgartentools.FinalizeTool("checkMedia", json, err)
 

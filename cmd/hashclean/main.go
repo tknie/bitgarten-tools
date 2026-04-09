@@ -27,6 +27,7 @@ import (
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/bitgartentools/tools"
 	"github.com/tknie/log"
+	"github.com/tknie/services"
 )
 
 const description = `This tool checks creates similar hash for all types
@@ -35,8 +36,17 @@ In addition the tool does cleanup HEIC scaled photos.
 
 `
 
+func init() {
+	services.ServerMessage("Start Hash Clean application %s (build at %s)", bitgartentools.BuildVersion, bitgartentools.BuildDate)
+
+	err := log.InitZapLogWithFilename("hashclean.log")
+	if err != nil {
+		fmt.Printf("Error initialzing logging: %v\n", err)
+		return
+	}
+}
+
 func main() {
-	log.InitZapLogWithFilename("hashclean.log")
 	var limit int
 	var minCount int
 	var heicclean bool
