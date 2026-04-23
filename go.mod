@@ -5,12 +5,12 @@ go 1.25.0
 require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/tknie/flynn v0.9.11
 	github.com/tknie/log v0.4.0
-	go.uber.org/zap v1.27.1
+	go.uber.org/zap v1.27.1 // indirect
 )
 
 require (
@@ -35,6 +35,7 @@ require (
 	golang.org/x/image v0.36.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
 require (
@@ -48,7 +49,6 @@ require (
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/metric v1.42.0
 	go.opentelemetry.io/otel/trace v1.42.0
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 
