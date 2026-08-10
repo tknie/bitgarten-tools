@@ -19,9 +19,9 @@ require (
 	github.com/tknie/goheif v0.0.0-20260407202049-b377b8a49533
 	github.com/tknie/log v0.4.0
 	github.com/tknie/services v0.6.0
-	go.opentelemetry.io/otel v1.44.0
-	go.opentelemetry.io/otel/metric v1.44.0
-	go.opentelemetry.io/otel/trace v1.44.0
+	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel/metric v1.45.0
+	go.opentelemetry.io/otel/trace v1.45.0
 	go.uber.org/multierr v1.11.0
 	golang.org/x/text v0.40.0
 	gopkg.in/yaml.v2 v2.4.0
