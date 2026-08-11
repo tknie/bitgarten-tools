@@ -62,7 +62,7 @@ func init() {
 	MaxBlobSize, _ = units.FromHumanSize("1GB")
 }
 
-func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
+func (di *DatabaseInfo) CheckExists(pic *store.Pictures) error {
 	pic.Available = store.NoAvailable
 
 	batch := &common.Query{TableName: "pictures", Search: query,
@@ -97,15 +97,16 @@ func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 	})
 	if err != nil {
 		fmt.Println("Check exists query error:", err)
-		log.Log.Fatalf("Query error database call...%v", err)
-		return
+		// log.Log.Fatalf("Query error database call...%v", err)
+		return err
 	}
 	log.Log.Debugf("%s: Current available %s", pic.ChecksumPicture, pic.Available)
 	if int64(len(pic.Media)) > MaxBlobSize && pic.Available != store.BothAvailable {
 		log.Log.Debugf("Check REST client ... size bigger than %d", MaxBlobSize)
 		found, err := CheckRestClient(pic.ChecksumPicture)
 		if err != nil {
-			log.Log.Fatalf("REST client check failed")
+			log.Log.Errorf("REST client check failed")
+			return err
 		}
 		if !found {
 			log.Log.Debugf("Maximal blob size...no available for %s", pic.ChecksumPicture)
@@ -116,4 +117,5 @@ func (di *DatabaseInfo) CheckExists(pic *store.Pictures) {
 		}
 	}
 	log.Log.Debugf("%s: Final available %s", pic.ChecksumPicture, pic.Available)
+	return nil
 }
