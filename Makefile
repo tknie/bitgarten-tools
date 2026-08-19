@@ -20,12 +20,12 @@ EXECS           = $(BIN)/exifclean $(BIN)/videothumb $(BIN)/heicthumb \
 				  $(BIN)/picloadql $(BIN)/syncAlbum  $(BIN)/checkMedia \
 				  $(BIN)/tagAlbum  $(BIN)/exiftool $(BIN)/imagehash \
 				  $(BIN)/hashclean $(BIN)/analyzeDirectory \
-				  $(BIN)/syncTables $(BIN)/exportMedia
+				  $(BIN)/syncTables $(BIN)/exportMedia $(BIN)/generateSha1Hash
 OBJECTS         = sql/*.go cmd/exifclean/*.go cmd/heicthumb/main.go \
 				  store/album.go cmd/checkMedia/main.go cmd/tagAlbum/main.go \
                   cmd/picloadql/*.go cmd/videothumb/main.go cmd/imagehash/main.go \
                   store/*.go cmd/syncAlbum/main.go cmd/hashclean/main.go \
-				  tools/*.go cmd/analyzeDirectory/main.go \
+				  tools/*.go cmd/analyzeDirectory/main.go cmd/generateSha1Hash/main.go \
 				  cmd/syncTables/*.go cmd/exportMedia/main.go version.go
 PACKAGE		    = $(shell $(GO) list -m)
 CGO_CFLAGS      = 
