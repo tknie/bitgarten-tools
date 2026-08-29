@@ -25,7 +25,10 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+	"sync"
 	"text/template"
+	"time"
 
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/bitgartentools/store"
@@ -33,13 +36,37 @@ import (
 	"github.com/tknie/services"
 )
 
+type typePoint int
+
+const (
+	sha1Measure typePoint = iota
+	recordMeasure
+)
+
+var measurePoints = []string{
+	"SHA1 checksum generation",
+	"Record processing",
+}
+
+var wgHash sync.WaitGroup
+
+const nrThreads = 5
+
+var measure sync.Map
+var counter = uint64(0)
+var channel = make(chan *store.Pictures, 10)
+var quit = make(chan bool, nrThreads)
+
 const searchSha1Hash = `{{if not .Deleted -}} markdelete = false AND {{end}}
-mimetype LIKE 'image/%' {{.Filter}} AND sha1checksum IS NULL`
+ {{.Filter}} sha1checksum IS NULL`
 
 func GenerateImageHash(parameter *ImageHashParameter) error {
-
+	defer dumpMeasure()
+	for i := 0; i < nrThreads; i++ {
+		go workOnChannel(i)
+	}
 	if parameter.PreFilter != "" {
-		parameter.PreFilter = fmt.Sprintf(" AND LOWER(title) LIKE '%s%%'", parameter.PreFilter)
+		parameter.PreFilter = fmt.Sprintf(" AND LOWER(title) LIKE '%s%%' AND ", parameter.PreFilter)
 	}
 
 	// Prepare template
@@ -66,33 +93,57 @@ func GenerateImageHash(parameter *ImageHashParameter) error {
 	if parameter.Json {
 		fmt.Printf("\"Hash\":[")
 	}
-	counter := uint64(0)
 
-	_, err = id.Query(query, func(search *common.Query, result *common.Result) error {
-		counter++
-		p := result.Data.(*store.Pictures)
-		buffer := bytes.NewBuffer(p.Media)
-		hd := generateSHA1(buffer)
-		err := insertSha1Hash(p.ChecksumPicture, hd)
-		if err != nil {
-			os.Exit(111)
-		}
-		if counter%1000 == 0 {
-			services.ServerMessage("Generated SHA1 hash for %06d pictures", counter)
-		}
-		// fmt.Printf("{\"Checksum\":\"%s\",\"Title\":\"%s\",\"MIMEType\":\"%s\",\"Checksumpicture\":\"%s\"}\n",
-		// 	p.ChecksumPicture, p.Title, p.MIMEType, hd)
-		return nil
-	})
+	_, err = id.Query(query, workOnRecord)
 	if err != nil {
 		services.ServerMessage("Error query ...: %v %d", err, counter)
 		return fmt.Errorf("query error: %v", err)
 	}
+	time.Sleep(10 * time.Second)
 	services.ServerMessage("Finished generating SHA1 hash for %d pictures", counter)
+	for i := 0; i < nrThreads; i++ {
+		quit <- true
+	}
+	wgHash.Wait()
 	return nil
 }
 
-func insertSha1Hash(checksumpicture string, sha1checksum string) error {
+func workOnRecord(search *common.Query, result *common.Result) error {
+	defer measureTime(recordMeasure, 0, time.Now())
+	counter++
+	p := result.Data.(*store.Pictures)
+	channel <- p
+	if counter%1000 == 0 {
+		services.ServerMessage("Generated SHA1 hash for %06d pictures", counter)
+	}
+	// fmt.Printf("{\"Checksum\":\"%s\",\"Title\":\"%s\",\"MIMEType\":\"%s\",\"Checksumpicture\":\"%s\"}\n",
+	// 	p.ChecksumPicture, p.Title, p.MIMEType, hd)
+	return nil
+}
+
+func workOnChannel(id int) {
+	wgHash.Add(1)
+	chanCounter := uint64(0)
+	for {
+		select {
+		case p := <-channel:
+			buffer := bytes.NewBuffer(p.Media)
+			hd := generateSHA1(buffer)
+			err := insertSha1Hash(p.ChecksumPicture, id, hd)
+			if err != nil {
+				os.Exit(111)
+			}
+			chanCounter++
+		case <-quit:
+			services.ServerMessage("Work channel %d counter = %d", id, chanCounter)
+			wgHash.Done()
+			return
+		}
+	}
+}
+
+func insertSha1Hash(checksumpicture string, id int, sha1checksum string) error {
+	defer measureTime(sha1Measure, id, time.Now())
 	wid, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
@@ -117,4 +168,26 @@ func generateSHA1(buffer *bytes.Buffer) string {
 	s := sha1.Sum(buffer.Bytes())
 	//fmt.Printf("Generate SHA1 hash for picture %v %s\n", s, base64.StdEncoding.EncodeToString(s[:]))
 	return base64.StdEncoding.EncodeToString(s[:])
+}
+
+func measureTime(tp typePoint, id int, t time.Time) {
+	f := fmt.Sprintf("%d-%d", tp, id)
+	if v, ok := measure.Load(f); ok {
+		d := v.(time.Duration)
+		measure.Store(f, d+time.Since(t))
+	} else {
+		measure.Store(f, time.Since(t))
+	}
+}
+
+func dumpMeasure() {
+
+	measure.Range(func(key, value any) bool {
+		k := key.(string)
+		v := value.(time.Duration)
+		keys := strings.Split(k, "-")
+		measureKey, _ := strconv.Atoi(keys[0])
+		services.ServerMessage("Measure %v: %v", measurePoints[measureKey], v)
+		return true
+	})
 }
