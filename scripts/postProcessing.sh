@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. ../.env
+. $(dirname $0)/../.env
 
 POSTGRES_PORT=5432
 POSTGRES_DB=photodb

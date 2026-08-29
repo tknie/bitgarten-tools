@@ -24,7 +24,6 @@ GOBIN      ?= $(if $(shell $(GO) env GOBIN),$(shell $(GO) env GOBIN),$(GOPATH)/b
 GO          = go
 GODOC       = godoc
 TIMEOUT     = 2000
-COPACKAGE   = github.com/tknie/services
 BINTESTS    = $(CURDIR)/bin/tests/$(GOOS)_$(GOARCH)
 V   = 0
 Q   = $(if $(filter 1,$V),,@)
@@ -51,13 +50,13 @@ $(LIBS): ; $(info $(M) building libraries…) @ # Build program libraries
 	$Q cd $(CURDIR) && echo "Building version $(VERSION) && \
 	    CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS) $(CGO_EXT_LDFLAGS)" $(GO) build $(GO_FLAGS) \
 		-buildmode=c-shared \
-		-ldflags '-X $(COPACKAGE).Version=$(VERSION) -X $(COPACKAGE).BuildDate=$(DATE) -s -w' \
+		-ldflags '-X $(PACKAGE).Version=$(VERSION) -X $(PACKAGE).BuildDate=$(DATE) -s -w' \
 		-o $(BIN)/$(GOOS)/$@.so $@.go
 
 $(EXECS): $(OBJECTS) ; $(info $(M) building executable $(@:$(BIN)/%=%)…) @ # Build program binary
-	$Q cd $(CURDIR) &&  echo "Build date: $(DATE) version: $(VERSION) at $(COPACKAGE).BuildDate $(GOEXE) -> ./cmd/$(@:$(BIN)/%=%)" && \
+	$Q cd $(CURDIR) &&  echo "Build date: $(DATE) version: $(VERSION) at $(PACKAGE).BuildDate $(GOEXE) -> ./cmd/$(@:$(BIN)/%=%)" && \
 	    CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS) $(CGO_EXT_LDFLAGS)" $(GO) build $(GO_FLAGS) \
-		-ldflags '-X $(COPACKAGE).Version=$(RESTVERSION) -X $(COPACKAGE).BuildVersion=$(VERSION) -X $(COPACKAGE).BuildDate=$(DATE)' \
+		-ldflags '-X $(PACKAGE).Version=$(RESTVERSION) -X $(PACKAGE).BuildVersion=$(VERSION) -X $(PACKAGE).BuildDate=$(DATE)' \
 		-o $@$(GOEXE) ./cmd/$(@:$(BIN)/%=%)
 #ifdef UPX
 #		upx $@$(GOEXE)
@@ -67,7 +66,7 @@ $(PLUGINS): ; $(info $(M) building plugins $(@:$(BIN)/%=%)…) @ # Build plugin 
 	$Q cd $(CURDIR) && \
 	    CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS) $(CGO_EXT_LDFLAGS)" $(GO) build $(GO_FLAGS) \
 	    -buildmode=plugin \
-	    -ldflags '-X $(COPACKAGE).Version=$(VERSION) -X $(COPACKAGE).BuildDate=$(DATE) -s -w' \
+	    -ldflags '-X $(PACKAGE).Version=$(VERSION) -X $(PACKAGE).BuildDate=$(DATE) -s -w' \
 	    -o $@.so ./$(@:$(BIN)/%=%)
 
 $(LOGPATH):
