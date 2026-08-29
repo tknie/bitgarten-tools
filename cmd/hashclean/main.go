@@ -78,12 +78,12 @@ func main() {
 	switch {
 	case nameclean:
 		err = tools.NameClean(&tools.NameCleanParameter{Limit: limit, MinCount: minCount, Title: title,
-			Commit: commit, Json: jsonResult})
+			Commit: commit, JSON: jsonResult})
 	case heicclean:
 		err = tools.HeicClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Title: title,
-			Commit: commit, Json: jsonResult})
+			Commit: commit, JSON: jsonResult})
 	default:
-		err = tools.HashClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit, Json: jsonResult})
+		err = tools.HashClean(&tools.HashCleanParameter{Limit: limit, MinCount: minCount, Commit: commit, JSON: jsonResult})
 	}
 	log.Log.Debugf("Error processing hashclean: %v", err)
 }

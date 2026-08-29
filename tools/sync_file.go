@@ -36,6 +36,7 @@ type SyncTableParameter struct {
 	Commit           bool
 }
 
+// SyncTable synchronis table data to another database
 func SyncTable(parameter *SyncTableParameter) error {
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {
@@ -50,9 +51,9 @@ func SyncTable(parameter *SyncTableParameter) error {
 		return nil
 	}
 
-	destUrl := os.Getenv("POSTGRES_DESTINATION_URL")
+	destURL := os.Getenv("POSTGRES_DESTINATION_URL")
 	pwd := os.Getenv("POSTGRES_DESTINATION_PASSWORD")
-	destSource, err := sql.Connect(destUrl, pwd)
+	destSource, err := sql.Connect(destURL, pwd)
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
 		fmt.Println("Set POSTGRES_DESTINATION_URL and/or POSTGRES_DESTINATION_PASSWORD to define remote database")

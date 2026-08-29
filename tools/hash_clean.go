@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -35,22 +36,16 @@ import (
 	"github.com/tknie/log"
 )
 
-type PictureHash struct {
-	Checksumpicture string
-	PerceptionHash  string
-}
-
-type PictureHashCount struct {
+type pictureHashCount struct {
 	Count          int
 	PerceptionHash string
 }
 
+// DefaultLimit default limit of hashs
 const DefaultLimit = 20
-const DefaultMinCount = 2
 
-// var limit = DefaultLimit
-// var minCount = DefaultMinCount
-// var commit = false
+// DefaultMinCount default minimal count
+const DefaultMinCount = 2
 
 const readHashs = `
 SELECT count(perceptionhash) AS count,
@@ -83,12 +78,13 @@ SELECT checksumpicture, title from pictures where markdelete = false
   {{if gt .Limit 0 -}} LIMIT {{.Limit}} {{end}}
 `
 
+// HashCleanParameter hash clean function parameter
 type HashCleanParameter struct {
 	Limit    int
 	MinCount int
 	Title    string
 	Commit   bool
-	Json     bool
+	JSON     bool
 }
 
 type heicCheck struct {
@@ -96,8 +92,9 @@ type heicCheck struct {
 	checksumpicture string
 }
 
+// HashClean check for hash commit cleanup
 func HashClean(parameter *HashCleanParameter) error {
-	if !parameter.Json {
+	if !parameter.JSON {
 		services.ServerMessage("Query database entries for one week not hashed commit=%v", parameter.Commit)
 	}
 	hashList, err := parameter.queryHash()
@@ -128,7 +125,7 @@ func (parameter *HashCleanParameter) queryHash() ([]string, error) {
 	}
 	defer id.FreeHandler()
 
-	sql, err := templateSql(readHashs, struct {
+	sql, err := templateSQL(readHashs, struct {
 		Limit int
 		Count int
 	}{parameter.Limit, parameter.MinCount})
@@ -142,7 +139,7 @@ func (parameter *HashCleanParameter) queryHash() ([]string, error) {
 	query := &common.Query{
 		TableName: "picturehash",
 		//Fields:     []string{"count(perceptionhash) as count", "perceptionhash"},
-		DataStruct: &PictureHashCount{},
+		DataStruct: &pictureHashCount{},
 		Limit:      limit,
 		Search:     sql,
 	}
@@ -165,7 +162,7 @@ func (parameter *HashCleanParameter) queryHash() ([]string, error) {
 	return hashList, nil
 }
 
-type PictureByHash struct {
+type pictureByHash struct {
 	Checksumpicture string
 	Title           string
 	Height          int
@@ -176,7 +173,7 @@ type PictureByHash struct {
 	delete          bool `flynn:":ignore"`
 }
 
-func templateSql(t string, p any) (string, error) {
+func templateSQL(t string, p any) (string, error) {
 	t1 := template.New("t1")
 	t1 = template.Must(t1.Parse(t))
 	var sql bytes.Buffer
@@ -195,24 +192,24 @@ func queryPictureByHash(hash string, commit bool) error {
 	}
 	defer id.FreeHandler()
 
-	sqlCmd, err := templateSql(readPictureByHashs, hash)
+	sqlCmd, err := templateSQL(readPictureByHashs, hash)
 	if err != nil {
 		return err
 	}
 
-	picturesByHash := make([]*PictureByHash, 0)
+	picturesByHash := make([]*pictureByHash, 0)
 
 	query := &common.Query{
 		TableName:  "pictures",
 		Fields:     []string{"*"},
-		DataStruct: &PictureByHash{},
+		DataStruct: &pictureByHash{},
 		Search:     sqlCmd,
 	}
 	counter := uint64(0)
 	err = id.BatchSelectFct(query, func(search *common.Query, result *common.Result) error {
-		ph := result.Data.(*PictureByHash)
+		ph := result.Data.(*pictureByHash)
 		log.Log.Debugf("Picture found: %#v", ph)
-		newPH := &PictureByHash{}
+		newPH := &pictureByHash{}
 		*newPH = *ph
 		picturesByHash = append(picturesByHash, newPH)
 		counter++
@@ -227,7 +224,7 @@ func queryPictureByHash(hash string, commit bool) error {
 		return picturesByHash[x].Width > picturesByHash[y].Width
 	})
 	services.ServerMessage("Found %d picture hash entries", len(picturesByHash))
-	var firstFound *PictureByHash
+	var firstFound *pictureByHash
 	tagMap := make(map[string]bool)
 	for _, pbh := range picturesByHash {
 		if strings.HasSuffix(strings.ToLower(pbh.Title), ".heic") {
@@ -290,7 +287,7 @@ func queryPictureByHash(hash string, commit bool) error {
 	return nil
 }
 
-func cleanUpPictures(commit bool, tagMap map[string]bool, firstFound *PictureByHash, picturesByHash []*PictureByHash) error {
+func cleanUpPictures(commit bool, tagMap map[string]bool, firstFound *pictureByHash, picturesByHash []*pictureByHash) error {
 	id, err := sql.DatabaseHandler()
 	if err != nil {
 		fmt.Println("POSTGRES error", err)
@@ -303,11 +300,11 @@ func cleanUpPictures(commit bool, tagMap map[string]bool, firstFound *PictureByH
 		return err
 	}
 
-	newTags := KeysString(tagMap)
+	newTags := keysString(tagMap)
 	log.Log.Debugf("First: %#v -> %#v", firstFound, newTags)
 	if newTags != firstFound.Tags {
-		oldTagMap := KeysMap(firstFound.Tags)
-		newTagMap := KeysMap(newTags)
+		oldTagMap := keysMap(firstFound.Tags)
+		newTagMap := keysMap(newTags)
 		changed := false
 		for k := range newTagMap {
 			if k != "" {
@@ -383,7 +380,7 @@ func cleanUpPictures(commit bool, tagMap map[string]bool, firstFound *PictureByH
 	return nil
 }
 
-func KeysMap(tags string) map[string]bool {
+func keysMap(tags string) map[string]bool {
 	keysMap := make(map[string]bool)
 	for _, k := range strings.Split(tags, ",") {
 		keysMap[k] = true
@@ -391,7 +388,7 @@ func KeysMap(tags string) map[string]bool {
 	return keysMap
 }
 
-func KeysString(m map[string]bool) string {
+func keysString(m map[string]bool) string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
@@ -399,8 +396,9 @@ func KeysString(m map[string]bool) string {
 	return strings.Join(keys, ",")
 }
 
+// HeicClean HEIC cleanup of doublicate and scaled entries
 func HeicClean(parameter *HashCleanParameter) error {
-	if !parameter.Json {
+	if !parameter.JSON {
 		services.ServerMessage("Query database entries for one week not HEIC images commit=%v", parameter.Commit)
 	}
 	err := parameter.queryHEIC()
@@ -439,7 +437,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 		return err
 	}
 
-	sqlCmd, err := templateSql(readHEIC, struct {
+	sqlCmd, err := templateSQL(readHEIC, struct {
 		Limit int
 		Count int
 		Title string
@@ -482,13 +480,13 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 	sort.Slice(foundList, func(i, j int) bool { return foundList[i].title < foundList[j].title })
 	lastFound := -1
 	childs := 0
-	if parameter.Json {
+	if parameter.JSON {
 		fmt.Printf("\"list\":%d,", len(foundList))
 	} else {
 		services.ServerMessage("Working found list of %4d", len(foundList))
 	}
 	for i, l := range foundList {
-		if !parameter.Json {
+		if !parameter.JSON {
 			if i%1000 == 0 {
 				services.ServerMessage("Work through %06d/%06d", i, len(foundList))
 			}
@@ -537,7 +535,7 @@ func (parameter *HashCleanParameter) queryHEIC() error {
 			return err
 		}
 	}
-	if parameter.Json {
+	if parameter.JSON {
 		fmt.Printf("\"found\":%d, \"length\":%d, \"childs\":%d,", counter, len(foundList), childs)
 	} else {
 		services.ServerMessage("Query HEIC end: found=%d length=%d childs=%d", counter, len(foundList), childs)

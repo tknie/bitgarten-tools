@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -34,6 +35,7 @@ type exif struct {
 	Exifmake        string
 }
 
+// CleanExif cleanup EXIF doublikate entries
 func CleanExif(tableName string) error {
 
 	log.Log.Debugf("Start exifclean")

@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -36,32 +37,26 @@ import (
 	"github.com/tknie/log"
 )
 
-type Albums struct {
-	Id          uint64
-	Type        string
-	Key         string
-	Directory   string
-	Title       string
-	Description string
-}
-
 var gid = common.RegDbID(0)
 
-const SELECT_ALBUM = `with albumIdSelect(Id) as ( SELECT Id FROM Albums WHERE Title = '%s'), checksumSelect as (  
+const selectAlbum = `with albumIdSelect(Id) as ( SELECT Id FROM Albums WHERE Title = '%s'), checksumSelect as (  
 	SELECT ChecksumPicture FROM AlbumPictures, albumIdSelect WHERE albumid = albumIdSelect.Id AND MIMEType LIKE 'video%%')
 	SELECT Pictures.ChecksumPicture,MIMEType,Media FROM Pictures, checksumSelect WHERE Pictures.checksumpicture = checksumSelect.ChecksumPicture`
 
+// VideoThumbParameter video thumbnail function parameter
 type VideoThumbParameter struct {
 	Title  string
 	ChkSum string
 	Commit bool
 }
 
+// VideoGenerateParameter video thumbnail function parameters
 type VideoGenerateParameter struct {
 	id     common.RegDbID
 	commit bool
 }
 
+// VideoThumb generate Video thumbnails
 func VideoThumb(parameter *VideoThumbParameter) error {
 	id, err := sql.DatabaseHandler()
 	if err != nil {
@@ -82,7 +77,7 @@ func VideoThumb(parameter *VideoThumbParameter) error {
 	}
 	if parameter.Title != "" {
 		// prefix = searchTitle(title, id)
-		prefix := fmt.Sprintf(SELECT_ALBUM, parameter.Title)
+		prefix := fmt.Sprintf(selectAlbum, parameter.Title)
 		if prefix == "" {
 			log.Log.Fatal("Error evaluating album id...", prefix)
 		}
@@ -195,7 +190,7 @@ func searchTitle(title string, id common.RegDbID) string {
 	aid := uint64(0)
 	_, err := id.Query(q, func(search *common.Query, result *common.Result) error {
 		a := result.Data.(*sql.Albums)
-		aid = a.Id
+		aid = a.ID
 		return nil
 	})
 	fmt.Println("AID: ", aid)

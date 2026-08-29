@@ -32,11 +32,12 @@ import (
 
 const timeParseFormat = "2006:01:02 15:04:05"
 
-type Printer struct {
+type printer struct {
 	pic    *Pictures
 	buffer bytes.Buffer
 }
 
+// ExifReader picture EXIF reader of media
 func (pic *Pictures) ExifReader() error {
 	log.Log.Debugf("Exif reader pic %s", pic.MIMEType)
 	if !strings.HasPrefix(pic.MIMEType, "image/") {
@@ -51,7 +52,7 @@ func (pic *Pictures) ExifReader() error {
 	return pic.analyseExif(x)
 }
 func (pic *Pictures) analyseExif(x *exif.Exif) error {
-	p := &Printer{pic: pic}
+	p := &printer{pic: pic}
 	err := x.Walk(p)
 	if err != nil {
 		log.Log.Errorf("Exif reader error (%s): %v", pic.Title, err)
@@ -76,7 +77,8 @@ func removeQuotes(in string) string {
 	return toModel
 }
 
-func (p *Printer) Walk(name exif.FieldName, tag *tiff.Tag) error {
+// Walk walk thorugh EXIF tags
+func (p *printer) Walk(name exif.FieldName, tag *tiff.Tag) error {
 	p.buffer.WriteString(fmt.Sprintf("%s: %s\n", name, tag))
 	switch name {
 	case "Model":

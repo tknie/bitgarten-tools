@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package bitgartentools
 
 import (
@@ -28,6 +29,7 @@ import (
 // TimeFormat time formating schema
 const TimeFormat = "2006-01-02 15:04:05"
 
+// InitTool initialize tools
 func InitTool(toolName string, json bool) {
 	if json {
 		fmt.Printf("{\"start\":\"%s\",\"tool\":\"%s\",", time.Now().Format(TimeFormat), toolName)
@@ -36,6 +38,7 @@ func InitTool(toolName string, json bool) {
 	services.ServerMessage("STARTING tool '%s'", toolName)
 }
 
+// FinalizeTool finalize tools
 func FinalizeTool(toolName string, json bool, err error) {
 	if err != nil {
 		if json {

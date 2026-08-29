@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package sql
 
 import (
@@ -35,7 +36,7 @@ import (
 	"github.com/tknie/bitgartentools/api"
 )
 
-var bitgartenUrl = os.Getenv("BITGARTEN_SERVER")
+var bitgartenURL = os.Getenv("BITGARTEN_SERVER")
 var bitgartenLocation = "tmp/media/"
 
 func init() {
@@ -45,13 +46,14 @@ func init() {
 	}
 }
 
+// CheckRestClient check rest client
 func CheckRestClient(md5 string) (bool, error) {
 	if md5 == "" {
 		debug.PrintStack()
 		log.Log.Fatalf("Error md5 empy in check rest")
 	}
 	ctx := context.Background()
-	c, err := api.NewClient(bitgartenUrl, &sec{})
+	c, err := api.NewClient(bitgartenURL, &sec{})
 	if err != nil {
 		log.Log.Debugf("Error creating client: %v", err)
 		return false, err
@@ -73,9 +75,10 @@ func CheckRestClient(md5 string) (bool, error) {
 	return false, fmt.Errorf("ERROR WEB")
 }
 
+// DownloadToTitle download file to title
 func DownloadToTitle(md5 string, title string) error {
 	ctx := context.Background()
-	c, err := api.NewClient(bitgartenUrl, &sec{})
+	c, err := api.NewClient(bitgartenURL, &sec{})
 	if err != nil {
 		log.Log.Debugf("Error creating client: %v", err)
 		return err
@@ -106,18 +109,19 @@ func DownloadToTitle(md5 string, title string) error {
 		fmt.Println("Downloaded bytes:", n)
 	case *api.DownloadFileForbidden, *api.DownloadFileUnauthorized:
 		fmt.Println("Error permission file:")
-		return fmt.Errorf("Permission Error")
+		return fmt.Errorf("permission Error")
 	default:
 		fmt.Printf("Error downloading file: %T\n", d)
-		return fmt.Errorf("Error download file type %T:", d)
+		return fmt.Errorf("error download file type %T", d)
 	}
 	return nil
 }
 
+// StoreRestClient store rest client
 func StoreRestClient(md5 string, media []byte) error {
 	log.Log.Debugf("Store REST available binary %s of length %d", md5, len(media))
 	ctx := context.Background()
-	c, err := api.NewClient(bitgartenUrl, &sec{})
+	c, err := api.NewClient(bitgartenURL, &sec{})
 	if err != nil {
 		fmt.Println("Error client", err)
 		return err

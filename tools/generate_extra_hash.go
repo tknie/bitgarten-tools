@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -60,6 +61,7 @@ var quit = make(chan bool, nrThreads)
 const searchSha1Hash = `{{if not .Deleted -}} markdelete = false AND {{end}}
  {{.Filter}} sha1checksum IS NULL`
 
+// GenerateImageHash generate image hash
 func GenerateImageHash(parameter *ImageHashParameter) error {
 	defer dumpMeasure()
 	for i := 0; i < nrThreads; i++ {
@@ -90,7 +92,7 @@ func GenerateImageHash(parameter *ImageHashParameter) error {
 		Limit:      strconv.Itoa(parameter.Limit),
 		Search:     sqlCmd.String(),
 	}
-	if parameter.Json {
+	if parameter.JSON {
 		fmt.Printf("\"Hash\":[")
 	}
 

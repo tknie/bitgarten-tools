@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -32,12 +33,7 @@ import (
 	"github.com/tknie/log"
 )
 
-//var wid common.RegDbID
-// var storeData bool
-
-// var ref *common.Reference
-//var passwd string
-
+// HeicThumbParameter HEIC thumbnail parameter
 type HeicThumbParameter struct {
 	Commit          bool
 	CreateThumbnail bool
@@ -49,6 +45,7 @@ type HeicThumbParameter struct {
 	ScaleRange      int
 }
 
+// HeicThumb HEIC thumbnail generation
 func (parameter *HeicThumbParameter) HeicThumb() error {
 	id, err := sql.DatabaseHandler()
 	if err != nil {
@@ -131,9 +128,9 @@ func (parameter *HeicThumbParameter) generateImageThumbnail(pic *store.Pictures)
 		}
 		fmt.Printf("%s -> %v\n", pic.Title, pic.ExifOrigTime)
 		return parameter.storeThumb(pic)
-	} else {
-		parameter.searchSimilarEntries(pic.Title)
 	}
+	parameter.searchSimilarEntries(pic.Title)
+
 	return nil
 }
 
@@ -234,6 +231,7 @@ func (parameter *HeicThumbParameter) searchSimilarEntries(title string) {
 	log.Log.Debugf("End query similar")
 }
 
+// HeicScale scale the size for the web album
 func (parameter *HeicThumbParameter) HeicScale() error {
 	if parameter.Title == "" {
 		fmt.Println("Album not set")
@@ -296,9 +294,9 @@ func (parameter *HeicThumbParameter) HeicScale() error {
 					},
 					DataStruct: albumPicture,
 					Update: []string{fmt.Sprintf("index = %d AND albumid = %d",
-						albumPicture.Index, albumPicture.AlbumId)},
+						albumPicture.Index, albumPicture.AlbumID)},
 					Criteria: fmt.Sprintf("index = %d and albumid = %d",
-						albumPicture.Index, albumPicture.AlbumId),
+						albumPicture.Index, albumPicture.AlbumID),
 					Values: list}
 				_, _, err = id.Update("AlbumPictures", input)
 				if err != nil {

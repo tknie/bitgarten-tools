@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package bitgartentools
 
 import (
@@ -29,6 +30,7 @@ var syncSchedule chan bool
 
 var wgStat sync.WaitGroup
 
+// ScheduleParameter schedule parameter
 func ScheduleParameter(what func(start time.Time, parameter interface{}), parameter interface{}, delay time.Duration) {
 	stopSchedule = make(chan bool)
 	syncSchedule = make(chan bool)
@@ -48,6 +50,7 @@ func ScheduleParameter(what func(start time.Time, parameter interface{}), parame
 
 }
 
+// Schedule schedule the function in time
 func Schedule(what func(), delay time.Duration) {
 	stopSchedule = make(chan bool)
 	go func() {
@@ -64,6 +67,7 @@ func Schedule(what func(), delay time.Duration) {
 
 }
 
+// EndStats end the statistics
 func EndStats(fct func()) {
 	fmt.Println("Trigger ending...")
 	wgStat.Add(1)
@@ -75,6 +79,7 @@ func EndStats(fct func()) {
 	fct()
 }
 
+// StopScheduler stop scheduler
 func StopScheduler() {
 	stopSchedule <- true
 

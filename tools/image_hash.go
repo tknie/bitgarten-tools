@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -40,7 +41,10 @@ import (
 	"github.com/tknie/log"
 )
 
+// DefaultHash default hash
 var DefaultHash = 1
+
+// Hashes hash array options
 var Hashes = []string{"averageHash", "perceptHash", "diffHash", "waveletHash"}
 
 const searchHash = `{{if not .Deleted -}} markdelete = false AND {{end}}
@@ -58,6 +62,7 @@ type hashData struct {
 	Kind            byte
 }
 
+// ImageHashParameter image hash parameter
 type ImageHashParameter struct {
 	Limit     int
 	PreFilter string
@@ -65,18 +70,20 @@ type ImageHashParameter struct {
 	All       bool
 	HashType  string
 	Commit    bool
-	Json      bool
+	JSON      bool
 }
 
 var hashOutput func(pic *store.Pictures, output string)
 var infoMap map[string]any
 
+// InitHash initialize hash prerequisites
 func InitHash(outFct func(pic *store.Pictures, output string),
 	resultMap map[string]any) {
 	hashOutput = outFct
 	infoMap = resultMap
 }
 
+// ImageHash image hash function to generate hash
 func ImageHash(parameter *ImageHashParameter) error {
 
 	if parameter.PreFilter != "" {
@@ -109,7 +116,7 @@ func ImageHash(parameter *ImageHashParameter) error {
 		Limit:      strconv.Itoa(parameter.Limit),
 		Search:     sqlCmd.String(),
 	}
-	if parameter.Json {
+	if parameter.JSON {
 		fmt.Printf("\"Hash\":[")
 	}
 	counter := uint64(0)
@@ -155,7 +162,7 @@ func ImageHash(parameter *ImageHashParameter) error {
 		}
 		hd.Checksumpicture = p.ChecksumPicture
 		hd.Hash = hd.PerceptionHash
-		if parameter.Json {
+		if parameter.JSON {
 			if counter > 1 {
 				fmt.Printf(",")
 			}
@@ -176,7 +183,7 @@ func ImageHash(parameter *ImageHashParameter) error {
 		return fmt.Errorf("query error: %v", err)
 	}
 	hashOutput(nil, fmt.Sprintf("Found %d pictures where %d pictures are hashed", counter, processed))
-	if parameter.Json {
+	if parameter.JSON {
 		fmt.Printf("],")
 	}
 

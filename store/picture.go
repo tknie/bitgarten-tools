@@ -81,14 +81,21 @@ type PictureData struct {
 	Thumbnail         []byte `xml:"-" json:"-"`
 }
 
+// Available availability state
 type Available byte
 
 const (
+	// NoAvailable no enntries availabe
 	NoAvailable Available = iota
+	// PicAvailable picture is available
 	PicAvailable
+	// PicLocationAvailable picture location is available
 	PicLocationAvailable
+	// ToBigNoAvailable to big picture and no available
 	ToBigNoAvailable
+	// ToBigMediaNotFound to big picture and media not found
 	ToBigMediaNotFound
+	// BothAvailable both available, media and location
 	BothAvailable
 )
 
@@ -138,13 +145,6 @@ type Pictures struct {
 	// PictureLocations  []PictureLocations `adabas:"::PL"`
 }
 
-type PictureLocations struct {
-	PictureName      string `adabas:"::PN"`
-	PictureMd5       string `adabas:"::PM"`
-	PictureHost      string `adabas:"::PH"`
-	PictureDirectory string `adabas:"::PD"`
-}
-
 // LoadFile load file
 func (pic *PictureBinary) LoadFile() error {
 	f, err := os.Open(pic.FileName)
@@ -176,10 +176,12 @@ func (pic *PictureBinary) LoadFile() error {
 	return nil
 }
 
+// CreateMd5 create MD5 checksum
 func CreateMd5(input []byte) string {
 	return fmt.Sprintf("%X", md5.Sum(input))
 }
 
+// CreateSHA create SHA checksum
 func CreateSHA(input []byte) string {
 	return fmt.Sprintf("%X", sha256.Sum256(input))
 }
@@ -344,6 +346,7 @@ func (pic *PictureBinary) CreateThumbnail() error {
 
 }
 
+// NewPictures new pictures created
 func NewPictures(fileName string) *Pictures {
 	return &Pictures{Directory: filepath.Dir(fileName), PictureName: filepath.Base(fileName)}
 }

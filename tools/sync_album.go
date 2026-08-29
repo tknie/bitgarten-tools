@@ -27,6 +27,7 @@ import (
 	"github.com/tknie/bitgartentools/sql"
 )
 
+// SyncAlbumParameter sync album parameters
 type SyncAlbumParameter struct {
 	Title       string
 	ListSource  bool
@@ -36,6 +37,7 @@ type SyncAlbumParameter struct {
 	SkipCheck   bool
 }
 
+// SyncAlbum sync albums to another environment database
 func SyncAlbum(parameter *SyncAlbumParameter) error {
 	var a *sql.Albums
 	connSource, err := sql.DatabaseConnect()
@@ -44,9 +46,9 @@ func SyncAlbum(parameter *SyncAlbumParameter) error {
 		fmt.Println("Set POSTGRES_URL and/or POSTGRES_PASSWORD to define remote database")
 		return err
 	}
-	destUrl := os.Getenv("POSTGRES_DESTINATION_URL")
+	destURL := os.Getenv("POSTGRES_DESTINATION_URL")
 	pwd := os.Getenv("POSTGRES_DESTINATION_PASSWORD")
-	destSource, err := sql.Connect(destUrl, pwd)
+	destSource, err := sql.Connect(destURL, pwd)
 	if err != nil {
 		fmt.Println("Error creating connection:", err)
 		fmt.Println("Set POSTGRES_DESTINATION_URL and/or POSTGRES_DESTINATION_PASSWORD to define remote database")

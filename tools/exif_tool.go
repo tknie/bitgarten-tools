@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -29,11 +30,13 @@ import (
 	"github.com/tknie/flynn/common"
 )
 
+// ExifToolParameter EXIF tool parameter
 type ExifToolParameter struct {
 	PreFilter string
 	Limit     int
 }
 
+// ExifTool EXIF tool function
 func ExifTool(parameter *ExifToolParameter) error {
 
 	id, err := sql.DatabaseHandler()

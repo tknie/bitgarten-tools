@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -35,11 +36,9 @@ import (
 
 const timeFormat = "2006-01-02 15:04:05"
 
-// var insertAlbum = false
-// var albumid = 1
-
+// PicLoadParameter picture load parameters
 type PicLoadParameter struct {
-	AlbumId        int
+	AlbumID        int
 	FileName       string
 	NrThreadReader int
 	NrThreadStorer int
@@ -48,20 +47,21 @@ type PicLoadParameter struct {
 	ShortenPath    bool
 	Directories    []string
 	InsertAlbum    bool
-	Json           bool
+	JSON           bool
 }
 
+// PicLoad picture load functions
 func PicLoad(parameter *PicLoadParameter) error {
 
-	StoreWorker(parameter.NrThreadReader)
+	storeWorker(parameter.NrThreadReader)
 	sql.InsertWorker(parameter.NrThreadStorer)
 	MaxBlobSize = parameter.MaxBlobSize
-	if parameter.Json {
+	if parameter.JSON {
 		fmt.Printf("\"MaxLOBSize\":\"%s\",", units.HumanSize(float64(MaxBlobSize)))
 	} else {
 		services.ServerMessage("Max lob size: %v", units.HumanSize(float64(MaxBlobSize)))
 	}
-	ShortPath = parameter.ShortenPath
+	shortPath = parameter.ShortenPath
 
 	regs := make([]*regexp.Regexp, 0)
 	for _, r := range strings.Split(parameter.Filter, ",") {
@@ -71,43 +71,43 @@ func PicLoad(parameter *PicLoadParameter) error {
 		}
 		regs = append(regs, reg)
 	}
-	if !parameter.Json {
+	if !parameter.JSON {
 		sql.StartStats()
 
 	}
 	start := time.Now()
 	switch {
 	case parameter.FileName != "":
-		if !parameter.Json {
-			fmt.Printf("Store file '%s' to album id %d\n", parameter.FileName, parameter.AlbumId)
+		if !parameter.JSON {
+			fmt.Printf("Store file '%s' to album id %d\n", parameter.FileName, parameter.AlbumID)
 		}
 		suffix := parameter.FileName[strings.LastIndex(parameter.FileName, ".")+1:]
 		suffix = strings.ToLower(suffix)
 		parameter.storeFile(parameter.FileName, suffix)
 		time.Sleep(1 * time.Minute)
 	case len(parameter.Directories) > 0:
-		if parameter.Json {
+		if parameter.JSON {
 			fmt.Printf("\"ScanResults\":[")
 		}
 		for _, pictureDirectory := range parameter.Directories {
-			if parameter.Json {
+			if parameter.JSON {
 				fmt.Printf("{")
 			}
 
 			parameter.storeDirectory(pictureDirectory, regs)
-			if parameter.Json {
+			if parameter.JSON {
 				fmt.Printf("}")
 			}
 		}
-		if parameter.Json {
+		if parameter.JSON {
 			fmt.Printf("],")
 		}
 	}
 	log.Log.Debugf("Wait wgstore")
 	wgStore.Wait()
 
-	if parameter.Json {
-		sql.PrintJsonStats()
+	if parameter.JSON {
+		sql.PrintJSONStats()
 		fmt.Printf("\"Used\":\"%s\",", time.Since(start))
 	} else {
 		sql.EndStats()
@@ -131,7 +131,7 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 				return
 			}
 			dir := filepath.Base(pictureDirectory)
-			parameter.AlbumId, err = di.InsertNewAlbum(dir)
+			parameter.AlbumID, err = di.InsertNewAlbum(dir)
 			if err != nil {
 				fmt.Println("Error inserting album:", err)
 				log.Log.Errorf("Error creating Album")
@@ -139,7 +139,7 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 				os.Exit(1)
 			}
 		}
-		if parameter.Json {
+		if parameter.JSON {
 			fmt.Printf("\"Directory\":\"%s\",\"start\":\"%s\"", pictureDirectory, time.Now().Format(timeFormat))
 		} else {
 			services.ServerMessage("Loading path %s", pictureDirectory)
@@ -164,7 +164,7 @@ func (parameter *PicLoadParameter) storeDirectory(pictureDirectory string, regs 
 			}
 			switch suffix {
 			case "jpg", "jpeg", "tif", "png", "heic", "gif", "m4v", "mov", "avi", "mp4", "webm":
-				queueStoreFileInAlbumID(path, parameter.AlbumId)
+				queueStoreFileInAlbumID(path, parameter.AlbumID)
 				if err != nil {
 					// return fmt.Errorf("error storing file: %v", err)
 					sql.IncErrorFile(err, path)
@@ -189,7 +189,7 @@ func (parameter *PicLoadParameter) storeFile(path, suffix string) error {
 	ti := sql.IncChecked()
 	switch suffix {
 	case "jpg", "jpeg", "tif", "png", "heic", "gif", "m4v", "mov", "mpg", "avi", "mp4", "webm":
-		queueStoreFileInAlbumID(path, parameter.AlbumId)
+		queueStoreFileInAlbumID(path, parameter.AlbumID)
 		ti.IncDone()
 	default:
 		log.Log.Infof("Suffix not supported: %s\n", suffix)

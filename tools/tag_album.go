@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -27,10 +28,12 @@ import (
 	"github.com/tknie/log"
 )
 
+// TagAlbumParameter  tag album parameters
 type TagAlbumParameter struct {
 	ListSource bool
 }
 
+// TagAlbum tag album function
 func TagAlbum(parameter *TagAlbumParameter) error {
 	connSource, err := sql.DatabaseConnect()
 	if err != nil {

@@ -123,9 +123,9 @@ func main() {
 	}
 	err = tools.PicLoad(&tools.PicLoadParameter{NrThreadReader: nrThreadReader,
 		NrThreadStorer: nrThreadStorer, MaxBlobSize: sz, Filter: filter,
-		AlbumId: albumid, InsertAlbum: insertAlbum,
+		AlbumID: albumid, InsertAlbum: insertAlbum,
 		ShortenPath: shortenPath, FileName: fileName,
-		Directories: directories, Json: json})
+		Directories: directories, JSON: json})
 	log.Log.Debugf("Error loading data: %v", err)
 }
 

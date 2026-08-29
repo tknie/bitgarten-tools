@@ -100,7 +100,7 @@ func main() {
 	}
 
 	err = tools.ImageHash(&tools.ImageHashParameter{Limit: limit, HashType: hashType,
-		Deleted: deleted, All: all, PreFilter: preFilter, Json: jsonResult, Commit: commit})
+		Deleted: deleted, All: all, PreFilter: preFilter, JSON: jsonResult, Commit: commit})
 	if err != nil {
 		fmt.Printf("Error generating image hash: %v\n", err)
 	}

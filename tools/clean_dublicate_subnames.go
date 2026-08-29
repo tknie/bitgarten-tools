@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -75,16 +76,18 @@ order by
 	perceptionhash,
 	width desc) where cnt > 1;` // and r > 1;`
 
+// NameCleanParameter name cleanup parameters
 type NameCleanParameter struct {
 	Limit    int
 	MinCount int
 	Title    string
 	Commit   bool
-	Json     bool
+	JSON     bool
 }
 
 var did common.RegDbID
 
+// NameClean name cleanup check
 func NameClean(parameter *NameCleanParameter) error {
 	id, err := sql.DatabaseHandler()
 	if err != nil {
@@ -104,7 +107,7 @@ func NameClean(parameter *NameCleanParameter) error {
 	if parameter.Title != "" {
 		search = "AND title like '" + parameter.Title + "%'"
 	}
-	search, _ = templateSql(checkQuery, search)
+	search, _ = templateSQL(checkQuery, search)
 	log.Log.Debugf("Search : %s", search)
 
 	query := &common.Query{
@@ -135,11 +138,11 @@ func NameClean(parameter *NameCleanParameter) error {
 								markDelete(checksumPicture)
 							}
 						}
-						if !parameter.Json {
+						if !parameter.JSON {
 							fmt.Println(subtitle, "Deleted:", deleted, "Tags:", tags, "Hash:", currentHash)
 						}
 					} else {
-						if !parameter.Json {
+						if !parameter.JSON {
 							fmt.Println("Record hash differences:", recordHash, currentHash)
 						}
 					}
@@ -152,7 +155,7 @@ func NameClean(parameter *NameCleanParameter) error {
 	if err != nil {
 		return err
 	}
-	if parameter.Json {
+	if parameter.JSON {
 		fmt.Printf("\"deleted\":%d,\"counter\":%d,", deleted, counter)
 	} else {
 		fmt.Println("Total count of records deleted:", deleted)

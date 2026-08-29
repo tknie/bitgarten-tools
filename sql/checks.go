@@ -56,12 +56,14 @@ const query = `with p(checksumpicture,sha256checksum,picopt,medialen) as (
 		p
 	`
 
+// MaxBlobSize maximum BLOB size
 var MaxBlobSize int64
 
 func init() {
 	MaxBlobSize, _ = units.FromHumanSize("1GB")
 }
 
+// CheckExists check if the picture exists
 func (di *DatabaseInfo) CheckExists(pic *store.Pictures) error {
 	pic.Available = store.NoAvailable
 

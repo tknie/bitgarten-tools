@@ -42,7 +42,7 @@ import (
 
 // Picture picture data
 type Picture struct {
-	Id              uint64
+	ID              uint64
 	ChecksumPicture string
 	Sha256checksum  string
 	Thumbnail       []byte
@@ -61,13 +61,13 @@ type Picture struct {
 	Exiforientation string
 	PicOpt          string
 	Created         time.Time
-	Updated_at      time.Time
+	UpdatedAt       time.Time `flynn:"Updated_at"`
 }
 
 // AlbumPictures pciture information
 type AlbumPictures struct {
 	Index           uint64
-	AlbumId         uint64
+	AlbumID         uint64
 	Name            string
 	Description     string
 	ChecksumPicture string
@@ -77,9 +77,9 @@ type AlbumPictures struct {
 	Width           uint64
 }
 
-// Album album information
+// Albums album information
 type Albums struct {
-	Id            uint64
+	ID            uint64
 	Type          string
 	Key           string
 	Directory     string
@@ -93,6 +93,7 @@ type Albums struct {
 	Pictures []*AlbumPictures `db:":ignore" flynn:":ignore"`
 }
 
+// Connect connect to database connection
 func Connect(url, pwd string) (*DatabaseInfo, error) {
 	ref, passwd, err := common.NewReference(url)
 	if err != nil {
@@ -105,6 +106,7 @@ func Connect(url, pwd string) (*DatabaseInfo, error) {
 	return &DatabaseInfo{0, ref, passwd, 0, 0}, nil
 }
 
+// Open open database connection
 func (di *DatabaseInfo) Open() (common.RegDbID, error) {
 	id, err := flynn.Handler(di.Reference, di.passwd)
 	if err != nil {
@@ -113,6 +115,7 @@ func (di *DatabaseInfo) Open() (common.RegDbID, error) {
 	return id, nil
 }
 
+// ListTables list tables in the database info
 func (di *DatabaseInfo) ListTables() ([]string, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -133,6 +136,7 @@ func (di *DatabaseInfo) ListTables() ([]string, error) {
 	return tables, err
 }
 
+// ListAlbums list albums in the database info
 func (di *DatabaseInfo) ListAlbums() ([]string, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -148,7 +152,7 @@ func (di *DatabaseInfo) ListAlbums() ([]string, error) {
 	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
 		album := result.Data.(*Albums)
 		count++
-		fmt.Printf("%03d - %3d: %-35s %v\n", count, album.Id, album.Title, album.Published)
+		fmt.Printf("%03d - %3d: %-35s %v\n", count, album.ID, album.Title, album.Published)
 		albumList = append(albumList, album.Title)
 		return nil
 	})
@@ -158,6 +162,7 @@ func (di *DatabaseInfo) ListAlbums() ([]string, error) {
 	return albumList, nil
 }
 
+// GetAlbums get albums
 func (di *DatabaseInfo) GetAlbums() ([]*Albums, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -183,6 +188,7 @@ func (di *DatabaseInfo) GetAlbums() ([]*Albums, error) {
 	return albums, nil
 }
 
+// ReadAlbum read specific album
 func (di *DatabaseInfo) ReadAlbum(albumTitle string) (*Albums, error) {
 	var album *Albums
 	id, err := di.Open()
@@ -202,13 +208,14 @@ func (di *DatabaseInfo) ReadAlbum(albumTitle string) (*Albums, error) {
 	if err != nil {
 		return nil, err
 	}
-	album.Pictures, err = di.ReadAlbumPictures(id, int(album.Id))
+	album.Pictures, err = di.ReadAlbumPictures(id, int(album.ID))
 	if err != nil {
 		return nil, err
 	}
 	return album, nil
 }
 
+// ReadAlbumPictures read album pictures
 func (di *DatabaseInfo) ReadAlbumPictures(id common.RegDbID, albumid int) ([]*AlbumPictures, error) {
 	q := &common.Query{TableName: "AlbumPictures",
 		DataStruct: AlbumPictures{},
@@ -232,6 +239,7 @@ func (di *DatabaseInfo) ReadAlbumPictures(id common.RegDbID, albumid int) ([]*Al
 	return pictures, nil
 }
 
+// CheckPicture check picture by checksum
 func (di *DatabaseInfo) CheckPicture(checksum string) (bool, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -255,6 +263,7 @@ func (di *DatabaseInfo) CheckPicture(checksum string) (bool, error) {
 	return found, nil
 }
 
+// ReadPicture read picture based on checksum
 func (di *DatabaseInfo) ReadPicture(checksum string) (*Picture, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -281,13 +290,15 @@ func (di *DatabaseInfo) ReadPicture(checksum string) (*Picture, error) {
 	return res.Data.(*Picture), nil
 }
 
+// Display output given album information
 func (a *Albums) Display() {
-	fmt.Printf("Found album %d: %s\n", a.Id, a.Title)
+	fmt.Printf("Found album %d: %s\n", a.ID, a.Title)
 	for _, p := range a.Pictures {
 		fmt.Printf("   Found picture %d: %s\n", p.Index, p.Description)
 	}
 }
 
+// CheckAlbum check album
 func (di *DatabaseInfo) CheckAlbum(album *Albums) (uint64, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -302,7 +313,7 @@ func (di *DatabaseInfo) CheckAlbum(album *Albums) (uint64, error) {
 	found := uint64(0)
 	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
 		a := result.Data.(*Albums)
-		found = a.Id
+		found = a.ID
 		return nil
 	})
 	if err != nil {
@@ -311,6 +322,7 @@ func (di *DatabaseInfo) CheckAlbum(album *Albums) (uint64, error) {
 	return found, nil
 }
 
+// CheckAlbumPictures check album pictures
 func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -321,7 +333,7 @@ func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error
 		DataStruct: AlbumPictures{},
 		Fields:     []string{"index", "albumid"},
 		Search: fmt.Sprintf("index = %d AND albumid = %d",
-			albumPic.Index, albumPic.AlbumId),
+			albumPic.Index, albumPic.AlbumID),
 	}
 	found := false
 	_, err = id.Query(q, func(search *common.Query, result *common.Result) error {
@@ -334,10 +346,12 @@ func (di *DatabaseInfo) CheckAlbumPictures(albumPic *AlbumPictures) (bool, error
 	return found, nil
 }
 
+// ReadMedia read media without search
 func (di *DatabaseInfo) ReadMedia(limit uint32, f common.ResultFunction) error {
 	return di.SearchMedia(limit, "", f)
 }
 
+// SearchMedia search media with search and limit parameter
 func (di *DatabaseInfo) SearchMedia(limit uint32, search string,
 	f common.ResultFunction) error {
 	id, err := di.Open()
@@ -360,6 +374,7 @@ func (di *DatabaseInfo) SearchMedia(limit uint32, search string,
 	return err
 }
 
+// Query query out of database
 func (di *DatabaseInfo) Query(query *common.Query, f common.ResultFunction) (*common.Result, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -369,6 +384,7 @@ func (di *DatabaseInfo) Query(query *common.Query, f common.ResultFunction) (*co
 	return id.Query(query, f)
 }
 
+// Insert insert picture into database
 func (di *DatabaseInfo) Insert(name string, insert *common.Entries) ([][]any, error) {
 	id, err := di.Open()
 	if err != nil {
@@ -378,6 +394,7 @@ func (di *DatabaseInfo) Insert(name string, insert *common.Entries) ([][]any, er
 	return id.Insert(name, insert)
 }
 
+// Resize resize picture size to max length and height square
 func (pic *Picture) Resize(max int) (err error) {
 	var srcImage image.Image
 	if strings.ToLower(pic.Mimetype) == "image/heic" {

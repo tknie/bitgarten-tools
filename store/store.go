@@ -21,10 +21,6 @@ package store
 
 import "os"
 
-var URL string
-var Credentials string
-var PictureName string
-
 // Hostname of this host
 var Hostname = "Unknown"
 
@@ -38,12 +34,4 @@ func init() {
 // Store store record
 type Store struct {
 	Store []interface{}
-}
-
-// StoreResponse response information
-type StoreResponse struct {
-	// NrStored number of stored entries
-	NrStored int64 `json:"NrStored,omitempty"`
-	// Stored stored json
-	Stored []int64 `json:"Stored"`
 }

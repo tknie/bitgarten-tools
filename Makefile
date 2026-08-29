@@ -38,9 +38,7 @@ GO_FLAGS        = $(if $(debug),"-x",) -tags $(GO_TAGS)
 PLUGINS         = $(BIN)/plugins/bittools
 SWAGGER_SPEC    = $(CURDIR)/swagger/openapi.yaml
 
-all: $(EXECS)
-
-plugins: $(PLUGINS)
+include $(CURDIR)/make/common.mk
 
 generatemodels: cleanAPI $(CURDIR)/api
 
@@ -49,13 +47,6 @@ cleanAPI: ; $(info $(M) cleaning models…)    @ ## Cleanup models
 
 $(CURDIR)/api: $(SWAGGER_SPEC) ; $(info $(M) generating code...) @ ## Generate rest go code
 		$Q go generate ./generate/...
-
-
-$(EXECS): $(OBJECTS) ; $(info $(M) building executable $(@:$(BIN)/%=%)…) @ ## Build program binary
-	$Q cd $(CURDIR) &&  \
-	   CGO_CFLAGS="$(CGO_CFLAGS)" CGO_LDFLAGS="$(CGO_LDFLAGS) $(CGO_EXT_LDFLAGS)" $(GO) build $(GO_FLAGS) \
-		-ldflags '-X $(PACKAGE).BuildVersion=$(VERSION) -X $(PACKAGE).BuildDate=$(DATE)' \
-		-o $@ ./cmd/$(@:$(BIN)/%=%)
 
 clean:
 	rm -f $(EXECS) *.log

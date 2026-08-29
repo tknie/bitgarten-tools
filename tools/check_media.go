@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -33,6 +34,7 @@ var stopCheck = make(chan bool)
 var wgCheck sync.WaitGroup
 var output func(pic *sql.Picture, output string)
 
+// InitCheck initialize picture checker
 func InitCheck(outFct func(pic *sql.Picture, output string)) {
 	output = outFct
 	for i := 0; i < 4; i++ {
@@ -40,11 +42,13 @@ func InitCheck(outFct func(pic *sql.Picture, output string)) {
 	}
 }
 
+// CheckMedia check media and insert in the channel
 func CheckMedia(pic *sql.Picture) {
 	wgCheck.Add(1)
 	checkPictureChannel <- pic
 }
 
+// CheckMediaWait check media wait for all done
 func CheckMediaWait() error {
 	wgCheck.Wait()
 	return nil

@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -53,6 +54,7 @@ func analyzeOutput(s time.Time, parameter interface{}) {
 	fmt.Printf("%-22s: %5d / %5d\n\n", "Pictures errors/empty", scan.countErrors, scan.countEmpty)
 }
 
+// AnalyzeDirectories analyze directories for suffix
 func AnalyzeDirectories(directories []string) error {
 	checker, err := sql.CreateConnection()
 	if err != nil {

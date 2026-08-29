@@ -16,6 +16,7 @@
 *   limitations under the License.
 *
  */
+
 package tools
 
 import (
@@ -33,7 +34,7 @@ type scan struct {
 	Directories []string `yaml:"directories"`
 }
 
-// ReadConfig read config file
+// ReadScanFile read scan config file
 func ReadScanFile(file string) ([]byte, error) {
 	scanFile, err := os.Open(file)
 	if err != nil {
@@ -53,6 +54,7 @@ func ReadScanFile(file string) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
+// EvaluatePictureDirectories evaluate picture directories
 func EvaluatePictureDirectories() (directories []string, err error) {
 	// Check for environment variable
 	e := os.Getenv("BITGARTEN_DIRECTORIES")

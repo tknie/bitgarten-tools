@@ -49,6 +49,7 @@ const (
 	doneIndex
 )
 
+// StatisticsTimeFrame statistics time frame
 var StatisticsTimeFrame = time.Duration(60)
 
 const lastIndex = doneIndex
@@ -62,6 +63,7 @@ type statInfo struct {
 	duration time.Duration
 }
 
+// PictureConnection picture connection
 type PictureConnection struct {
 	start           time.Time
 	ShortenName     bool
@@ -78,21 +80,30 @@ type PictureConnection struct {
 	NrErrors        uint64
 }
 
-type timeInfo struct {
+// TimeInfo time information
+type TimeInfo struct {
 	startTime time.Time
 }
 
 type workerState byte
 
 const (
+	// InitStoreWorker initialize store worker
 	InitStoreWorker workerState = iota
+	// LoadingStoreWorker loading store worker
 	LoadingStoreWorker
+	// InsertingStoreWorker inserting store worker
 	InsertingStoreWorker
+	// WaitingStoreWorker waiting store worker
 	WaitingStoreWorker
+	// DoneStoreWorker done store worker
 	DoneStoreWorker
+	// StopStoreWorker stop store worker
 	StopStoreWorker
+	// Done2StoreWorker done two store worker
 	Done2StoreWorker
-	SqlStoreWorker
+	// SQLStoreWorker SQL store worker
+	SQLStoreWorker
 )
 
 var workerStates = []string{"init", "loading", "inserting", "waiting", "done", "stop", "done2", "sqlStore"}
@@ -109,29 +120,35 @@ type storeWorkerStatistic struct {
 var storeWorkerStatistics []storeWorkerStatistic
 var readerWorkerStatistics []storeWorkerStatistic
 
+// InitStoreWorkerStatistics initialize store worker statistics
 func InitStoreWorkerStatistics(nrThreadReader int) {
 	storeWorkerStatistics = make([]storeWorkerStatistic, nrThreadReader)
 }
 
+// InitReaderWorkerStatistics initialize reader worker statistics
 func InitReaderWorkerStatistics(nrThreadReader int) {
 	readerWorkerStatistics = make([]storeWorkerStatistic, nrThreadReader)
 }
 
+// SetState set state
 func SetState(index int, state workerState) {
 	storeWorkerStatistics[index].state = state
 	storeWorkerStatistics[index].currentFile = ""
 }
 
+// SetStateWithFile set state with file
 func SetStateWithFile(index int, state workerState, filename string) {
 	SetState(index, state)
 	storeWorkerStatistics[index].currentFile = filename
 }
 
+// SetReaderState set reader state
 func SetReaderState(index int, state workerState) {
 	readerWorkerStatistics[index].state = state
 	readerWorkerStatistics[index].currentFile = ""
 }
 
+// SetReaderStateWithFile set reader state with file
 func SetReaderStateWithFile(index int, state workerState, filename string) {
 	SetReaderState(index, state)
 	readerWorkerStatistics[index].currentFile = filename
@@ -206,6 +223,7 @@ var output = func() {
 	log.Log.Infof("--------------------------------------------------------------\n")
 }
 
+// ByteCountBinary byte counter binaries to human output
 func ByteCountBinary(b int64) string {
 	const unit = 1024
 	if b < unit {
@@ -219,12 +237,14 @@ func ByteCountBinary(b int64) string {
 	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
+// StartStats start statistics
 func StartStats() {
 	ps.start = time.Now()
 	bitgartentools.Schedule(output, StatisticsTimeFrame*time.Second)
 }
 
-func PrintJsonStats() {
+// PrintJSONStats print JSON statistics
+func PrintJSONStats() {
 	fmt.Printf("\"Statistics\":{")
 	fmt.Printf("\"Start\":\"%s\",", ps.start)
 	fmt.Printf("\"Checked\":\"%d\",", ps.checked)
@@ -261,12 +281,14 @@ func normalizeString(src string) string {
 	return result
 }
 
+// DeferredBlobSize deferred blog size
 func DeferredBlobSize(blobSize int64) {
 	if blobSize > ps.RequestBlobSize {
 		ps.RequestBlobSize = blobSize
 	}
 }
 
+// RegisterBlobSize register blog size
 func RegisterBlobSize(blobSize int64) {
 	statLock.Lock()
 	defer statLock.Unlock()
@@ -275,61 +297,75 @@ func RegisterBlobSize(blobSize int64) {
 	}
 }
 
-func IncStored() *timeInfo {
-	return &timeInfo{startTime: time.Now()}
+// IncStored increase stored counter
+func IncStored() *TimeInfo {
+	return &TimeInfo{startTime: time.Now()}
 }
 
-func (di *timeInfo) IncLoaded() {
+// IncLoaded increase loaded counter
+func (di *TimeInfo) IncLoaded() {
 	di.used(int(loadedIndex))
 }
 
-func (di *timeInfo) IncEndStored() {
+// IncEndStored increase end store index
+func (di *TimeInfo) IncEndStored() {
 	di.used(int(endStoreIndex))
 }
 
-func (di *timeInfo) IncDuplicate() {
+// IncDuplicate increase duplicate counter
+func (di *TimeInfo) IncDuplicate() {
 	di.used(int(duplicateIndex))
 }
 
-func (di *timeInfo) IncDuplicateLocation() {
+// IncDuplicateLocation increase duplicate location counter
+func (di *TimeInfo) IncDuplicateLocation() {
 	di.used(int(duplicateLocationIndex))
 }
 
-func (ps *PictureConnection) IncStarted() *timeInfo {
+// IncStarted increase started counter
+func (ps *PictureConnection) IncStarted() *TimeInfo {
 	ps.Started++
-	return &timeInfo{startTime: time.Now()}
+	return &TimeInfo{startTime: time.Now()}
 }
 
-func IncChecked() *timeInfo {
+// IncChecked increase checked counter
+func IncChecked() *TimeInfo {
 	ps.checked++
-	return &timeInfo{startTime: time.Now()}
+	return &TimeInfo{startTime: time.Now()}
 }
 
-func (di *timeInfo) IncDone() {
+// IncDone increase done counter
+func (di *TimeInfo) IncDone() {
 	di.used(int(doneIndex))
 }
 
-func (di *timeInfo) IncInserted() {
+// IncInserted increase insert counter
+func (di *TimeInfo) IncInserted() {
 	di.used(int(insertedIndex))
 }
 
-func (di *timeInfo) IncInsert() {
+// IncInsert increase load counter
+func (di *TimeInfo) IncInsert() {
 	di.used(int(loadIndex))
 }
 
-func (di *timeInfo) IncCommit() {
+// IncCommit increase commit count
+func (di *TimeInfo) IncCommit() {
 	di.used(int(commitedIndex))
 }
 
+// IncToBig increase to big counter
 func IncToBig() {
 	ps.ToBig++
 
 }
 
+// IncSkipped increase skipped counter
 func IncSkipped() {
 	ps.skipped++
 }
 
+// IncError increase error counter
 func IncError(prefix string, err error) {
 	ps.NrErrors++
 	if err == nil {
@@ -342,6 +378,7 @@ func IncError(prefix string, err error) {
 	ps.Errors.Store(prefix+":"+err.Error(), uint64(1))
 }
 
+// IncErrorFile increase error file information
 func IncErrorFile(err error, fileName string) {
 	ps.NrErrors++
 	if err == nil {
@@ -355,11 +392,12 @@ func IncErrorFile(err error, fileName string) {
 	ps.Errors.Store(fileName+"->"+err.Error(), uint64(1))
 }
 
-func (di *timeInfo) used(index int) {
+func (di *TimeInfo) used(index int) {
 	ps.StatInfo[index].counter++
 	ps.StatInfo[index].duration += time.Since(di.startTime)
 }
 
+// EndStats end statistics summary
 func EndStats() {
 	bitgartentools.EndStats(func() {
 		output()

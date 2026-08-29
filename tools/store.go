@@ -33,35 +33,28 @@ import (
 	"github.com/tknie/log"
 )
 
+// MaxBlobSize maximal blob size loaded
 var MaxBlobSize = int64(30000000)
 
 var globalindex = uint64(0)
-var ShortPath = false
+var shortPath = false
 var wgStore sync.WaitGroup
 
-type Data struct {
-	Media                 []byte
-	Thumbnail             []byte
-	ChecksumPicture       string
-	ChecksumPictureSha256 string
-	ChecksumThumbnail     string
-}
-
-type StoreFile struct {
+type storeFile struct {
 	fileName string
 	albumid  int
 }
 
-var storeChannel = make(chan *StoreFile, 4)
+var storeChannel = make(chan *storeFile, 4)
 var stopStore = make(chan bool)
 
 func queueStoreFileInAlbumID(fileName string, albumid int) {
 	wgStore.Add(1)
 	log.Log.Infof("Add to store queue " + fileName)
-	storeChannel <- &StoreFile{fileName: fileName, albumid: albumid}
+	storeChannel <- &storeFile{fileName: fileName, albumid: albumid}
 }
 
-func StoreWorker(nrThreadReader int) {
+func storeWorker(nrThreadReader int) {
 	sql.InitReaderWorkerStatistics(nrThreadReader)
 	for i := 0; i < nrThreadReader; i++ {
 		sql.SetReaderState(i, sql.InitStoreWorker)
@@ -99,7 +92,7 @@ func storeWorkerThread(currentIndex int) {
 }
 
 func storeFileInAlbumID(currentIndex int, db *sql.DatabaseInfo,
-	file *StoreFile, storeAlbum int) error {
+	file *storeFile, storeAlbum int) error {
 	log.Log.Debugf("Store file %s in AlbumId %d", file.fileName, storeAlbum)
 	ti := sql.IncStored()
 	baseName := path.Base(file.fileName)
@@ -124,7 +117,7 @@ func storeFileInAlbumID(currentIndex int, db *sql.DatabaseInfo,
 	pic.Index = globalindex
 	pic.Title = baseName
 	pic.StoreAlbum = storeAlbum
-	sql.SetReaderStateWithFile(currentIndex, sql.SqlStoreWorker, file.fileName)
+	sql.SetReaderStateWithFile(currentIndex, sql.SQLStoreWorker, file.fileName)
 	sql.StorePictures(pic)
 	ti.IncEndStored()
 	log.Log.Infof("Stored file %s", file.fileName)
@@ -157,7 +150,7 @@ func LoadFile(db *sql.DatabaseInfo, fileName string) (*store.Pictures, error) {
 	// 	return nil, err
 	// }
 	pic := store.NewPictures(fileName)
-	if ShortPath {
+	if shortPath {
 		pic.Directory = path.Base(pic.Directory)
 	}
 	fileType := filepath.Ext(fileName)

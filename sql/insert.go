@@ -40,7 +40,7 @@ import (
 	"github.com/tknie/log"
 )
 
-type DataConfig struct {
+type dataConfig struct {
 	User     string
 	Password string
 	URL      string
@@ -48,6 +48,7 @@ type DataConfig struct {
 	Database string
 }
 
+// DatabaseInfo database information structure
 type DatabaseInfo struct {
 	// Deprecated: Get rid of native SQL driver
 	// db        *sql.DB
@@ -58,9 +59,10 @@ type DatabaseInfo struct {
 	workerNr  int32
 }
 
+// DefaultAlbum define default album
 const DefaultAlbum = "Default Album"
 
-var Md5Map sync.Map
+var md5Map sync.Map
 
 var picChannel = make(chan *store.Pictures)
 var stop = make(chan bool)
@@ -70,6 +72,7 @@ var sqlInsertCounter = uint32(0)
 var sqlSkipCounter = uint32(0)
 var albEntryIndex = int32(0)
 
+// ExitOnError exit on error
 var ExitOnError = false
 
 var workerCounter = int32(0)
@@ -77,13 +80,14 @@ var workerCounter = int32(0)
 func init() {
 }
 
+// CreateConnection create connection
 func CreateConnection() (*DatabaseInfo, error) {
 	ref, passwd, err := DatabaseLocation()
 	if err != nil {
 		return nil, err
 	}
 
-	dc := &DataConfig{User: ref.User, Password: passwd, URL: ref.Host,
+	dc := &dataConfig{User: ref.User, Password: passwd, URL: ref.Host,
 		Port: ref.Port, Database: ref.Database}
 	_, url := dc.PostgresXConnection()
 	ref, pwd, err := common.NewReference(url)
@@ -99,6 +103,7 @@ func CreateConnection() (*DatabaseInfo, error) {
 	return &DatabaseInfo{id, nil, "", 0, 0}, nil
 }
 
+// Reopen reopen database connection
 func (di *DatabaseInfo) Reopen() error {
 	log.Log.Infof("Reopen %v", di.id)
 	di.id.Close()
@@ -106,7 +111,7 @@ func (di *DatabaseInfo) Reopen() error {
 	if err != nil {
 		return err
 	}
-	dc := &DataConfig{User: ref.User, Password: passwd, URL: ref.Host,
+	dc := &dataConfig{User: ref.User, Password: passwd, URL: ref.Host,
 		Port: ref.Port, Database: ref.Database}
 	_, url := dc.PostgresXConnection()
 	ref, pwd, err := common.NewReference(url)
@@ -125,13 +130,14 @@ func (di *DatabaseInfo) Reopen() error {
 	return nil
 }
 
+// WriteAlbum write album to database
 func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
 	found, err := di.CheckAlbum(album)
 	if err != nil {
 		return err
 	}
 	log.Log.Debugf("Check Album found: %v", found)
-	fmt.Printf("Search found on source %03d -> %s\n", album.Id, album.Title)
+	fmt.Printf("Search found on source %03d -> %s\n", album.ID, album.Title)
 
 	id, err := di.Open()
 	if err != nil {
@@ -167,7 +173,7 @@ func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
 			return err
 		}
 		log.Log.Debugf("Update %d entries", n)
-		album.Id = found
+		album.ID = found
 	} else {
 		_, err = id.Insert("Albums", input)
 		if err != nil {
@@ -177,16 +183,17 @@ func (di *DatabaseInfo) WriteAlbum(album *Albums) error {
 		if err != nil {
 			return err
 		}
-		album.Id = found
+		album.ID = found
 	}
-	fmt.Printf("Adapt new album id on destination %03d -> %s\n", album.Id, album.Title)
+	fmt.Printf("Adapt new album id on destination %03d -> %s\n", album.ID, album.Title)
 	for _, p := range album.Pictures {
-		p.AlbumId = album.Id
+		p.AlbumID = album.ID
 	}
 
 	return nil
 }
 
+// WriteAlbumPictures write album pictures
 func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
 	found, err := di.CheckAlbumPictures(albumPic)
 	if err != nil {
@@ -200,7 +207,7 @@ func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
 	defer id.FreeHandler()
 	list := [][]any{{
 		albumPic.Index,
-		albumPic.AlbumId,
+		albumPic.AlbumID,
 		albumPic.Name,
 		albumPic.Description,
 		albumPic.ChecksumPicture,
@@ -224,7 +231,7 @@ func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
 		Values: list}
 	if found {
 		input.Update = []string{fmt.Sprintf("index = %d AND albumid = %d",
-			albumPic.Index, albumPic.AlbumId)}
+			albumPic.Index, albumPic.AlbumID)}
 		_, n, err := id.Update("AlbumPictures", input)
 		if err != nil {
 			return err
@@ -241,6 +248,7 @@ func (di *DatabaseInfo) WriteAlbumPictures(albumPic *AlbumPictures) error {
 	return nil
 }
 
+// WritePicture write picture
 func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 	id, err := di.Open()
 	if err != nil {
@@ -250,6 +258,7 @@ func (di *DatabaseInfo) WritePicture(pic *Picture) error {
 	return di.WritePictureTransaction(id, pic)
 }
 
+// WritePictureTransaction write picture transaction
 func (di *DatabaseInfo) WritePictureTransaction(id common.RegDbID, pic *Picture) error {
 
 	list := [][]any{{
@@ -270,7 +279,7 @@ func (di *DatabaseInfo) WritePictureTransaction(id common.RegDbID, pic *Picture)
 		pic.Exifydimension,
 		pic.Exiforientation,
 		pic.Created,
-		pic.Updated_at,
+		pic.UpdatedAt,
 	}}
 	input := &common.Entries{
 		Fields: []string{
@@ -301,12 +310,14 @@ func (di *DatabaseInfo) WritePictureTransaction(id common.RegDbID, pic *Picture)
 	return nil
 }
 
+// Close close database connection
 func (di *DatabaseInfo) Close() {
 	if di != nil && di.id != 0 {
 		di.id.FreeHandler()
 	}
 }
 
+// InsertNewAlbum insert new album
 func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
 
 	di.id.BeginTransaction()
@@ -356,6 +367,7 @@ func (di *DatabaseInfo) InsertNewAlbum(directory string) (int, error) {
 	return newID, nil
 }
 
+// InsertAlbum insert album
 func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 	id, err := DatabaseHandler()
 	if err != nil {
@@ -387,7 +399,7 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 		}
 		album.Key = createStringMd5(album.Title)
 	}
-	if m, ok := Md5Map.Load(album.Thumbnailhash); ok {
+	if m, ok := md5Map.Load(album.Thumbnailhash); ok {
 		album.Thumbnailhash = m.(string)
 	}
 	insert := &common.Entries{Fields: []string{"Title", "key", "Directory", "ThumbnailHash", "published"},
@@ -410,7 +422,7 @@ func (di *DatabaseInfo) InsertAlbum(album *store.Album) error {
 		if p.Md5 == "" {
 			log.Log.Fatalf("Pic MD5 empty, %s", p.Name)
 		}
-		if m, ok := Md5Map.Load(p.Md5); ok {
+		if m, ok := md5Map.Load(p.Md5); ok {
 			p.Md5 = strings.Trim(m.(string), " ")
 			fmt.Printf("MD5 AP <%s>", p.Md5)
 		}
@@ -478,6 +490,7 @@ func createStringMd5(input string) string {
 	return fmt.Sprintf("%X", h.Sum(nil))
 }
 
+// StorePictures store pictures
 func StorePictures(pic *store.Pictures) {
 	wg.Add(1)
 	log.Log.Infof("Add picture to insert queue: %s", pic.PictureName)
@@ -485,12 +498,14 @@ func StorePictures(pic *store.Pictures) {
 	atomic.AddUint32(&sqlSendCounter, 1)
 }
 
+// WaitStored wait stored
 func WaitStored() {
 	wg.Wait()
 	fmt.Printf("Store requested = %d inserted = %d skipped = %d\n",
 		sqlSendCounter, sqlInsertCounter, sqlSkipCounter)
 }
 
+// InsertWorker start worker
 func InsertWorker(nrThreadStorer int) {
 	InitStoreWorkerStatistics(nrThreadStorer)
 	for i := 0; i < nrThreadStorer; i++ {
@@ -538,6 +553,7 @@ func insertWorkerThread(currentIndex int) {
 	}
 }
 
+// InsertAlbumPictures insert album pictures
 func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid int) error {
 	err := di.id.BeginTransaction()
 	if err != nil {
@@ -570,6 +586,7 @@ func (di *DatabaseInfo) InsertAlbumPictures(pic *store.Pictures, index, albumid 
 	return nil
 }
 
+// InsertPictures insert pictures
 func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	log.Log.Infof("Insert picture in AlbumPictures (worker %d)", di.workerNr)
 	if pic.ChecksumPictureSHA == "" {
@@ -655,7 +672,7 @@ func (di *DatabaseInfo) InsertPictures(pic *store.Pictures) error {
 	return nil
 }
 
-func insertPictureData(ti *timeInfo, pic *store.Pictures) error {
+func insertPictureData(ti *TimeInfo, pic *store.Pictures) error {
 	fill := pic.Fill
 	if len(fill) > 1 {
 		fmt.Println("Fill >1: " + fill)
@@ -722,21 +739,25 @@ func insertPictureData(ti *timeInfo, pic *store.Pictures) error {
 	return nil
 }
 
-func (dc *DataConfig) MySQLConnection() (string, string) {
+// MySQLConnection MySQL connection
+func (dc *dataConfig) MySQLConnection() (string, string) {
 	return "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", dc.User, dc.Password, dc.URL, dc.Database)
 }
 
-func (dc *DataConfig) PostgresConnection() (string, string) {
+// PostgresConnection postgres connection
+func (dc *dataConfig) PostgresConnection() (string, string) {
 	return "postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		dc.URL, dc.Port, dc.User, dc.Password, dc.Database)
 }
 
-func (dc *DataConfig) PostgresXConnection() (string, string) {
+// PostgresXConnection postgres conneciton PGX style
+func (dc *dataConfig) PostgresXConnection() (string, string) {
 	// urlExample := "postgres://username:password@localhost:5432/database_name"
 	return "pgx", fmt.Sprintf("postgres://%s:%s@%s:%d/%s?application_name=picloadql",
 		dc.User, dc.Password, dc.URL, dc.Port, dc.Database)
 }
 
+// Display display postgres information
 func Display() (err error) {
 	portS := os.Getenv("POSTGRES_PORT")
 	port := 5432
@@ -747,7 +768,7 @@ func Display() (err error) {
 			return err
 		}
 	}
-	dc := &DataConfig{User: "admin", Password: os.Getenv("POSTGRES_PASS"), URL: os.Getenv("POSTGRES_HOST"), Port: port}
+	dc := &dataConfig{User: "admin", Password: os.Getenv("POSTGRES_PASS"), URL: os.Getenv("POSTGRES_HOST"), Port: port}
 	driver, url := dc.PostgresXConnection()
 	db, err := sql.Open(driver,
 		url)
@@ -796,6 +817,7 @@ func Display() (err error) {
 	return nil
 }
 
+// StopWorker stop worker
 func StopWorker() {
 	stop <- true
 }

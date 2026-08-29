@@ -37,6 +37,7 @@ import (
 
 const exportTimeFormat = "2006-01-02"
 
+// ExportMediaParameter export media function parameter
 type ExportMediaParameter struct {
 	Directory  string
 	Limit      int
@@ -59,6 +60,7 @@ var stop = make(chan bool)
 
 var wgWrite sync.WaitGroup
 
+// StartExport start the export of media files
 func StartExport(workers int) {
 	picChannel = make(chan *store.Pictures, workers)
 
@@ -67,6 +69,7 @@ func StartExport(workers int) {
 	}
 }
 
+// ExportMedia export media to a file
 func ExportMedia(parameter *ExportMediaParameter) error {
 	if parameter.Directory == "" {
 		parameter.Directory = "./"
