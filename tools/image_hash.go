@@ -32,6 +32,8 @@ import (
 	"strings"
 	"text/template"
 
+	"golang.org/x/image/tiff"
+
 	"github.com/tknie/bitgartentools/sql"
 	"github.com/tknie/bitgartentools/store"
 
@@ -108,12 +110,16 @@ func ImageHash(parameter *ImageHashParameter) error {
 	if err != nil {
 		return fmt.Errorf("POSTGRES error: %v", err)
 	}
+	limit := "ALL"
+	if parameter.Limit != 0 {
+		limit = strconv.Itoa(parameter.Limit)
+	}
 	log.Log.Debugf("Execute query:\n%s\n", sqlCmd.String())
 	query := &common.Query{
 		TableName:  "pictures",
 		Fields:     []string{"ChecksumPicture", "title", "mimetype", "media"},
 		DataStruct: &store.Pictures{},
-		Limit:      strconv.Itoa(parameter.Limit),
+		Limit:      limit,
 		Search:     sqlCmd.String(),
 	}
 	if parameter.JSON {
@@ -150,6 +156,13 @@ func ImageHash(parameter *ImageHashParameter) error {
 			}
 		case "image/gif":
 			hd, err = hashGif(buffer)
+			if err != nil {
+				hashOutput(p, fmt.Sprintf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err))
+				log.Log.Errorf("Error generating hash for %s/%s: %v", p.Title, p.ChecksumPicture, err)
+				return nil
+			}
+		case "image/tif":
+			hd, err = hashTiff(buffer)
 			if err != nil {
 				hashOutput(p, fmt.Sprintf("Error generating hash for %s/%s: %v\n", p.Title, p.ChecksumPicture, err))
 				log.Log.Errorf("Error generating hash for %s/%s: %v", p.Title, p.ChecksumPicture, err)
@@ -270,6 +283,14 @@ func hashPng(f io.Reader) (*hashData, error) {
 
 func hashGif(f io.Reader) (*hashData, error) {
 	i, err := gif.Decode(f)
+	if err != nil {
+		return nil, err
+	}
+	return generateHash(i)
+}
+
+func hashTiff(f io.Reader) (*hashData, error) {
+	i, err := tiff.Decode(f)
 	if err != nil {
 		return nil, err
 	}

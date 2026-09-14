@@ -140,6 +140,7 @@ type Pictures struct {
 	GPSlatitude        float64
 	GPSlongitude       float64
 	PicOpt             string
+	MarkDelete         bool
 	Available          Available `adabas:":ignore"`
 	StoreAlbum         int       `adabas:":ignore"`
 	// PictureLocations  []PictureLocations `adabas:"::PL"`

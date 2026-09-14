@@ -95,7 +95,7 @@ func ExportMedia(parameter *ExportMediaParameter) error {
 		Search:       search,
 		Limit:        limit,
 		FctParameter: parameter,
-		Fields: []string{"MIMEType", "title", "exiforigtime",
+		Fields: []string{"MIMEType", "title", "markdelete", "exiforigtime",
 			"checksumpicture", "Media", "PicOpt"},
 	}
 	outStat := func() {
@@ -144,9 +144,13 @@ func writerMedia(pic *store.Pictures) {
 	defer wgWrite.Done()
 
 	atomic.AddUint64(&statCount.processed, 1)
-	filename := fmt.Sprintf("%s/%s/%c/%s/%s-%s", exportParameter.Directory,
+	deleted := ""
+	if pic.MarkDelete {
+		deleted = "-deleted"
+	}
+	filename := fmt.Sprintf("%s/%s/%c/%s-%s%s/%s", exportParameter.Directory,
 		pic.ExifOrigTime.Format(exportTimeFormat), pic.Title[0], pic.Title,
-		pic.ChecksumPicture, pic.Title)
+		pic.ChecksumPicture, deleted, pic.Title)
 	dirname := filepath.Dir(filename)
 	if pic.PicOpt == "webstore" {
 		fmt.Printf("Skip webstore %s\n", filename)
